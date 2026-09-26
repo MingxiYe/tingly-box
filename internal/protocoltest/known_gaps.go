@@ -123,8 +123,6 @@ var _ = registerKnownGaps(KnownGap{
 	"TestGuardrailsBlocksServerTool/anthropic_v1->anthropic_beta/stream=true",
 	"TestGuardrailsBlocksServerTool/anthropic_v1->openai_chat/stream=false",
 	"TestGuardrailsBlocksServerTool/anthropic_v1->openai_chat/stream=true",
-	"TestGuardrailsBlocksServerTool/anthropic_beta->anthropic_beta/stream=false",
-	"TestGuardrailsBlocksServerTool/anthropic_beta->anthropic_beta/stream=true",
 	"TestGuardrailsBlocksServerTool/anthropic_beta->openai_chat/stream=false",
 	"TestGuardrailsBlocksServerTool/anthropic_beta->openai_chat/stream=true",
 ) && registerKnownGaps(KnownGap{
@@ -162,8 +160,6 @@ var _ = registerKnownGaps(KnownGap{
 	"TestMCPNoFailoverAfterServerTool/anthropic_v1->anthropic_beta/stream=true",
 	"TestMCPNoFailoverAfterServerTool/anthropic_v1->openai_chat/stream=false",
 	"TestMCPNoFailoverAfterServerTool/anthropic_v1->openai_chat/stream=true",
-	"TestMCPNoFailoverAfterServerTool/anthropic_beta->anthropic_beta/stream=false",
-	"TestMCPNoFailoverAfterServerTool/anthropic_beta->anthropic_beta/stream=true",
 	"TestMCPNoFailoverAfterServerTool/anthropic_beta->openai_chat/stream=false",
 	"TestMCPNoFailoverAfterServerTool/anthropic_beta->openai_chat/stream=true",
 	"TestMCPNoFailoverAfterServerTool/openai_chat->anthropic_beta/stream=false",
