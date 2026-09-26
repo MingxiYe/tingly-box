@@ -705,7 +705,9 @@ func guardrailsBlocksServerToolCase(t flagTB, source, target protocol.APIType, s
 	if n := len(echo.Calls()); n != 0 {
 		failures = append(failures, fmt.Sprintf("blocked server tool executed %d times", n))
 	}
-	if strings.Contains(raw, OwnedToolWireName) {
+	// The block message may name the refused command; only a tool_use block
+	// for the server tool is a leak.
+	if strings.Contains(raw, ownedToolUseMarker) {
 		failures = append(failures, "server tool call leaked to client")
 	}
 	if !strings.Contains(raw, "Blocked by guardrails") {
@@ -789,3 +791,7 @@ func credentialAliasClientToolCase(t flagTB, source, target protocol.APIType, st
 	}
 	return failures, fmt.Sprintf("tool calls=%d client response:\n%s", len(echo.Calls()), raw)
 }
+
+// ownedToolUseMarker appears only in a tool_use block for the server tool;
+// a block message may name the tool in plain text.
+const ownedToolUseMarker = `"name":"` + OwnedToolWireName + `"`
