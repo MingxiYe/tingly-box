@@ -10,6 +10,7 @@
 | `internal/protocol/stage` | 契约：`Endpoint`、`EventStream`、`Stage`、`Compose`、`Bridge`、`Adapt` |
 | `internal/protocol/stage/anthropicbridge` | Anthropic Beta → OpenAI Chat / Responses 的 Bridge |
 | `internal/protocol/stage/upstream` | 终端 Endpoint：Anthropic（Beta 或 V1 wire）、OpenAI Chat、OpenAI Responses |
+| `internal/protocol/stage/toolround` | Tool Round Stage：Guardrails 与 MCP 对工具调用的统一决策 |
 
 ---
 
@@ -116,6 +117,37 @@ provider 返回的错误是 SDK 的类型化错误，携带 HTTP 状态；客户
 - `Stage.Wrap` 不得执行请求；`Compose` 校验每层协议一致、名称非空、返回值非 nil。
 - Bridge 不得把请求状态存在 Bridge 实例上，只能放在会话里。
 - 客户端可见的 model 由边缘或 Bridge 选项（`ResponseModel`）决定，与发给 provider 的 model 相互独立。
+
+---
+
+## Tool Round Stage
+
+`stage/toolround` 是模型产生的**每一个工具调用**的唯一决策点，工作在 Beta 上。Guardrails 与 MCP（server tool）都通过它生效，因此二者的组合语义只定义一次。
+
+| 术语 | 含义 |
+|---|---|
+| **轮（round）** | 一次 provider 调用及其响应。模型调用 server tool 后，Stage 执行工具并发起下一轮。 |
+| **Gate** | Guardrails 一侧：筛请求、判定每个 tool_use、筛 server tool 结果、还原凭证别名、检查最终响应。实现：`guardrailspipeline.ToolRoundGate`。 |
+| **Owner** | MCP 一侧：认领 server tool、执行、在混合轮后暂存与续接。实现：`toolengine.AnthropicBetaOwner`。 |
+| **混合轮** | 同一轮既有 server tool 又有客户端工具：server tool 执行后结果暂存，等客户端带着自己工具的结果回来时再拼回对话。 |
+
+每一轮里，每个 tool_use 按固定顺序决策：
+
+1. **Gate**：被拦下的调用结束本轮对话，替换为说明文本；该轮其它调用都不执行。
+2. **Owner**：属于 server 的调用执行，结果经 Gate 筛查后进入下一轮；混合轮只执行 server 部分并暂存。
+3. 其余调用原样交给客户端。
+
+流式行为：
+
+- 文本与 thinking **实时转发**；只有 tool_use 块在本轮决策完成前被暂扣。
+- 跨多轮的回答对客户端是**一条消息**：只有一个 `message_start`，块索引连续。
+- 达到轮数上限时以 `end_turn` 结束，不暴露 server tool 调用。
+- 用量覆盖所有轮。
+- server tool 执行之后再出的错误标记为**已提交**（`stage.CommittedError`）：客户端边缘不会因此 failover 到另一个服务，避免工具被重复执行。
+
+混合轮的续接只在有会话时进行，并且只由"回答了该轮某个客户端调用"的请求消费（`continuationStore.popAnswered`），因此既不会串到别的对话，也不会被无关请求提前取走。
+
+Gate 与 Owner 都是可选的：两者都没有时，Tool Round Stage 直接透传。
 
 ---
 
