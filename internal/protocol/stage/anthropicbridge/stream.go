@@ -25,7 +25,6 @@ func newAnthropicStream(
 	return &anthropicStream{
 		iterator:  iterator,
 		converter: converter,
-		model:     sourceModel,
 	}, nil
 }
 
@@ -85,7 +84,6 @@ func (s *chatStreamIterator) Close() error {
 type anthropicStream struct {
 	iterator  *chatStreamIterator
 	converter protocolstream.StreamConverter
-	model     string
 }
 
 func (s *anthropicStream) Next(ctx context.Context) (stage.Event, error) {
@@ -117,5 +115,5 @@ func (s *anthropicStream) Result() stage.StreamResult {
 	if usage != nil && !usage.HasUsage() {
 		usage = nil
 	}
-	return stage.StreamResult{Usage: usage, Model: s.model}
+	return stage.StreamResult{Usage: usage}
 }

@@ -32,8 +32,7 @@ type Clients interface {
 type Config struct {
 	Clients  Clients
 	Provider *typ.Provider
-	// Model is the provider-bound model used to resolve the client. It is also
-	// the fallback Response.Model when the provider reports none.
+	// Model is the provider-bound model used to resolve the client.
 	Model string
 }
 
@@ -49,11 +48,4 @@ func (c Config) validate() error {
 
 func (c Config) forwardContext(ctx context.Context) *forwarding.ForwardContext {
 	return forwarding.NewForwardContext(ctx, c.Provider)
-}
-
-func (c Config) model(reported string) string {
-	if reported != "" {
-		return reported
-	}
-	return c.Model
 }

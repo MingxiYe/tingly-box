@@ -35,7 +35,6 @@ func TestAnthropicBetaToOpenAIResponsesComplete(t *testing.T) {
 					"output":[{"id":"msg_1","type":"message","role":"assistant","status":"completed","content":[{"type":"output_text","text":"hello from responses","annotations":[]}]}],
 					"usage":{"input_tokens":9,"output_tokens":4,"total_tokens":13,"input_tokens_details":{"cached_tokens":2},"output_tokens_details":{"reasoning_tokens":0}}
 				}`),
-				SideEffectsCommitted: true,
 			}, nil
 		},
 	}
@@ -58,9 +57,6 @@ func TestAnthropicBetaToOpenAIResponsesComplete(t *testing.T) {
 	if result.Usage == nil || result.Usage.InputTokens != 7 || result.Usage.CacheReadTokens != 2 || result.Usage.OutputTokens != 4 {
 		t.Fatalf("usage = %#v", result.Usage)
 	}
-	if !result.SideEffectsCommitted {
-		t.Fatal("side effects were not preserved")
-	}
 }
 
 func TestAnthropicBetaToOpenAIResponsesStream(t *testing.T) {
@@ -73,7 +69,6 @@ func TestAnthropicBetaToOpenAIResponsesStream(t *testing.T) {
 			`{"type":"response.output_text.done","sequence_number":2,"item_id":"msg_1","output_index":0,"content_index":0,"text":"stream responses"}`,
 			`{"type":"response.completed","sequence_number":3,"response":{"id":"resp_stream","object":"response","model":"provider-model","status":"completed","output":[],"usage":{"input_tokens":6,"output_tokens":2,"total_tokens":8,"input_tokens_details":{"cached_tokens":0},"output_tokens_details":{"reasoning_tokens":0}}}}`,
 		),
-		result: stage.StreamResult{SideEffectsCommitted: true},
 	}
 	terminal := &memoryEndpoint{api: protocol.TypeOpenAIResponses, stream: func(context.Context, stage.Call) (stage.EventStream, error) {
 		return target, nil
@@ -111,7 +106,7 @@ func TestAnthropicBetaToOpenAIResponsesStream(t *testing.T) {
 		t.Fatalf("events = %v, saw text = %v", eventTypes, sawText)
 	}
 	result := stream.Result()
-	if result.Model != "public-stream-model" || result.Usage == nil || result.Usage.InputTokens != 6 || result.Usage.OutputTokens != 2 || !result.SideEffectsCommitted {
+	if result.Usage == nil || result.Usage.InputTokens != 6 || result.Usage.OutputTokens != 2 {
 		t.Fatalf("Result() = %+v", result)
 	}
 	if err := stream.Close(); err != nil {

@@ -39,10 +39,6 @@ func (*chatBridge) Source() protocol.APIType { return protocol.TypeAnthropicBeta
 
 func (b *chatBridge) Target() protocol.APIType { return protocol.TypeOpenAIChat }
 
-func (b *chatBridge) Capabilities() stage.Capabilities {
-	return stage.AllBridgeCapabilities
-}
-
 func (b *chatBridge) Open(_ context.Context, call stage.Call, operation stage.Operation) (stage.BridgeSession, error) {
 	isStreaming, err := operationStreaming(operation)
 	if err != nil {
@@ -132,7 +128,6 @@ func (s *chatSession) ConvertComplete(_ context.Context, response *stage.Respons
 	return &stage.Response{
 		Value: value,
 		Usage: normalizedUsage,
-		Model: s.sourceModel,
 	}, nil
 }
 
@@ -159,5 +154,3 @@ func (s *chatSession) ConvertStream(_ context.Context, target stage.EventStream)
 	}
 	return newAnthropicStream(target, s.sourceModel, s.targetRequest)
 }
-
-func (s *chatSession) ConvertError(_ context.Context, err error) error { return err }

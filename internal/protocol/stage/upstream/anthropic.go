@@ -85,11 +85,7 @@ func (e *anthropicEndpoint) Complete(ctx context.Context, call stage.Call) (*sta
 		}
 		usage = protocolusage.FromAnthropicBetaMessage(message.Usage)
 	}
-	return &stage.Response{
-		Value: message,
-		Usage: usage,
-		Model: e.config.model(string(message.Model)),
-	}, nil
+	return &stage.Response{Value: message, Usage: usage}, nil
 }
 
 func (e *anthropicEndpoint) Stream(ctx context.Context, call stage.Call) (stage.EventStream, error) {
@@ -102,7 +98,6 @@ func (e *anthropicEndpoint) Stream(ctx context.Context, call stage.Call) (stage.
 	out := &anthropicStream{
 		client: wrapper,
 		usage:  protocolusage.NewAnthropicAccumulator(),
-		model:  e.config.Model,
 	}
 	if e.wire == AnthropicWireV1 {
 		v1, err := request.ConvertAnthropicBetaToV1Request(req)
@@ -166,7 +161,6 @@ type anthropicStream struct {
 	v1     *anthropicstream.Stream[anthropic.MessageStreamEventUnion]
 	cancel context.CancelFunc
 	usage  *protocolusage.AnthropicAccumulator
-	model  string
 
 	closeOnce sync.Once
 	closeErr  error
@@ -189,7 +183,6 @@ func (s *anthropicStream) Next(ctx context.Context) (stage.Event, error) {
 		if err := json.Unmarshal(anthropicRaw(v1.RawJSON(), v1), &event); err != nil {
 			return stage.Event{}, fmt.Errorf("upgrade Anthropic v1 stream event to Beta: %w", err)
 		}
-		s.observeModel(event)
 		return stage.Event{Value: event}, nil
 	}
 	if !s.beta.Next() {
@@ -197,14 +190,7 @@ func (s *anthropicStream) Next(ctx context.Context) (stage.Event, error) {
 	}
 	event := s.beta.Current()
 	s.usage.ConsumeBeta(&event)
-	s.observeModel(event)
 	return stage.Event{Value: event}, nil
-}
-
-func (s *anthropicStream) observeModel(event anthropic.BetaRawMessageStreamEventUnion) {
-	if event.Type == "message_start" && event.Message.Model != "" {
-		s.model = string(event.Message.Model)
-	}
 }
 
 func (s *anthropicStream) Close() error {
@@ -223,7 +209,7 @@ func (s *anthropicStream) Close() error {
 }
 
 func (s *anthropicStream) Result() stage.StreamResult {
-	result := stage.StreamResult{Model: s.model}
+	var result stage.StreamResult
 	if s.usage.HasUsage() {
 		result.Usage = s.usage.Result()
 	}

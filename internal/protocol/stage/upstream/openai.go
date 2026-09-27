@@ -45,7 +45,6 @@ func (e *openAIChatEndpoint) Complete(ctx context.Context, call stage.Call) (*st
 	return &stage.Response{
 		Value: completion,
 		Usage: protocolusage.FromOpenAIChatCompletion(completion.Usage),
-		Model: e.config.model(completion.Model),
 	}, nil
 }
 
@@ -66,13 +65,11 @@ func (e *openAIChatEndpoint) Stream(ctx context.Context, call stage.Call) (stage
 		client: wrapper,
 		stream: stream,
 		cancel: cancel,
-		model:  e.config.Model,
-		observe: func(chunk openai.ChatCompletionChunk) (*protocol.TokenUsage, string) {
-			var usage *protocol.TokenUsage
+		usageOf: func(chunk openai.ChatCompletionChunk) *protocol.TokenUsage {
 			if u := protocolusage.FromOpenAIChatCompletion(chunk.Usage); u.HasUsage() {
-				usage = u
+				return u
 			}
-			return usage, chunk.Model
+			return nil
 		},
 	}, nil
 }
@@ -117,7 +114,6 @@ func (e *openAIResponsesEndpoint) Complete(ctx context.Context, call stage.Call)
 	return &stage.Response{
 		Value: response,
 		Usage: protocolusage.FromOpenAIResponses(response.Usage),
-		Model: e.config.model(string(response.Model)),
 	}, nil
 }
 
@@ -138,18 +134,16 @@ func (e *openAIResponsesEndpoint) Stream(ctx context.Context, call stage.Call) (
 		client: wrapper,
 		stream: stream,
 		cancel: cancel,
-		model:  e.config.Model,
-		observe: func(event responses.ResponseStreamEventUnion) (*protocol.TokenUsage, string) {
+		usageOf: func(event responses.ResponseStreamEventUnion) *protocol.TokenUsage {
 			switch event.Type {
 			case "response.created", "response.in_progress", "response.completed", "response.incomplete", "response.failed":
 			default:
-				return nil, ""
+				return nil
 			}
-			var usage *protocol.TokenUsage
 			if u := protocolusage.FromOpenAIResponses(event.Response.Usage); u.HasUsage() {
-				usage = u
+				return u
 			}
-			return usage, string(event.Response.Model)
+			return nil
 		},
 	}, nil
 }
@@ -166,15 +160,14 @@ func openAIResponsesRequest(value any) (*responses.ResponseNewParams, error) {
 	return nil, fmt.Errorf("OpenAI Responses upstream endpoint: request has type %T, want responses.ResponseNewParams", value)
 }
 
-// openAIStream adapts an OpenAI SDK stream to stage.EventStream. observe
-// extracts the latest usage and provider-reported model from each event.
+// openAIStream adapts an OpenAI SDK stream to stage.EventStream. usageOf
+// extracts the usage an event reports, if any; the latest one wins.
 type openAIStream[T any] struct {
 	client  client.OpenAIClientInterface
 	stream  *openaistream.Stream[T]
 	cancel  context.CancelFunc
-	observe func(T) (*protocol.TokenUsage, string)
+	usageOf func(T) *protocol.TokenUsage
 	usage   *protocol.TokenUsage
-	model   string
 
 	closeOnce sync.Once
 	closeErr  error
@@ -189,12 +182,8 @@ func (s *openAIStream[T]) Next(ctx context.Context) (stage.Event, error) {
 		return stage.Event{}, streamEnd(s.stream.Err())
 	}
 	event := s.stream.Current()
-	usage, model := s.observe(event)
-	if usage != nil {
+	if usage := s.usageOf(event); usage != nil {
 		s.usage = usage
-	}
-	if model != "" {
-		s.model = model
 	}
 	return stage.Event{Value: event}, nil
 }
@@ -210,5 +199,5 @@ func (s *openAIStream[T]) Close() error {
 }
 
 func (s *openAIStream[T]) Result() stage.StreamResult {
-	return stage.StreamResult{Usage: s.usage, Model: s.model}
+	return stage.StreamResult{Usage: s.usage}
 }

@@ -8,8 +8,8 @@ import (
 )
 
 // Anthropic V1 lives only at the edges (upgraded to Beta at the client,
-// downgraded at the provider when needed), so every chain entry point rejects
-// it before anything executes.
+// downgraded at the provider when needed), so Compose and Adapt reject it
+// before anything executes.
 func TestChainRejectsAnthropicV1(t *testing.T) {
 	t.Parallel()
 
@@ -31,19 +31,11 @@ func TestChainRejectsAnthropicV1(t *testing.T) {
 		check(t, err)
 	})
 	t.Run("adapt bridge", func(t *testing.T) {
-		_, err := Adapt(beta, &testingBridge{source: protocol.TypeAnthropicV1, target: protocol.TypeAnthropicBeta, caps: AllBridgeCapabilities})
+		_, err := Adapt(beta, &testingBridge{source: protocol.TypeAnthropicV1, target: protocol.TypeAnthropicBeta})
 		check(t, err)
 	})
-	t.Run("registry", func(t *testing.T) {
-		_, err := NewBridgeRegistry(&testingBridge{source: protocol.TypeAnthropicBeta, target: protocol.TypeAnthropicV1, caps: AllBridgeCapabilities})
-		check(t, err)
-	})
-	t.Run("topology client", func(t *testing.T) {
-		registry, err := NewBridgeRegistry()
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = BuildTopology(TopologyConfig{Terminal: beta, ClientProtocol: protocol.TypeAnthropicV1, Registry: registry})
+	t.Run("adapt bridge target", func(t *testing.T) {
+		_, err := Adapt(beta, &testingBridge{source: protocol.TypeAnthropicBeta, target: protocol.TypeAnthropicV1})
 		check(t, err)
 	})
 }

@@ -51,31 +51,22 @@ func TestAnthropicToOpenAIChatComplete(t *testing.T) {
 					if chatRequest.StreamOptions.IncludeUsage.Valid() {
 						t.Fatal("complete request unexpectedly enabled stream usage")
 					}
-					if call.Metadata.RequestID != "complete-request" || call.Metadata.Attempt != 3 {
-						t.Fatalf("metadata = %+v", call.Metadata)
-					}
 					return &stage.Response{
-						Value:                completion,
-						Usage:                protocol.NewTokenUsage(999, 999),
-						Model:                "provider-model",
-						SideEffectsCommitted: true,
+						Value: completion,
+						Usage: protocol.NewTokenUsage(999, 999),
 					}, nil
 				},
 			}
 			adapted := mustAdapt(t, terminal, tt.bridge)
 			response, err := adapted.Complete(context.Background(), stage.Call{
-				Request:  tt.request,
-				Metadata: stage.CallMetadata{RequestID: "complete-request", Attempt: 3},
-				State:    stage.ProtocolState{OpenAIChat: &protocol.OpenAIConfig{ReasoningEffort: "xhigh"}},
+				Request: tt.request,
+				State:   stage.ProtocolState{OpenAIChat: &protocol.OpenAIConfig{ReasoningEffort: "xhigh"}},
 			})
 			if err != nil {
 				t.Fatalf("Complete() error = %v", err)
 			}
 			if reflect.TypeOf(response.Value) != reflect.TypeOf(tt.wantType) {
 				t.Fatalf("response type = %T, want %T", response.Value, tt.wantType)
-			}
-			if response.Model != tt.sourceModel || !response.SideEffectsCommitted {
-				t.Fatalf("response facts = %+v", response)
 			}
 			if response.Usage == nil || response.Usage.InputTokens != 8 || response.Usage.OutputTokens != 4 || response.Usage.CacheReadTokens != 2 || response.Usage.ReasoningTokens != 1 {
 				t.Fatalf("normalized usage = %+v", response.Usage)
@@ -157,48 +148,38 @@ func TestAnthropicToOpenAIChatSeparatesProviderAndResponseModels(t *testing.T) {
 		t.Fatalf("Complete() error = %v", err)
 	}
 	message, ok := response.Value.(*anthropic.BetaMessage)
-	if !ok || string(message.Model) != "client-alias" || response.Model != "client-alias" {
-		t.Fatalf("source-visible models = message:%v response:%q", message, response.Model)
+	if !ok || string(message.Model) != "client-alias" {
+		t.Fatalf("source-visible model = %v", message)
 	}
 }
 
-func TestAnthropicIdentityStageThenOpenAIChatTopology(t *testing.T) {
+func TestAnthropicStageComposedOverOpenAIChatBridge(t *testing.T) {
 	t.Parallel()
 
 	completion := decodeChatCompletion(t, `{
-        "id":"chat-topology",
+        "id":"chat-composed",
         "model":"provider-model",
-        "choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"topology ok"}}],
+        "choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","content":"composed ok"}}],
         "usage":{"prompt_tokens":3,"completion_tokens":2,"total_tokens":5}
     }`)
 	terminal := &memoryEndpoint{
 		api: protocol.TypeOpenAIChat,
 		complete: func(_ context.Context, call stage.Call) (*stage.Response, error) {
 			requireChatRequest(t, call)
-			return &stage.Response{Value: completion, Model: "provider-model"}, nil
+			return &stage.Response{Value: completion}, nil
 		},
 	}
-	registry, err := stage.NewBridgeRegistry(NewBetaToOpenAIChat(ChatOptions{}))
-	if err != nil {
-		t.Fatalf("NewBridgeRegistry() error = %v", err)
-	}
 	identity := &anthropicPassthroughStage{api: protocol.TypeAnthropicBeta}
-	topology, err := stage.BuildTopology(stage.TopologyConfig{
-		Terminal:             terminal,
-		Stages:               []stage.Stage{identity},
-		ClientProtocol:       protocol.TypeAnthropicBeta,
-		Registry:             registry,
-		RequiredCapabilities: stage.CapabilityUsage | stage.CapabilityFinishReason,
-	})
+	composed, err := stage.Compose(mustAdapt(t, terminal, NewBetaToOpenAIChat(ChatOptions{})), identity)
 	if err != nil {
-		t.Fatalf("BuildTopology() error = %v", err)
+		t.Fatalf("Compose() error = %v", err)
 	}
 	request := &anthropic.BetaMessageNewParams{
-		Model:     "client-topology",
+		Model:     "client-composed",
 		MaxTokens: 32,
 		Messages:  []anthropic.BetaMessageParam{anthropic.NewBetaUserMessage(anthropic.NewBetaTextBlock("hello"))},
 	}
-	response, err := topology.Complete(context.Background(), stage.Call{Request: request})
+	response, err := composed.Complete(context.Background(), stage.Call{Request: request})
 	if err != nil {
 		t.Fatalf("Complete() error = %v", err)
 	}
@@ -208,8 +189,8 @@ func TestAnthropicIdentityStageThenOpenAIChatTopology(t *testing.T) {
 	if _, ok := identity.response.(*anthropic.BetaMessage); !ok {
 		t.Fatalf("identity stage response = %T", identity.response)
 	}
-	if _, ok := response.Value.(*anthropic.BetaMessage); !ok || response.Model != "client-topology" {
-		t.Fatalf("topology response = %T %+v", response.Value, response)
+	if message, ok := response.Value.(*anthropic.BetaMessage); !ok || string(message.Model) != "client-composed" {
+		t.Fatalf("composed response = %T %+v", response.Value, response)
 	}
 }
 
@@ -235,7 +216,7 @@ func TestAnthropicToOpenAIChatStream(t *testing.T) {
 			t.Parallel()
 			target := &memoryStream{
 				events: append([]stage.Event(nil), chunks...),
-				result: stage.StreamResult{Usage: protocol.NewTokenUsage(999, 999), Model: "provider-model", SideEffectsCommitted: true},
+				result: stage.StreamResult{Usage: protocol.NewTokenUsage(999, 999)},
 			}
 			terminal := &memoryEndpoint{
 				api: protocol.TypeOpenAIChat,
@@ -287,9 +268,6 @@ func TestAnthropicToOpenAIChatStream(t *testing.T) {
 			if result.Usage == nil || result.Usage.InputTokens != 6 || result.Usage.CacheReadTokens != 1 || result.Usage.OutputTokens != 2 {
 				t.Fatalf("stream usage = %+v", result.Usage)
 			}
-			if result.Model != tt.sourceModel || !result.SideEffectsCommitted {
-				t.Fatalf("stream result = %+v", result)
-			}
 			if err := stream.Close(); err != nil {
 				t.Fatalf("Close() error = %v", err)
 			}
@@ -308,7 +286,6 @@ func TestAnthropicStreamTreatsZeroUsageAsMissing(t *testing.T) {
 
 	stream := &anthropicStream{
 		converter: staticUsageConverter{usage: protocol.ZeroTokenUsage()},
-		model:     "client-model",
 	}
 	if result := stream.Result(); result.Usage != nil {
 		t.Fatalf("Result().Usage = %+v, want nil", result.Usage)

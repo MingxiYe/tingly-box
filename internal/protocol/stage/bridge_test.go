@@ -5,180 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/tingly-dev/tingly-box/internal/protocol"
 )
-
-func TestBuildTopologyCompleteAndStreamFlow(t *testing.T) {
-	t.Parallel()
-
-	var calls []string
-	usage := protocol.NewTokenUsage(17, 9)
-	terminalStream := &recordingEventStream{
-		calls:  &calls,
-		events: []Event{{Value: "terminal event"}},
-		result: StreamResult{
-			Usage:                usage,
-			Model:                "provider-model",
-			SideEffectsCommitted: true,
-		},
-	}
-	terminal := &recordingEndpoint{
-		protocol: protocol.TypeOpenAIResponses,
-		calls:    &calls,
-		response: &Response{
-			Value:                "terminal response",
-			Usage:                usage,
-			Model:                "provider-model",
-			SideEffectsCommitted: true,
-		},
-		stream: terminalStream,
-	}
-	providerBridge := &testingBridge{
-		name:      "provider_bridge",
-		source:    protocol.TypeAnthropicBeta,
-		target:    protocol.TypeOpenAIResponses,
-		caps:      AllBridgeCapabilities,
-		calls:     &calls,
-		dropFacts: true,
-	}
-	ingressBridge := &testingBridge{
-		name:      "ingress_bridge",
-		source:    protocol.TypeOpenAIChat,
-		target:    protocol.TypeAnthropicBeta,
-		caps:      AllBridgeCapabilities,
-		calls:     &calls,
-		dropFacts: true,
-	}
-
-	registry, err := NewBridgeRegistry(providerBridge, ingressBridge)
-	if err != nil {
-		t.Fatalf("NewBridgeRegistry() error = %v", err)
-	}
-	chain, err := BuildTopology(TopologyConfig{
-		Terminal: terminal,
-		Stages: []Stage{
-			&recordingStage{name: "guardrails", protocol: protocol.TypeAnthropicBeta, calls: &calls},
-			&recordingStage{name: "tool_loop", protocol: protocol.TypeAnthropicBeta, calls: &calls},
-		},
-		ClientProtocol: protocol.TypeOpenAIChat,
-		Registry:       registry,
-		RequiredCapabilities: CapabilityUsage |
-			CapabilityToolUse |
-			CapabilityToolResult,
-	})
-	if err != nil {
-		t.Fatalf("BuildTopology() error = %v", err)
-	}
-	if chain.Protocol() != protocol.TypeOpenAIChat {
-		t.Fatalf("chain.Protocol() = %q, want %q", chain.Protocol(), protocol.TypeOpenAIChat)
-	}
-	if len(calls) != 0 {
-		t.Fatalf("BuildTopology() executed chain, calls = %v", calls)
-	}
-
-	call := Call{
-		Request: "client request",
-		Metadata: CallMetadata{
-			RequestID: "req-chain",
-			Attempt:   3,
-		},
-	}
-	response, err := chain.Complete(context.Background(), call)
-	if err != nil {
-		t.Fatalf("Complete() error = %v", err)
-	}
-	if response.Value != "ingress_bridge(provider_bridge(terminal response))" {
-		t.Fatalf("response.Value = %v", response.Value)
-	}
-	assertResponseFacts(t, response, usage, "provider-model", true)
-	if terminal.lastCall.Metadata != call.Metadata {
-		t.Fatalf("terminal metadata = %+v, want %+v", terminal.lastCall.Metadata, call.Metadata)
-	}
-
-	wantCompleteCalls := []string{
-		"ingress_bridge:request",
-		"guardrails:request",
-		"tool_loop:request",
-		"provider_bridge:request",
-		"terminal:request",
-		"terminal:response",
-		"provider_bridge:response",
-		"tool_loop:response",
-		"guardrails:response",
-		"ingress_bridge:response",
-	}
-	if !reflect.DeepEqual(calls, wantCompleteCalls) {
-		t.Fatalf("complete calls = %v, want %v", calls, wantCompleteCalls)
-	}
-
-	calls = nil
-	stream, err := chain.Stream(context.Background(), call)
-	if err != nil {
-		t.Fatalf("Stream() error = %v", err)
-	}
-	event, err := stream.Next(context.Background())
-	if err != nil {
-		t.Fatalf("Next() error = %v", err)
-	}
-	if event.Value != "ingress_bridge(provider_bridge(terminal event))" {
-		t.Fatalf("event.Value = %v", event.Value)
-	}
-	_, err = stream.Next(context.Background())
-	if !errors.Is(err, io.EOF) {
-		t.Fatalf("second Next() error = %v, want io.EOF", err)
-	}
-	result := stream.Result()
-	if result.Usage != usage || result.Model != "provider-model" || !result.SideEffectsCommitted {
-		t.Fatalf("Result() = %+v, want preserved terminal facts", result)
-	}
-	if err := stream.Close(); err != nil {
-		t.Fatalf("Close() error = %v", err)
-	}
-	if terminalStream.closeCount != 1 {
-		t.Fatalf("terminal close count = %d, want 1", terminalStream.closeCount)
-	}
-
-	wantStreamCalls := []string{
-		"ingress_bridge:request",
-		"guardrails:stream_request",
-		"tool_loop:stream_request",
-		"provider_bridge:request",
-		"terminal:stream_request",
-		"terminal:event",
-		"provider_bridge:event",
-		"tool_loop:event",
-		"guardrails:event",
-		"ingress_bridge:event",
-		"terminal:eof",
-		"provider_bridge:eof",
-		"tool_loop:eof",
-		"guardrails:eof",
-		"ingress_bridge:eof",
-		"ingress_bridge:close",
-		"guardrails:close",
-		"tool_loop:close",
-		"provider_bridge:close",
-		"terminal:close",
-	}
-	if !reflect.DeepEqual(calls, wantStreamCalls) {
-		t.Fatalf("stream calls = %v, want %v", calls, wantStreamCalls)
-	}
-
-	if providerBridge.openCount != 2 || ingressBridge.openCount != 2 {
-		t.Fatalf("bridge opens: provider=%d ingress=%d, want 2 each", providerBridge.openCount, ingressBridge.openCount)
-	}
-	wantOperations := []Operation{OperationComplete, OperationStream}
-	if !reflect.DeepEqual(providerBridge.operations, wantOperations) || !reflect.DeepEqual(ingressBridge.operations, wantOperations) {
-		t.Fatalf("bridge operations: provider=%v ingress=%v, want %v", providerBridge.operations, ingressBridge.operations, wantOperations)
-	}
-	if providerBridge.sessions[0] == providerBridge.sessions[1] || ingressBridge.sessions[0] == ingressBridge.sessions[1] {
-		t.Fatal("Bridge.Open() reused a session across calls")
-	}
-}
 
 func TestAdaptRejectsInvalidBoundary(t *testing.T) {
 	t.Parallel()
@@ -189,7 +20,6 @@ func TestAdaptRejectsInvalidBoundary(t *testing.T) {
 			name:   "bridge",
 			source: protocol.TypeOpenAIChat,
 			target: protocol.TypeAnthropicBeta,
-			caps:   AllBridgeCapabilities,
 		}
 	}
 
@@ -204,13 +34,13 @@ func TestAdaptRejectsInvalidBoundary(t *testing.T) {
 		{
 			name:   "empty source",
 			next:   validEndpoint,
-			bridge: &testingBridge{target: protocol.TypeAnthropicBeta, caps: AllBridgeCapabilities},
+			bridge: &testingBridge{target: protocol.TypeAnthropicBeta},
 			want:   "source: empty protocol",
 		},
 		{
 			name:   "empty target",
 			next:   validEndpoint,
-			bridge: &testingBridge{source: protocol.TypeOpenAIChat, caps: AllBridgeCapabilities},
+			bridge: &testingBridge{source: protocol.TypeOpenAIChat},
 			want:   "target: empty protocol",
 		},
 		{
@@ -225,19 +55,8 @@ func TestAdaptRejectsInvalidBoundary(t *testing.T) {
 			bridge: &testingBridge{
 				source: protocol.TypeOpenAIChat,
 				target: protocol.TypeAnthropicBeta,
-				caps:   AllBridgeCapabilities,
 			},
 			want: `cannot call endpoint speaking "openai_responses"`,
-		},
-		{
-			name: "missing core capability",
-			next: validEndpoint,
-			bridge: &testingBridge{
-				source: protocol.TypeOpenAIChat,
-				target: protocol.TypeAnthropicBeta,
-				caps:   CapabilityComplete | CapabilityError,
-			},
-			want: "missing core capabilities: stream",
 		},
 		{name: "valid baseline", next: validEndpoint, bridge: validBridge()},
 	}
@@ -295,26 +114,13 @@ func TestAdaptRuntimeFailures(t *testing.T) {
 		}
 	})
 
-	t.Run("target error converted", func(t *testing.T) {
+	t.Run("target error returned unchanged", func(t *testing.T) {
 		endpoint := &failureEndpoint{protocol: protocol.TypeAnthropicBeta, completeErr: upstreamErr}
-		bridge := validTestingBridge()
-		adapted := mustAdapt(t, endpoint, bridge)
+		adapted := mustAdapt(t, endpoint, validTestingBridge())
 
 		_, err := adapted.Complete(context.Background(), Call{})
-		if !errors.Is(err, upstreamErr) || !strings.Contains(err.Error(), "bridge: ") {
-			t.Fatalf("Complete() error = %v", err)
-		}
-	})
-
-	t.Run("target error cannot be swallowed", func(t *testing.T) {
-		endpoint := &failureEndpoint{protocol: protocol.TypeAnthropicBeta, completeErr: upstreamErr}
-		bridge := validTestingBridge()
-		bridge.swallowError = true
-		adapted := mustAdapt(t, endpoint, bridge)
-
-		_, err := adapted.Complete(context.Background(), Call{})
-		if !errors.Is(err, upstreamErr) || !strings.Contains(err.Error(), "swallowed target error") {
-			t.Fatalf("Complete() error = %v", err)
+		if err != upstreamErr {
+			t.Fatalf("Complete() error = %v, want the target's error unchanged", err)
 		}
 	})
 
@@ -340,13 +146,38 @@ func TestAdaptRuntimeFailures(t *testing.T) {
 		}
 	})
 
-	t.Run("target stream open error converted", func(t *testing.T) {
+	t.Run("target stream open error returned unchanged", func(t *testing.T) {
 		endpoint := &failureEndpoint{protocol: protocol.TypeAnthropicBeta, streamErr: upstreamErr}
 		adapted := mustAdapt(t, endpoint, validTestingBridge())
 
 		_, err := adapted.Stream(context.Background(), Call{})
-		if !errors.Is(err, upstreamErr) || !strings.Contains(err.Error(), "bridge: ") {
+		if err != upstreamErr {
+			t.Fatalf("Stream() error = %v, want the target's error unchanged", err)
+		}
+	})
+
+	t.Run("usage kept when the conversion reports none", func(t *testing.T) {
+		usage := protocol.NewTokenUsage(7, 3)
+		targetStream := &recordingEventStream{result: StreamResult{Usage: usage}}
+		endpoint := &failureEndpoint{
+			protocol: protocol.TypeAnthropicBeta,
+			response: &Response{Value: "ok", Usage: usage},
+			stream:   targetStream,
+		}
+		bridge := validTestingBridge()
+		bridge.dropFacts = true
+		adapted := mustAdapt(t, endpoint, bridge)
+
+		response, err := adapted.Complete(context.Background(), Call{})
+		if err != nil || response.Usage != usage {
+			t.Fatalf("Complete() = %+v, %v; want the target's usage", response, err)
+		}
+		stream, err := adapted.Stream(context.Background(), Call{})
+		if err != nil {
 			t.Fatalf("Stream() error = %v", err)
+		}
+		if got := stream.Result().Usage; got != usage {
+			t.Fatalf("Result().Usage = %v, want the target's usage", got)
 		}
 	})
 
@@ -399,11 +230,11 @@ func TestAdaptPassthroughPreservesValuesAndState(t *testing.T) {
 	usage := protocol.NewTokenUsage(5, 2)
 	targetStream := &recordingEventStream{
 		events: []Event{{Value: "event"}},
-		result: StreamResult{Usage: usage, Model: "model", SideEffectsCommitted: true},
+		result: StreamResult{Usage: usage},
 	}
 	terminal := &recordingEndpoint{
 		protocol: protocol.TypeAnthropicBeta,
-		response: &Response{Value: "response", Usage: usage, Model: "model", SideEffectsCommitted: true},
+		response: &Response{Value: "response", Usage: usage},
 		stream:   targetStream,
 	}
 	adapted := mustAdapt(t, terminal, passthroughBridge{api: protocol.TypeAnthropicBeta})
@@ -417,7 +248,9 @@ func TestAdaptPassthroughPreservesValuesAndState(t *testing.T) {
 	if response.Value != "response" {
 		t.Fatalf("response.Value = %v", response.Value)
 	}
-	assertResponseFacts(t, response, usage, "model", true)
+	if response.Usage != usage {
+		t.Fatalf("response.Usage = %v, want %v", response.Usage, usage)
+	}
 
 	if terminal.lastCall.State.OpenAIChat != config {
 		t.Fatal("passthrough complete call did not preserve protocol state")
@@ -431,7 +264,7 @@ func TestAdaptPassthroughPreservesValuesAndState(t *testing.T) {
 	if err != nil || event.Value != "event" {
 		t.Fatalf("Next() = (%+v, %v)", event, err)
 	}
-	if got := stream.Result(); got.Usage != usage || got.Model != "model" || !got.SideEffectsCommitted {
+	if got := stream.Result(); got.Usage != usage {
 		t.Fatalf("Result() = %+v", got)
 	}
 	if err := stream.Close(); err != nil {
@@ -456,73 +289,6 @@ func TestOperationString(t *testing.T) {
 	}
 }
 
-func TestCapabilities(t *testing.T) {
-	t.Parallel()
-
-	got := CapabilityComplete | CapabilityUsage | CapabilityToolUse
-	if !got.Supports(CapabilityComplete | CapabilityUsage) {
-		t.Fatal("Capabilities.Supports() = false for contained set")
-	}
-	if got.Supports(CapabilityStream) {
-		t.Fatal("Capabilities.Supports() = true for missing capability")
-	}
-	if missing := got.Missing(CapabilityComplete | CapabilityStream | CapabilityToolResult); missing != CapabilityStream|CapabilityToolResult {
-		t.Fatalf("Missing() = %v", missing)
-	}
-	if got.String() != "complete,usage,tool_use" {
-		t.Fatalf("String() = %q", got)
-	}
-	if Capabilities(0).String() != "none" {
-		t.Fatalf("zero String() = %q", Capabilities(0))
-	}
-	unknown := Capabilities(1 << 20)
-	if unknown.String() != "unknown(0x100000)" {
-		t.Fatalf("unknown String() = %q", unknown)
-	}
-}
-
-func TestBuildTopologyRejectsMissingSemanticCapability(t *testing.T) {
-	t.Parallel()
-
-	terminal := &recordingEndpoint{protocol: protocol.TypeOpenAIResponses}
-	provider := &testingBridge{
-		name:   "provider",
-		source: protocol.TypeAnthropicBeta,
-		target: protocol.TypeOpenAIResponses,
-		caps:   CoreBridgeCapabilities | CapabilityUsage,
-	}
-	ingress := &testingBridge{
-		name:   "ingress",
-		source: protocol.TypeOpenAIChat,
-		target: protocol.TypeAnthropicBeta,
-		caps:   AllBridgeCapabilities,
-	}
-
-	registry, err := NewBridgeRegistry(provider, ingress)
-	if err != nil {
-		t.Fatalf("NewBridgeRegistry() error = %v", err)
-	}
-	_, err = BuildTopology(TopologyConfig{
-		Terminal: terminal,
-		Stages: []Stage{
-			&recordingStage{name: "guardrails", protocol: protocol.TypeAnthropicBeta},
-		},
-		ClientProtocol:       protocol.TypeOpenAIChat,
-		Registry:             registry,
-		RequiredCapabilities: CapabilityToolUse,
-	})
-	if err == nil || !strings.Contains(err.Error(), "bridge below stage") || !strings.Contains(err.Error(), "tool_use") {
-		t.Fatalf("BuildTopology() error = %v", err)
-	}
-}
-
-func assertResponseFacts(t *testing.T, response *Response, usage *protocol.TokenUsage, model string, committed bool) {
-	t.Helper()
-	if response.Usage != usage || response.Model != model || response.SideEffectsCommitted != committed {
-		t.Fatalf("response facts = %+v, want usage=%p model=%q committed=%v", response, usage, model, committed)
-	}
-}
-
 func mustAdapt(t *testing.T, endpoint Endpoint, bridge Bridge) Endpoint {
 	t.Helper()
 	adapted, err := Adapt(endpoint, bridge)
@@ -537,7 +303,6 @@ func validTestingBridge() *testingBridge {
 		name:   "bridge",
 		source: protocol.TypeOpenAIChat,
 		target: protocol.TypeAnthropicBeta,
-		caps:   AllBridgeCapabilities,
 	}
 }
 
@@ -545,12 +310,10 @@ type testingBridge struct {
 	name                string
 	source              protocol.APIType
 	target              protocol.APIType
-	caps                Capabilities
 	calls               *[]string
 	dropFacts           bool
 	openErr             error
 	nilSession          bool
-	swallowError        bool
 	nilResponse         bool
 	streamConversionErr error
 	nilStream           bool
@@ -565,10 +328,6 @@ func (b *testingBridge) Source() protocol.APIType {
 
 func (b *testingBridge) Target() protocol.APIType {
 	return b.target
-}
-
-func (b *testingBridge) Capabilities() Capabilities {
-	return b.caps
 }
 
 func (b *testingBridge) Open(_ context.Context, call Call, operation Operation) (BridgeSession, error) {
@@ -586,7 +345,6 @@ func (b *testingBridge) Open(_ context.Context, call Call, operation Operation) 
 		bridge: b,
 		call: Call{
 			Request: fmt.Sprintf("%s(%v)", b.name, call.Request),
-			// Metadata is intentionally omitted. Adapt must restore it.
 		},
 	}
 	b.sessions = append(b.sessions, session)
@@ -616,8 +374,6 @@ func (s *testingBridgeSession) ConvertComplete(_ context.Context, response *Resp
 	converted := &Response{Value: fmt.Sprintf("%s(%v)", s.bridge.name, response.Value)}
 	if !s.bridge.dropFacts {
 		converted.Usage = response.Usage
-		converted.Model = response.Model
-		converted.SideEffectsCommitted = response.SideEffectsCommitted
 	}
 	return converted, nil
 }
@@ -630,13 +386,6 @@ func (s *testingBridgeSession) ConvertStream(_ context.Context, stream EventStre
 		return nil, nil
 	}
 	return &testingBridgeStream{bridge: s.bridge, target: stream}, nil
-}
-
-func (s *testingBridgeSession) ConvertError(_ context.Context, err error) error {
-	if s.bridge.swallowError {
-		return nil
-	}
-	return fmt.Errorf("%s: %w", s.bridge.name, err)
 }
 
 type testingBridgeStream struct {
@@ -708,10 +457,6 @@ func (b passthroughBridge) Target() protocol.APIType {
 	return b.api
 }
 
-func (b passthroughBridge) Capabilities() Capabilities {
-	return AllBridgeCapabilities
-}
-
 func (b passthroughBridge) Open(_ context.Context, call Call, _ Operation) (BridgeSession, error) {
 	return &passthroughBridgeSession{call: call}, nil
 }
@@ -730,8 +475,4 @@ func (s *passthroughBridgeSession) ConvertComplete(_ context.Context, response *
 
 func (s *passthroughBridgeSession) ConvertStream(_ context.Context, stream EventStream) (EventStream, error) {
 	return stream, nil
-}
-
-func (s *passthroughBridgeSession) ConvertError(_ context.Context, err error) error {
-	return err
 }

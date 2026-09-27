@@ -29,10 +29,6 @@ type responsesBridge struct {
 
 func (*responsesBridge) Source() protocol.APIType { return protocol.TypeAnthropicBeta }
 func (*responsesBridge) Target() protocol.APIType { return protocol.TypeOpenAIResponses }
-func (*responsesBridge) Capabilities() stage.Capabilities {
-	return stage.AllBridgeCapabilities
-}
-
 func (b *responsesBridge) Open(_ context.Context, call stage.Call, operation stage.Operation) (stage.BridgeSession, error) {
 	switch operation {
 	case stage.OperationComplete, stage.OperationStream:
@@ -82,7 +78,7 @@ func (s *responsesSession) ConvertComplete(_ context.Context, response *stage.Re
 	if !usage.HasUsage() {
 		usage = nil
 	}
-	return &stage.Response{Value: &message, Usage: usage, Model: s.sourceModel}, nil
+	return &stage.Response{Value: &message, Usage: usage}, nil
 }
 
 func responsesValue(response *stage.Response) (*responses.Response, error) {
@@ -108,5 +104,3 @@ func (s *responsesSession) ConvertStream(ctx context.Context, target stage.Event
 	}
 	return newAnthropicResponsesStream(ctx, target, s.sourceModel)
 }
-
-func (*responsesSession) ConvertError(_ context.Context, err error) error { return err }

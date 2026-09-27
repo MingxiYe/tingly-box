@@ -21,7 +21,6 @@ func TestComposeCompleteOrder(t *testing.T) {
 		response: &Response{
 			Value: "terminal response",
 			Usage: protocol.NewTokenUsage(7, 3),
-			Model: "provider-model",
 		},
 	}
 
@@ -37,13 +36,8 @@ func TestComposeCompleteOrder(t *testing.T) {
 		t.Fatalf("Compose() executed endpoint, calls = %v", calls)
 	}
 
-	call := Call{
-		Request: "native request",
-		Metadata: CallMetadata{
-			RequestID: "req-1",
-			Attempt:   2,
-		},
-	}
+	config := &protocol.OpenAIConfig{HasThinking: true}
+	call := Call{Request: "native request", State: ProtocolState{OpenAIChat: config}}
 	response, err := composed.Complete(context.Background(), call)
 	if err != nil {
 		t.Fatalf("Complete() error = %v", err)
@@ -63,8 +57,8 @@ func TestComposeCompleteOrder(t *testing.T) {
 	if response != terminal.response {
 		t.Fatal("Complete() did not preserve terminal response")
 	}
-	if terminal.lastCall.Metadata != call.Metadata {
-		t.Fatalf("metadata = %+v, want %+v", terminal.lastCall.Metadata, call.Metadata)
+	if terminal.lastCall.State.OpenAIChat != config {
+		t.Fatalf("protocol state = %+v, want %+v", terminal.lastCall.State, call.State)
 	}
 }
 
@@ -77,11 +71,7 @@ func TestComposeStreamOrderAndClose(t *testing.T) {
 		events: []Event{
 			{Value: "event-1"},
 		},
-		result: StreamResult{
-			Usage:                protocol.NewTokenUsage(11, 5),
-			Model:                "provider-model",
-			SideEffectsCommitted: true,
-		},
+		result: StreamResult{Usage: protocol.NewTokenUsage(11, 5)},
 	}
 	terminal := &recordingEndpoint{
 		protocol: protocol.TypeAnthropicBeta,

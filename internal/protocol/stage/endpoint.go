@@ -11,9 +11,8 @@ import (
 // Request remains protocol-native; a Bridge is responsible for changing its
 // concrete type before it crosses a protocol boundary.
 type Call struct {
-	Request  any
-	Metadata CallMetadata
-	State    ProtocolState
+	Request any
+	State   ProtocolState
 }
 
 // ProtocolState carries typed, request-derived facts that a later endpoint or
@@ -28,23 +27,12 @@ type ProtocolState struct {
 	OpenAIChat *protocol.OpenAIConfig
 }
 
-// CallMetadata carries the small set of attempt identity fields that every
-// stage may need. It is immutable by convention: a stage should copy Call
-// before changing metadata for an inner invocation.
-type CallMetadata struct {
-	RequestID string
-	// Attempt is zero for the first provider attempt and increments for retries.
-	Attempt int
-}
-
 // Response is the complete result returned by an Endpoint. Value is expressed
-// in the endpoint's native protocol. The remaining fields are protocol-neutral
-// facts that outer stages and the eventual failover adapter must preserve.
+// in the endpoint's native protocol; Usage is the protocol-neutral token usage
+// of the call, which outer levels must preserve across protocol changes.
 type Response struct {
-	Value                any
-	Usage                *protocol.TokenUsage
-	Model                string
-	SideEffectsCommitted bool
+	Value any
+	Usage *protocol.TokenUsage
 }
 
 // Event is one native-protocol streaming event.
@@ -53,12 +41,10 @@ type Event struct {
 }
 
 // StreamResult is the latest protocol-neutral summary of an EventStream. It is
-// valid before completion, but usage and model data may only become final after
-// Next returns io.EOF.
+// valid before completion, but usage may only become final after Next returns
+// io.EOF.
 type StreamResult struct {
-	Usage                *protocol.TokenUsage
-	Model                string
-	SideEffectsCommitted bool
+	Usage *protocol.TokenUsage
 }
 
 // EventStream is a pull-based stream in one concrete protocol.

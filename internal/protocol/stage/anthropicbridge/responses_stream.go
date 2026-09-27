@@ -21,7 +21,6 @@ func newAnthropicResponsesStream(ctx context.Context, target stage.EventStream, 
 	return &anthropicResponsesStream{
 		iterator:  iterator,
 		converter: protocolstream.NewOpenAIResponsesToAnthropicConverter(ctx, iterator, sourceModel),
-		model:     sourceModel,
 	}, nil
 }
 
@@ -93,7 +92,6 @@ func (s *responsesStreamIterator) Close() error {
 type anthropicResponsesStream struct {
 	iterator  *responsesStreamIterator
 	converter protocolstream.StreamConverter
-	model     string
 	primed    bool
 }
 
@@ -130,5 +128,5 @@ func (s *anthropicResponsesStream) Result() stage.StreamResult {
 	if usage != nil && !usage.HasUsage() {
 		usage = nil
 	}
-	return stage.StreamResult{Usage: usage, Model: s.model}
+	return stage.StreamResult{Usage: usage}
 }

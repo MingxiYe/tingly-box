@@ -290,7 +290,7 @@ func TestUpstreamWireMatchesDirectForward(t *testing.T) {
 	}
 }
 
-// Both Anthropic wires yield the same Beta response, usage and model, so
+// Both Anthropic wires yield the same Beta response and usage, so
 // every stage above the terminal is wire-agnostic.
 func TestUpstreamAnthropicWiresAgree(t *testing.T) {
 	fake := newFakeProvider(t, scenario.ToolUseScenario())
@@ -303,10 +303,8 @@ func TestUpstreamAnthropicWiresAgree(t *testing.T) {
 	type outcome struct {
 		Complete    string
 		Usage       *protocol.TokenUsage
-		Model       string
 		Events      []string
 		StreamUsage *protocol.TokenUsage
-		StreamModel string
 	}
 	collect := func(wire AnthropicWire) outcome {
 		endpoint, err := NewAnthropic(fake.config(protocol.APIStyleAnthropic), wire)
@@ -324,7 +322,6 @@ func TestUpstreamAnthropicWiresAgree(t *testing.T) {
 		out := outcome{
 			Complete: canonical(t, []byte(message.RawJSON())),
 			Usage:    response.Usage,
-			Model:    response.Model,
 		}
 		for {
 			event, err := events.Next(context.Background())
@@ -338,7 +335,7 @@ func TestUpstreamAnthropicWiresAgree(t *testing.T) {
 		}
 		result := events.Result()
 		require.NoError(t, events.Close())
-		out.StreamUsage, out.StreamModel = result.Usage, result.Model
+		out.StreamUsage = result.Usage
 		return out
 	}
 
@@ -346,11 +343,10 @@ func TestUpstreamAnthropicWiresAgree(t *testing.T) {
 	require.True(t, beta.Usage.HasUsage())
 	require.NotNil(t, beta.StreamUsage)
 	require.True(t, beta.StreamUsage.HasUsage())
-	require.NotEmpty(t, beta.Model)
 	require.Equal(t, beta, collect(AnthropicWireV1))
 }
 
-func TestUpstreamOpenAIUsageAndModel(t *testing.T) {
+func TestUpstreamOpenAIUsage(t *testing.T) {
 	fake := newFakeProvider(t, scenario.TextScenario())
 	config := fake.config(protocol.APIStyleOpenAI)
 
@@ -364,15 +360,15 @@ func TestUpstreamOpenAIUsageAndModel(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &openai.ChatCompletion{}, response.Value)
 	require.True(t, response.Usage.HasUsage())
-	require.Equal(t, "gpt-4o", response.Model)
 
 	chatReq.StreamOptions.IncludeUsage = openai.Bool(true)
 	events, err := chat.Stream(context.Background(), stage.Call{Request: chatReq})
 	require.NoError(t, err)
-	for _, event := range drain(t, events) {
+	chunks := drain(t, events)
+	require.NotEmpty(t, chunks)
+	for _, event := range chunks {
 		require.IsType(t, openai.ChatCompletionChunk{}, event.Value)
 	}
-	require.NotEmpty(t, events.Result().Model)
 
 	respEndpoint, err := NewOpenAIResponses(config)
 	require.NoError(t, err)
@@ -391,8 +387,8 @@ func TestUpstreamOpenAIUsageAndModel(t *testing.T) {
 	require.True(t, events.Result().Usage.HasUsage())
 }
 
-// Provider errors pass through as the SDK's typed errors, which the bridges'
-// ConvertError and the client edge rely on for status mapping.
+// Provider errors pass through as the SDK's typed errors, which the bridges
+// return unchanged and the client edge relies on for status mapping.
 func TestUpstreamProviderErrorsPassThrough(t *testing.T) {
 	fake := newFakeProvider(t, scenario.TextScenario())
 	fake.status = http.StatusTooManyRequests

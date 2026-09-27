@@ -14,7 +14,6 @@ import (
 type Bridge interface {
 	Source() protocol.APIType
 	Target() protocol.APIType
-	Capabilities() Capabilities
 	Open(ctx context.Context, call Call, operation Operation) (BridgeSession, error)
 }
 
@@ -41,19 +40,19 @@ func (o Operation) String() string {
 
 // BridgeSession is the per-call reverse path created while converting a request
 // inward. A session is used for exactly one Complete or Stream invocation.
+// Errors from the target endpoint are returned unchanged: they carry the
+// provider's status, which the client edge maps.
 //
 // ConvertStream must return a source-protocol stream that owns the target stream:
-// it converts runtime Next errors and closes the target stream from Close.
+// it closes the target stream from Close.
 type BridgeSession interface {
 	TargetCall() Call
 	ConvertComplete(ctx context.Context, response *Response) (*Response, error)
 	ConvertStream(ctx context.Context, stream EventStream) (EventStream, error)
-	ConvertError(ctx context.Context, err error) error
 }
 
 // Adapt exposes next in bridge.Source() while calling next in bridge.Target().
-// It validates the structural and core-capability boundary without executing a
-// request.
+// It validates the protocol boundary without executing a request.
 func Adapt(next Endpoint, bridge Bridge) (Endpoint, error) {
 	if next == nil {
 		return nil, fmt.Errorf("adapt protocol bridge: target endpoint is nil")
@@ -78,15 +77,6 @@ func Adapt(next Endpoint, bridge Bridge) (Endpoint, error) {
 			next.Protocol(),
 		)
 	}
-	if missing := bridge.Capabilities().Missing(CoreBridgeCapabilities); missing != 0 {
-		return nil, fmt.Errorf(
-			"adapt protocol bridge %q -> %q: missing core capabilities: %s",
-			source,
-			target,
-			missing,
-		)
-	}
-
 	return &bridgeEndpoint{
 		next:   next,
 		bridge: bridge,
@@ -114,7 +104,7 @@ func (e *bridgeEndpoint) Complete(ctx context.Context, call Call) (*Response, er
 
 	response, err := e.next.Complete(ctx, targetCall)
 	if err != nil {
-		return nil, e.convertError(ctx, session, err)
+		return nil, err
 	}
 	if response == nil {
 		return nil, fmt.Errorf("protocol bridge %q -> %q: target endpoint returned a nil response", e.source, e.target)
@@ -141,7 +131,7 @@ func (e *bridgeEndpoint) Stream(ctx context.Context, call Call) (EventStream, er
 
 	targetStream, err := e.next.Stream(ctx, targetCall)
 	if err != nil {
-		return nil, e.convertError(ctx, session, err)
+		return nil, err
 	}
 	if targetStream == nil {
 		return nil, fmt.Errorf("protocol bridge %q -> %q: target endpoint returned a nil stream", e.source, e.target)
@@ -171,45 +161,20 @@ func (e *bridgeEndpoint) open(ctx context.Context, call Call, operation Operatio
 		return nil, Call{}, fmt.Errorf("protocol bridge %q -> %q: Open returned a nil session", e.source, e.target)
 	}
 
-	targetCall := session.TargetCall()
-	// Protocol conversion must not erase attempt identity. Any future metadata
-	// transformation needs an explicit field and policy rather than a hidden
-	// bridge-local mutation.
-	targetCall.Metadata = call.Metadata
-	return session, targetCall, nil
+	return session, session.TargetCall(), nil
 }
 
-func (e *bridgeEndpoint) convertError(ctx context.Context, session BridgeSession, targetErr error) error {
-	converted := session.ConvertError(ctx, targetErr)
-	if converted != nil {
-		return converted
-	}
-	return fmt.Errorf(
-		"protocol bridge %q -> %q swallowed target error: %w",
-		e.source,
-		e.target,
-		targetErr,
-	)
-}
-
+// mergeResponseFacts keeps the target's usage when the conversion reports none.
 func mergeResponseFacts(converted, target *Response) {
 	if converted.Usage == nil {
 		converted.Usage = target.Usage
 	}
-	if converted.Model == "" {
-		converted.Model = target.Model
-	}
-	converted.SideEffectsCommitted = converted.SideEffectsCommitted || target.SideEffectsCommitted
 }
 
 func mergeStreamFacts(converted, target StreamResult) StreamResult {
 	if converted.Usage == nil {
 		converted.Usage = target.Usage
 	}
-	if converted.Model == "" {
-		converted.Model = target.Model
-	}
-	converted.SideEffectsCommitted = converted.SideEffectsCommitted || target.SideEffectsCommitted
 	return converted
 }
 
@@ -223,8 +188,9 @@ func closeAfterConversionFailure(stream EventStream, conversionErr error, source
 	return conversionErr
 }
 
-// factPreservingStream keeps protocol-neutral facts monotonic while delegating
-// event conversion and target-stream ownership to the BridgeSession's stream.
+// factPreservingStream keeps the target's usage when the conversion reports
+// none, while delegating event conversion and target-stream ownership to the
+// BridgeSession's stream.
 type factPreservingStream struct {
 	converted EventStream
 	target    EventStream
