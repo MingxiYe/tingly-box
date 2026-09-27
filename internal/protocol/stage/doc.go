@@ -3,7 +3,8 @@
 //
 // Provider endpoints, Guardrails and the server tool loop become composable
 // levels, and protocol changes happen only in an explicit Bridge. Nothing in
-// the server imports this package yet.
+// the server imports this package yet. Terms and design decisions are in
+// .design/protocol-stage.md.
 //
 // Anthropic V1 is not a chain protocol. V1 is a subset of Anthropic Beta on the
 // wire, so V1 requests are upgraded to Beta at the client edge and downgraded
