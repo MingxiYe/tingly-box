@@ -40,7 +40,7 @@ const equivalenceResponseModel = "client-visible-model"
 
 func equivalenceBridges() []stage.Bridge {
 	return []stage.Bridge{
-		anthropicbridge.NewBetaToOpenAIChat(anthropicbridge.ChatOptions{Compatible: true, ResponseModel: equivalenceResponseModel}),
+		anthropicbridge.NewBetaToOpenAIChat(anthropicbridge.ChatOptions{ResponseModel: equivalenceResponseModel}),
 		anthropicbridge.NewBetaToOpenAIResponses(anthropicbridge.ResponsesOptions{ResponseModel: equivalenceResponseModel}),
 	}
 }

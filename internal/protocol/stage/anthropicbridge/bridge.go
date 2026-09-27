@@ -19,7 +19,6 @@ import (
 // ChatOptions configures the existing Anthropic-to-OpenAI-Chat request
 // conversion. Options are immutable after the Bridge is constructed.
 type ChatOptions struct {
-	Compatible         bool
 	DisableStreamUsage bool
 	// ResponseModel overrides the source-visible Anthropic response model while
 	// leaving the provider-bound request model unchanged.
@@ -51,7 +50,7 @@ func (b *chatBridge) Open(_ context.Context, call stage.Call, operation stage.Op
 	}
 	chatRequest, config := request.ConvertAnthropicBetaToOpenAIRequest(
 		anthropicRequest,
-		b.options.Compatible,
+		true, // ignored by the converter; BaseTransform passes the same
 		isStreaming,
 		b.options.DisableStreamUsage,
 	)

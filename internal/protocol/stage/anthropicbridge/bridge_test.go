@@ -142,7 +142,7 @@ func TestAnthropicToOpenAIChatSeparatesProviderAndResponseModels(t *testing.T) {
 			return &stage.Response{Value: completion}, nil
 		},
 	}
-	bridge := NewBetaToOpenAIChat(ChatOptions{Compatible: true, ResponseModel: "client-alias"})
+	bridge := NewBetaToOpenAIChat(ChatOptions{ResponseModel: "client-alias"})
 	response, err := mustAdapt(t, terminal, bridge).Complete(context.Background(), stage.Call{Request: request})
 	if err != nil {
 		t.Fatalf("Complete() error = %v", err)
