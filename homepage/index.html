@@ -6,7 +6,7 @@
   <title>Tingly Box — Any agent, any provider, one team</title>
   <meta name="description" content="Tingly Box is an open-source AI gateway: plug Claude Code, Codex, OpenCode and any other agent into any model provider, and manage your team's AI with shared keys, routing rules, usage and guardrails.">
   <meta property="og:title" content="Tingly Box — Any agent, any provider, one team">
-  <meta property="og:description" content="Open-source AI gateway for agents and teams. Any agent → any provider, with sharing keys, routing, usage and guardrails.">
+  <meta property="og:description" content="Open-source AI gateway for agents and teams. Any agent → any provider, with sharing keys, routing, usage, guardrails and MCP tools.">
   <meta property="og:image" content="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/hero.png">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,8 +14,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
+  <a class="skip" href="#main">Skip to content</a>
+
   <header class="nav">
-    <div class="nav-inner">
+    <div class="container nav-inner">
       <a class="brand" href="#top" aria-label="Tingly Box home">
         <span class="brand-mark" aria-hidden="true">T</span>
         <span>Tingly Box</span>
@@ -28,17 +30,18 @@
         <a href="https://github.com/tingly-dev/tingly-box/blob/main/docs/user-manual.md">Docs</a>
       </nav>
       <a class="btn btn-ghost btn-sm" href="https://github.com/tingly-dev/tingly-box">
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z"/></svg>
+        <i data-icon="brand-github" aria-hidden="true"></i>
         GitHub
       </a>
     </div>
   </header>
 
-  <main id="top">
+  <main id="main">
     <!-- ================= HERO ================= -->
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="hero" id="top" aria-labelledby="hero-title">
       <canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas>
-      <div class="hero-copy">
+      <div id="hero-tip" class="hero-tip" hidden></div>
+      <div class="container hero-copy">
         <p class="eyebrow">Open-source AI gateway · MPL-2.0</p>
         <h1 id="hero-title">Any agent.<br>Any provider.<br><em>One box for your team.</em></h1>
         <p class="lede">Tingly Box plugs Claude Code, Codex, OpenCode, Xcode and every other agent into any model provider — and gives your team shared keys, routing rules, usage and guardrails in one place.</p>
@@ -51,31 +54,33 @@
           <a class="btn btn-primary" href="#start">Get started</a>
         </div>
         <p class="hero-level" aria-live="polite">
-          <span class="dot" aria-hidden="true"></span>
+          <span class="pulse" aria-hidden="true"></span>
           <span id="hero-level">Any agent ⇄ any provider</span>
         </p>
       </div>
     </section>
 
-    <!-- ================= STATS STRIP ================= -->
+    <!-- ================= STATS ================= -->
     <section class="strip" aria-label="At a glance">
-      <div class="strip-inner">
-        <div><strong>30+</strong><span>model providers, cloud &amp; self-hosted</span></div>
+      <div class="container strip-inner">
+        <div><strong>30+</strong><span>model providers, cloud and self-hosted</span></div>
         <div><strong>10+</strong><span>agents with one-click or guided setup</span></div>
-        <div><strong>3</strong><span>protocols translated both ways — Anthropic, OpenAI, Gemini</span></div>
+        <div><strong>3</strong><span>protocols translated both ways: Anthropic, OpenAI, Gemini</span></div>
         <div><strong>&lt; 1 ms</strong><span>typical gateway overhead</span></div>
       </div>
     </section>
 
-    <!-- ================= HOW IT WORKS (sticky scroll timeline) ================= -->
-    <section id="how" class="flow" aria-labelledby="how-title">
-      <div class="section-head">
-        <p class="eyebrow">How it works</p>
-        <h2 id="how-title">From one laptop to a whole team, on one endpoint.</h2>
+    <!-- ================= HOW IT WORKS ================= -->
+    <section id="how" class="section flow" aria-labelledby="how-title">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">How it works</p>
+          <h2 id="how-title">From one laptop to a whole team, on one endpoint.</h2>
+        </div>
       </div>
       <div class="flow-scroll" data-static="true">
         <div class="flow-sticky">
-          <div class="flow-inner">
+          <div class="container flow-inner">
             <div class="flow-stage">
               <svg id="flow-svg" viewBox="0 0 1000 640" role="img" aria-label="Agents and team members connect through Tingly Box to model providers, with guardrails, MCP tools, usage and remote control attached."></svg>
             </div>
@@ -88,7 +93,7 @@
               <li class="flow-step">
                 <p class="step-kicker">02 · One endpoint</p>
                 <h3>Point them at Tingly Box</h3>
-                <p>One-click config writes the base URL and key for you: <code>http://localhost:12580/tingly/&lt;scenario&gt;</code>.</p>
+                <p>One-click config writes the base URL and key for you: <code>localhost:12580/tingly/&lt;scenario&gt;</code>.</p>
               </li>
               <li class="flow-step">
                 <p class="step-kicker">03 · Any provider</p>
@@ -111,241 +116,294 @@
       </div>
     </section>
 
-    <!-- ================= ANY AGENT → ANY PROVIDER ================= -->
+    <!-- ================= AGENTS & PROVIDERS ================= -->
     <section id="agents" class="section" aria-labelledby="agents-title">
-      <div class="section-head">
-        <p class="eyebrow">Any agent → any provider</p>
-        <h2 id="agents-title">Bring your own agent. Pick any model behind it.</h2>
-        <p class="section-lede">Agents keep their native protocol. Tingly Box converts between Anthropic, OpenAI and Gemini formats, so Claude Code can run on DeepSeek and Codex can run on Claude.</p>
-      </div>
-
-      <div class="logo-rows">
-        <div class="logo-row">
-          <p class="row-label">Agents</p>
-          <ul class="logos" id="logos-agents"></ul>
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Any agent → any provider</p>
+          <h2 id="agents-title">Bring your own agent. Pick any model behind it.</h2>
+          <p class="section-lede">Agents keep their native protocol. Tingly Box converts between Anthropic, OpenAI and Gemini formats, so Claude Code can run on DeepSeek and Codex can run on Claude.</p>
         </div>
-        <div class="logo-row">
-          <p class="row-label">Providers</p>
-          <ul class="logos" id="logos-providers"></ul>
+
+        <div class="brands">
+          <div class="brand-group">
+            <h3 class="group-title">Agents <span class="count" data-count="agents"></span></h3>
+            <ul class="brand-grid" id="logos-agents"></ul>
+          </div>
+          <div class="brand-group">
+            <h3 class="group-title">Providers <span class="count" data-count="providers"></span></h3>
+            <ul class="brand-grid" id="logos-providers"></ul>
+          </div>
         </div>
-      </div>
 
-      <div class="features">
-        <article class="feature">
-          <h3>One-click agent setup</h3>
-          <p>Claude Code, OpenCode and Codex are configured for you; Xcode, VS Code and others get a step-by-step in-app guide.</p>
-        </article>
-        <article class="feature">
-          <h3>Claude Code profiles</h3>
-          <p>Switch between profiles that map each task tier to a different model — Opus on one provider, Haiku on another.</p>
-        </article>
-        <article class="feature">
-          <h3>API keys and OAuth</h3>
-          <p>Add providers by key, or sign in with OAuth and reuse the quota you already pay for, in any compatible tool.</p>
-        </article>
-        <article class="feature">
-          <h3>Smart routing</h3>
-          <p>Route across models and tokens by cost, speed or your own policy, with load balancing and fallback built in.</p>
-        </article>
-        <article class="feature">
-          <h3>Self-hosted models</h3>
-          <p>vLLM, SGLang, Ollama, LM Studio, LocalAI and Jan connect like any cloud provider, with defaults pre-filled.</p>
-        </article>
-        <article class="feature">
-          <h3>Image API</h3>
-          <p>Route image generation and editing through the same gateway at <code>/tingly/imagegen</code>, with a built-in playground.</p>
-        </article>
-      </div>
+        <div class="features">
+          <article class="feature">
+            <i class="feature-icon" data-icon="click" aria-hidden="true"></i>
+            <h3>One-click agent setup</h3>
+            <p>Claude Code, OpenCode and Codex are configured for you; Xcode, VS Code and others get a step-by-step in-app guide.</p>
+          </article>
+          <article class="feature">
+            <i class="feature-icon" data-icon="adjustments-horizontal" aria-hidden="true"></i>
+            <h3>Claude Code profiles</h3>
+            <p>Switch between profiles that map each task tier to a different model — Opus on one provider, Haiku on another.</p>
+          </article>
+          <article class="feature">
+            <i class="feature-icon" data-icon="key" aria-hidden="true"></i>
+            <h3>API keys and OAuth</h3>
+            <p>Add providers by key, or sign in with OAuth and reuse the quota you already pay for, in any compatible tool.</p>
+          </article>
+          <article class="feature">
+            <i class="feature-icon" data-icon="route" aria-hidden="true"></i>
+            <h3>Smart routing</h3>
+            <p>Route across models and tokens by cost, speed or your own policy, with load balancing and fallback built in.</p>
+          </article>
+          <article class="feature">
+            <i class="feature-icon" data-icon="server" aria-hidden="true"></i>
+            <h3>Self-hosted models</h3>
+            <p>vLLM, SGLang, Ollama, LM Studio, LocalAI and Jan connect like any cloud provider, with defaults pre-filled.</p>
+          </article>
+          <article class="feature">
+            <i class="feature-icon" data-icon="photo" aria-hidden="true"></i>
+            <h3>Image API</h3>
+            <p>Route image generation and editing through the same gateway at <code>/tingly/imagegen</code>, with a built-in playground.</p>
+          </article>
+        </div>
 
-      <figure class="shot">
-        <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/1-1-agents.png" alt="Agents page in Tingly Box listing Claude Code, Claude Desktop, Codex, OpenCode, Xcode, VS Code and SDK scenarios" loading="lazy" width="1440" height="900">
-      </figure>
+        <figure class="frame">
+          <div class="frame-bar" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="frame-url">localhost:12580/agent</span></div>
+          <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/1-1-agents.png" alt="Agents page in Tingly Box listing Claude Code, Claude Desktop, Codex, OpenCode, Xcode, VS Code and SDK scenarios" loading="lazy" width="1440" height="900">
+        </figure>
+      </div>
     </section>
 
     <!-- ================= TEAM ================= -->
     <section id="team" class="section section-alt" aria-labelledby="team-title">
-      <div class="section-head">
-        <p class="eyebrow">Team AI management</p>
-        <h2 id="team-title">Give everyone AI. Keep one place to run it.</h2>
-        <p class="section-lede">One team endpoint backed by centrally managed model rules. Members get their own keys; you get per-user usage, isolation and policy.</p>
-      </div>
-
-      <div class="team-grid">
-        <ol class="team-steps">
-          <li>
-            <span class="num">1</span>
-            <div>
-              <h3>Set the rules once</h3>
-              <p>Open <b>Team</b> and decide which models the team can call, and which providers serve them.</p>
-            </div>
-          </li>
-          <li>
-            <span class="num">2</span>
-            <div>
-              <h3>Hand out sharing keys</h3>
-              <p>Create a key per member under <b>Sharing Keys</b>. Revoke or rotate one without touching anyone else.</p>
-            </div>
-          </li>
-          <li>
-            <span class="num">3</span>
-            <div>
-              <h3>Track who uses what</h3>
-              <p><b>Dashboard → Team usage</b> shows tokens, latency and cost estimates per member and per model.</p>
-            </div>
-          </li>
-        </ol>
-        <div class="tabs" data-tabs>
-          <div class="tab-list" role="tablist" aria-label="Team screenshots">
-            <button role="tab" aria-selected="true" aria-controls="shot-team" id="tab-team">Model rules</button>
-            <button role="tab" aria-selected="false" aria-controls="shot-usage" id="tab-usage" tabindex="-1">Team usage</button>
-          </div>
-          <figure class="shot" role="tabpanel" id="shot-team" aria-labelledby="tab-team">
-            <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/2-1-team.png" alt="Team page with base URL, plugins and model rules routing each model to a provider" loading="lazy" width="1440" height="900">
-          </figure>
-          <figure class="shot" role="tabpanel" id="shot-usage" aria-labelledby="tab-usage" hidden>
-            <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/4-1-team-usage.png" alt="Team usage dashboard broken down by member" loading="lazy" width="1440" height="900">
-          </figure>
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Team AI management</p>
+          <h2 id="team-title">Give everyone AI. Keep one place to run it.</h2>
+          <p class="section-lede">One team endpoint backed by centrally managed model rules. Members get their own keys; you get per-user usage, isolation and policy.</p>
         </div>
-      </div>
 
-      <div class="features features-4">
-        <article class="feature">
-          <h3>Guardrails</h3>
-          <p>Policy-based checks on requests and responses, built-in protections, and masking for protected credentials.</p>
-          <a href="https://github.com/tingly-dev/tingly-box/blob/main/docs/guardrails.md">Read the guardrails guide →</a>
-        </article>
-        <article class="feature">
-          <h3>MCP gateway</h3>
-          <p>Register MCP servers once and share them with every agent — per source or aggregated — with built-in <code>web_search</code> and <code>web_fetch</code>.</p>
-        </article>
-        <article class="feature">
-          <h3>Remote control</h3>
-          <p>Drive agents from Telegram, WeChat (Weixin), WeCom, Feishu, Lark or DingTalk — from any device.</p>
-          <ul class="mini-logos" id="logos-im"></ul>
-        </article>
-        <article class="feature">
-          <h3>Usage analytics</h3>
-          <p>Tokens, latency, cost estimates and model selection for every request, across people and scenarios.</p>
-        </article>
+        <div class="team-grid">
+          <ol class="team-steps">
+            <li>
+              <span class="num">1</span>
+              <div>
+                <h3>Set the rules once</h3>
+                <p>Open <b>Team</b> and decide which models the team can call, and which providers serve them.</p>
+              </div>
+            </li>
+            <li>
+              <span class="num">2</span>
+              <div>
+                <h3>Hand out sharing keys</h3>
+                <p>Create a key per member under <b>Sharing Keys</b>. Revoke or rotate one without touching anyone else.</p>
+              </div>
+            </li>
+            <li>
+              <span class="num">3</span>
+              <div>
+                <h3>Track who uses what</h3>
+                <p><b>Dashboard → Team usage</b> shows tokens, latency and cost estimates per member and per model.</p>
+              </div>
+            </li>
+          </ol>
+          <div class="tabs" data-tabs>
+            <div class="tab-list" role="tablist" aria-label="Team screenshots">
+              <button role="tab" aria-selected="true" aria-controls="shot-team" id="tab-team">Model rules</button>
+              <button role="tab" aria-selected="false" aria-controls="shot-usage" id="tab-usage" tabindex="-1">Team usage</button>
+            </div>
+            <figure class="frame" role="tabpanel" id="shot-team" aria-labelledby="tab-team">
+              <div class="frame-bar" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="frame-url">localhost:12580/team</span></div>
+              <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/2-1-team.png" alt="Team page with base URL, plugins and model rules routing each model to a provider" loading="lazy" width="1440" height="900">
+            </figure>
+            <figure class="frame" role="tabpanel" id="shot-usage" aria-labelledby="tab-usage" hidden>
+              <div class="frame-bar" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="frame-url">localhost:12580/dashboard</span></div>
+              <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/4-1-team-usage.png" alt="Team usage dashboard broken down by member" loading="lazy" width="1440" height="900">
+            </figure>
+          </div>
+        </div>
+
+        <div class="features features-4">
+          <article class="feature">
+            <i class="feature-icon" data-icon="shield-check" aria-hidden="true"></i>
+            <h3>Guardrails</h3>
+            <p>Policy checks on requests and responses, built-in protections, and masking for protected credentials.</p>
+            <a class="more" href="https://github.com/tingly-dev/tingly-box/blob/main/docs/guardrails.md">Guardrails guide <i data-icon="arrow-up-right" aria-hidden="true"></i></a>
+          </article>
+          <article class="feature">
+            <i class="feature-icon" data-icon="plug-connected" aria-hidden="true"></i>
+            <h3>MCP gateway</h3>
+            <p>Register MCP servers once and share them with every agent — per source or aggregated — with built-in <code>web_search</code> and <code>web_fetch</code>.</p>
+          </article>
+          <article class="feature">
+            <i class="feature-icon" data-icon="device-mobile-message" aria-hidden="true"></i>
+            <h3>Remote control</h3>
+            <p>Drive agents from Telegram, WeChat, WeCom, Feishu, Lark or DingTalk — from any device.</p>
+            <ul class="mini-logos" id="logos-im"></ul>
+          </article>
+          <article class="feature">
+            <i class="feature-icon" data-icon="chart-bar" aria-hidden="true"></i>
+            <h3>Usage analytics</h3>
+            <p>Tokens, latency, cost estimates and model selection for every request, across people and scenarios.</p>
+          </article>
+        </div>
       </div>
     </section>
 
     <!-- ================= GALLERY ================= -->
     <section class="section" aria-labelledby="gallery-title">
-      <div class="section-head">
-        <p class="eyebrow">Inside the box</p>
-        <h2 id="gallery-title">A UI that makes the complex parts visible.</h2>
-      </div>
-      <div class="tabs gallery" data-tabs>
-        <div class="tab-list" role="tablist" aria-label="Product screenshots">
-          <button role="tab" aria-selected="true" aria-controls="g-dash" id="gt-dash">Dashboard</button>
-          <button role="tab" aria-selected="false" aria-controls="g-connect" id="gt-connect" tabindex="-1">Connect AI</button>
-          <button role="tab" aria-selected="false" aria-controls="g-models" id="gt-models" tabindex="-1">Model select</button>
-          <button role="tab" aria-selected="false" aria-controls="g-remote" id="gt-remote" tabindex="-1">Remote</button>
-          <button role="tab" aria-selected="false" aria-controls="g-image" id="gt-image" tabindex="-1">Image playground</button>
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Inside the box</p>
+          <h2 id="gallery-title">A UI that makes the complex parts visible.</h2>
         </div>
-        <figure class="shot" role="tabpanel" id="g-dash" aria-labelledby="gt-dash"><img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/4-2-dashboard.png" alt="Usage dashboard" loading="lazy" width="1440" height="900"></figure>
-        <figure class="shot" role="tabpanel" id="g-connect" aria-labelledby="gt-connect" hidden><img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/6-1-connect-ai.png" alt="Connect AI dialog with API key, OAuth and self-hosted providers" loading="lazy" width="1440" height="900"></figure>
-        <figure class="shot" role="tabpanel" id="g-models" aria-labelledby="gt-models" hidden><img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/1-3-model-select.png" alt="Model selection for a routing rule" loading="lazy" width="1440" height="900"></figure>
-        <figure class="shot" role="tabpanel" id="g-remote" aria-labelledby="gt-remote" hidden><img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/5-1-remote.png" alt="Remote control bots configuration" loading="lazy" width="1440" height="900"></figure>
-        <figure class="shot" role="tabpanel" id="g-image" aria-labelledby="gt-image" hidden><img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/3-1-image-playground.png" alt="Image generation playground" loading="lazy" width="1440" height="900"></figure>
+        <div class="tabs" data-tabs>
+          <div class="tab-list" role="tablist" aria-label="Product screenshots">
+            <button role="tab" aria-selected="true" aria-controls="g-dash" id="gt-dash">Dashboard</button>
+            <button role="tab" aria-selected="false" aria-controls="g-connect" id="gt-connect" tabindex="-1">Connect AI</button>
+            <button role="tab" aria-selected="false" aria-controls="g-models" id="gt-models" tabindex="-1">Model select</button>
+            <button role="tab" aria-selected="false" aria-controls="g-remote" id="gt-remote" tabindex="-1">Remote</button>
+            <button role="tab" aria-selected="false" aria-controls="g-image" id="gt-image" tabindex="-1">Image playground</button>
+          </div>
+          <figure class="frame" role="tabpanel" id="g-dash" aria-labelledby="gt-dash">
+            <div class="frame-bar" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="frame-url">localhost:12580/dashboard</span></div>
+            <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/4-2-dashboard.png" alt="Usage dashboard" loading="lazy" width="1440" height="900">
+          </figure>
+          <figure class="frame" role="tabpanel" id="g-connect" aria-labelledby="gt-connect" hidden>
+            <div class="frame-bar" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="frame-url">localhost:12580/credential</span></div>
+            <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/6-1-connect-ai.png" alt="Connect AI dialog with API key, OAuth and self-hosted providers" loading="lazy" width="1440" height="900">
+          </figure>
+          <figure class="frame" role="tabpanel" id="g-models" aria-labelledby="gt-models" hidden>
+            <div class="frame-bar" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="frame-url">localhost:12580/agent</span></div>
+            <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/1-3-model-select.png" alt="Model selection for a routing rule" loading="lazy" width="1440" height="900">
+          </figure>
+          <figure class="frame" role="tabpanel" id="g-remote" aria-labelledby="gt-remote" hidden>
+            <div class="frame-bar" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="frame-url">localhost:12580/remote</span></div>
+            <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/5-1-remote.png" alt="Remote control bots configuration" loading="lazy" width="1440" height="900">
+          </figure>
+          <figure class="frame" role="tabpanel" id="g-image" aria-labelledby="gt-image" hidden>
+            <div class="frame-bar" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span class="frame-url">localhost:12580/image</span></div>
+            <img src="https://raw.githubusercontent.com/tingly-dev/tingly-box/main/docs/images/3-1-image-playground.png" alt="Image generation playground" loading="lazy" width="1440" height="900">
+          </figure>
+        </div>
       </div>
     </section>
 
     <!-- ================= QUICK START ================= -->
     <section id="start" class="section section-alt" aria-labelledby="start-title">
-      <div class="section-head">
-        <p class="eyebrow">Quick start</p>
-        <h2 id="start-title">Running in a minute.</h2>
-        <p class="section-lede">macOS, Linux and Windows. Install from npm — the platform binary ships inside the package, so an npm mirror is all you need behind a firewall.</p>
-      </div>
-      <div class="start-grid">
-        <div class="tabs" data-tabs>
-          <div class="tab-list" role="tablist" aria-label="Install method">
-            <button role="tab" aria-selected="true" aria-controls="i-npm" id="it-npm">npm (recommended)</button>
-            <button role="tab" aria-selected="false" aria-controls="i-npx" id="it-npx" tabindex="-1">npx</button>
-            <button role="tab" aria-selected="false" aria-controls="i-docker" id="it-docker" tabindex="-1">Docker</button>
-          </div>
-          <div class="code" role="tabpanel" id="i-npm" aria-labelledby="it-npm">
-            <button class="copy" type="button" aria-label="Copy commands">Copy</button>
-<pre><code>npm install -g tingly-box@latest
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Quick start</p>
+          <h2 id="start-title">Running in a minute.</h2>
+          <p class="section-lede">macOS, Linux and Windows. Install from npm — the platform binary ships inside the package, so an npm mirror is all you need behind a firewall.</p>
+        </div>
+        <div class="start-grid">
+          <div class="term" data-tabs>
+            <div class="term-bar">
+              <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <div class="term-tabs" role="tablist" aria-label="Install method">
+                <button role="tab" aria-selected="true" aria-controls="i-npm" id="it-npm">npm</button>
+                <button role="tab" aria-selected="false" aria-controls="i-npx" id="it-npx" tabindex="-1">npx</button>
+                <button role="tab" aria-selected="false" aria-controls="i-docker" id="it-docker" tabindex="-1">Docker</button>
+              </div>
+              <button class="copy" type="button" aria-label="Copy commands">Copy</button>
+            </div>
+<pre role="tabpanel" id="i-npm" aria-labelledby="it-npm"><code><span class="c"># install (recommended)</span>
+npm install -g tingly-box@latest
 
-tb start   # runs in the background (--no-daemon for foreground)
-tb open    # opens the web UI
+tb start   <span class="c"># runs in the background (--no-daemon for foreground)</span>
+tb open    <span class="c"># opens the web UI</span>
 
-# update: reinstall, then restart
+<span class="c"># update: reinstall, then restart</span>
 npm install -g tingly-box@latest &amp;&amp; tb restart
 
-# behind a firewall, any npm mirror works
+<span class="c"># behind a firewall, any npm mirror works</span>
 npm install -g tingly-box@latest --registry=https://registry.npmmirror.com</code></pre>
-          </div>
-          <div class="code" role="tabpanel" id="i-npx" aria-labelledby="it-npx" hidden>
-            <button class="copy" type="button" aria-label="Copy commands">Copy</button>
-<pre><code>npx -y tingly-box@latest
+<pre role="tabpanel" id="i-npx" aria-labelledby="it-npx" hidden><code><span class="c"># one-off run without a global install</span>
+npx -y tingly-box@latest
 
-# behind a firewall, use a mirror
+<span class="c"># with a mirror</span>
 npx --registry=https://registry.npmmirror.com -y tingly-box@latest</code></pre>
-          </div>
-          <div class="code" role="tabpanel" id="i-docker" aria-labelledby="it-docker" hidden>
-            <button class="copy" type="button" aria-label="Copy commands">Copy</button>
-<pre><code>mkdir tingly-data
+<pre role="tabpanel" id="i-docker" aria-labelledby="it-docker" hidden><code>mkdir tingly-data
 docker run -d --name tingly-box \
   -p 12580:12580 \
   -v "$(pwd)/tingly-data:/home/tingly/.tingly-box" \
   ghcr.io/tingly-dev/tingly-box</code></pre>
           </div>
+          <ol class="next-steps">
+            <li><span class="num">1</span><div><b>Open the UI</b><p><code>tb open</code>, or <code>http://localhost:12580</code></p></div></li>
+            <li><span class="num">2</span><div><b>Connect AI</b><p>Add a provider by API key, OAuth or a self-hosted URL.</p></div></li>
+            <li><span class="num">3</span><div><b>Pick an agent</b><p>Claude Code, Codex, OpenCode… and apply the config.</p></div></li>
+            <li><span class="num">4</span><div><b>Invite your team</b><p>Optional: set rules and hand out sharing keys.</p></div></li>
+          </ol>
         </div>
-        <ol class="next-steps">
-          <li><b>Open</b> <code>tb open</code>, or <code>http://localhost:12580</code></li>
-          <li><b>Connect AI</b> — add a provider by API key, OAuth or a self-hosted URL</li>
-          <li><b>Agent</b> — pick Claude Code, Codex, OpenCode… and apply the config</li>
-          <li><b>Team</b> — optional: set rules and hand out sharing keys</li>
-        </ol>
-      </div>
 
-      <div class="sdk">
-        <div class="code">
-          <p class="code-title">OpenAI SDK</p>
-          <button class="copy" type="button" aria-label="Copy OpenAI example">Copy</button>
+        <div class="sdk">
+          <div class="code">
+            <p class="code-title">OpenAI SDK</p>
+            <button class="copy" type="button" aria-label="Copy OpenAI example">Copy</button>
 <pre><code>from openai import OpenAI
 
 client = OpenAI(
     api_key="your-tingly-model-token",
     base_url="http://localhost:12580/tingly/openai/v1",
 )</code></pre>
-        </div>
-        <div class="code">
-          <p class="code-title">Anthropic SDK</p>
-          <button class="copy" type="button" aria-label="Copy Anthropic example">Copy</button>
+          </div>
+          <div class="code">
+            <p class="code-title">Anthropic SDK</p>
+            <button class="copy" type="button" aria-label="Copy Anthropic example">Copy</button>
 <pre><code>from anthropic import Anthropic
 
 client = Anthropic(
     api_key="your-tingly-model-token",
     base_url="http://localhost:12580/tingly/anthropic",
 )</code></pre>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- ================= DOCS ================= -->
     <section class="section" aria-labelledby="docs-title">
-      <div class="section-head">
-        <p class="eyebrow">Learn more</p>
-        <h2 id="docs-title">Docs and community</h2>
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Learn more</p>
+          <h2 id="docs-title">Docs and community</h2>
+        </div>
+        <div class="doc-links">
+          <a href="https://github.com/tingly-dev/tingly-box/blob/main/docs/user-manual.md"><i data-icon="book" aria-hidden="true"></i><b>User manual</b><span>Installation, configuration and operations</span></a>
+          <a href="https://github.com/tingly-dev/tingly-box/blob/main/docs/docker.md"><i data-icon="server" aria-hidden="true"></i><b>Docker guide</b><span>Compose, custom images, troubleshooting</span></a>
+          <a href="https://github.com/tingly-dev/tingly-box/blob/main/docs/guardrails.md"><i data-icon="shield-check" aria-hidden="true"></i><b>Guardrails</b><span>Policies, protections, credential masking</span></a>
+          <a href="https://github.com/tingly-dev/tingly-box/issues"><i data-icon="bug" aria-hidden="true"></i><b>Issues</b><span>Report a bug or ask for a feature</span></a>
+          <a href="https://github.com/tingly-dev/tingly-box/discussions"><i data-icon="messages" aria-hidden="true"></i><b>Discussions</b><span>Questions, ideas and setup help</span></a>
+          <a href="https://github.com/tingly-dev/tingly-box/blob/main/CONTRIBUTING.md"><i data-icon="git-pull-request" aria-hidden="true"></i><b>Contributing</b><span>Build from source and send a PR</span></a>
+        </div>
       </div>
-      <div class="doc-links">
-        <a href="https://github.com/tingly-dev/tingly-box/blob/main/docs/user-manual.md"><b>User manual</b><span>Installation, configuration and operations</span></a>
-        <a href="https://github.com/tingly-dev/tingly-box/blob/main/docs/docker.md"><b>Docker guide</b><span>Compose, custom images, troubleshooting</span></a>
-        <a href="https://github.com/tingly-dev/tingly-box/blob/main/docs/guardrails.md"><b>Guardrails</b><span>Policies, protections, credential masking</span></a>
-        <a href="https://github.com/tingly-dev/tingly-box/issues"><b>Issues</b><span>Report a bug or ask for a feature</span></a>
-        <a href="https://github.com/tingly-dev/tingly-box/discussions"><b>Discussions</b><span>Questions, ideas and setup help</span></a>
-        <a href="https://github.com/tingly-dev/tingly-box/blob/main/CONTRIBUTING.md"><b>Contributing</b><span>Build from source and send a PR</span></a>
+    </section>
+
+    <!-- ================= CLOSING CTA ================= -->
+    <section class="closing" aria-labelledby="closing-title">
+      <div class="container closing-inner">
+        <div>
+          <h2 id="closing-title">Plug in your first agent in a minute.</h2>
+          <p>Open source, runs on your machine, adds under a millisecond.</p>
+        </div>
+        <div class="closing-actions">
+          <div class="cmd cmd-dark" data-copy="npm install -g tingly-box@latest && tb start">
+            <span class="cmd-prompt" aria-hidden="true">$</span>
+            <code>npm i -g tingly-box &amp;&amp; tb start</code>
+            <button class="copy" type="button" aria-label="Copy install command">Copy</button>
+          </div>
+          <a class="btn btn-light" href="https://github.com/tingly-dev/tingly-box"><i data-icon="brand-github" aria-hidden="true"></i>Star on GitHub</a>
+        </div>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <div class="footer-inner">
+    <div class="container footer-inner">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">T</span>
         <span>Tingly Box</span>

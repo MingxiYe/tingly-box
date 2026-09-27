@@ -207,7 +207,7 @@ Any compatible application is ready to use.
 </details>
 
 <details>
-<summary><strong>Remote Control Agent via IM Bots - TG / DingTalk / Feishu / Lark / Weixin / WecCom</strong></summary>
+<summary><strong>Remote Control Agent via IM Bots - TG / DingTalk / Feishu / Lark / Weixin / WeCom</strong></summary>
 
 Tingly Box now supports remote control through popular IM platforms. Interact with your AI agents remotely without direct server access.
 

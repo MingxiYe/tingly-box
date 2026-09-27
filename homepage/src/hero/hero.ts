@@ -16,8 +16,8 @@ const TILE = 0.84;                  // tile edge as a fraction of the cell pitch
 const SPAN = N - 1 + TILE;          // T edge measured in pitches
 const TICK = 150;                   // ms per walker step
 const POP = 460;                    // ms tile pop-in
-const HOLD = 1100;                  // ms the finished T rests before folding
-const FOLD = 900;                   // ms to fold the T back into the icon
+const HOLD = 1500;                  // ms the finished T rests before folding
+const FOLD = 1300;                  // ms for the T to drain back into the icon
 const VARIANTS = 6;                 // icon shuffles, cycled round after round
 
 const CAPTIONS = [
@@ -69,11 +69,19 @@ const layouts: string[][] = Array.from({ length: VARIANTS }, (_, v) => {
   return out;
 });
 
-/**
- * @param textColumn the hero copy; on wide screens the T is fitted into the
- *   space to its right so the two never overlap.
- */
-export function startHero(canvas: HTMLCanvasElement, caption: HTMLElement | null, textColumn: HTMLElement | null): void {
+// farthest cell from the start, in grid steps; orders the fold
+const MAX_DIST = Math.max(...shapeCells.map((i) => Math.abs(col(i) - col(START)) + Math.abs(row(i) - row(START))));
+
+export interface HeroOptions {
+  /** receives the line describing the current round */
+  caption?: HTMLElement | null;
+  /** the hero copy; on wide screens the T is fitted into the space to its right */
+  textColumn?: HTMLElement | null;
+  /** positioned label shown when hovering a tile */
+  tooltip?: HTMLElement | null;
+}
+
+export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tooltip }: HeroOptions = {}): void {
   const ctx = ctx2d(canvas);
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -184,31 +192,19 @@ export function startHero(canvas: HTMLCanvasElement, caption: HTMLElement | null
   function draw(now: number): void {
     ctx.clearRect(0, 0, W, H);
     const p = boxSize / SPAN;
+    const tile = p * TILE;
     dots(p, originX + p / 2, originY + p / 2, 0.5);
 
-    // Where the start cell sits; the folded T lands exactly on it.
-    const sx = originX + (col(START) - CENTER) * p;
-    const sy = originY + (row(START) - CENTER) * p;
     const fold = round.doneAt && !finished ? clamp01((now - round.doneAt - HOLD) / FOLD) : 0;
+    if (fold > 0) drawFold(fold, p, tile);
+    else drawT(round, originX, originY, boxSize, now, 1);
 
-    if (fold > 0) {
-      // Shrink the whole T onto the start cell while it turns into the icon.
-      const e = easeInOut(fold);
-      const size = boxSize * ((p * TILE) / boxSize) ** e;
-      const cx = originX + (sx - originX) * e;
-      const cy = originY + (sy - originY) * e;
-      const toIcon = clamp01((e - 0.35) / 0.55);
-      drawT(round, cx, cy, size, now, 1 - toIcon);
-      drawTile(brand, cx, cy, size, toIcon);
-      ctx.globalAlpha = 1;
-      return;
-    }
-
-    drawT(round, originX, originY, boxSize, now, 1);
-
-    // walkers: small "requests" hopping between cells
-    const radius = Math.max(2.5, Math.min(8, p * TILE * 0.12));
+    // walkers: small "requests" hopping between cells, with a short trail
+    const radius = Math.max(2, Math.min(5, tile * 0.075));
     ctx.fillStyle = accent;
+    ctx.strokeStyle = accent;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = radius * 1.2;
     for (const w of round.walkers) {
       const life = w.dieAt
         ? (1 - Math.min(1, (now - w.dieAt) / 300)) ** 2
@@ -218,12 +214,82 @@ export function startHero(canvas: HTMLCanvasElement, caption: HTMLElement | null
       const ax = originX + (col(w.prev) - CENTER) * p, ay = originY + (row(w.prev) - CENTER) * p;
       const bx = originX + (col(w.idx) - CENTER) * p, by = originY + (row(w.idx) - CENTER) * p;
       const x = ax + (bx - ax) * e, y = ay + (by - ay) * e;
-      ctx.globalAlpha = 0.18 * life;
-      ctx.beginPath(); ctx.arc(x, y, radius * 2.4, 0, Math.PI * 2); ctx.fill();
+      if (e < 1) {
+        ctx.globalAlpha = 0.3 * life * (1 - e);
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(x, y); ctx.stroke();
+      }
+      ctx.globalAlpha = 0.14 * life;
+      ctx.beginPath(); ctx.arc(x, y, radius * 2.2, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = life;
       ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
+  }
+
+  /**
+   * The finished T drains into the Tingly Box icon: tiles fly to the start cell
+   * nearest-first and vanish into it, the icon swells as it takes them in, and
+   * a ring goes out as the last one lands.
+   */
+  function drawFold(t: number, p: number, tile: number): void {
+    const sx = originX + (col(START) - CENTER) * p;
+    const sy = originY + (row(START) - CENTER) * p;
+    for (const [i] of round.cells) {
+      if (i === START) continue;
+      const d = Math.abs(col(i) - col(START)) + Math.abs(row(i) - row(START));
+      const local = clamp01((t - (d / MAX_DIST) * 0.5) / 0.42);
+      const e = local * local;
+      const x = originX + (col(i) - CENTER) * p;
+      const y = originY + (row(i) - CENTER) * p;
+      const img = icons.get(layouts[round.variant][i]);
+      if (img) drawTile(img, x + (sx - x) * e, y + (sy - y) * e, tile * (1 - 0.7 * e), 1 - clamp01((e - 0.55) / 0.45));
+    }
+    const ring = clamp01((t - 0.62) / 0.38);
+    if (ring > 0 && ring < 1) {
+      const r = tile * (1 + 1.1 * easeInOut(ring));
+      ctx.globalAlpha = 0.45 * (1 - ring);
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(sx - r / 2, sy - r / 2, r, r, r * 0.3);
+      ctx.stroke();
+    }
+    const swell = 1 + 0.12 * Math.sin(Math.PI * clamp01((t - 0.1) / 0.9));
+    drawTile(brand, sx, sy, tile * swell, 1);
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- hover labels ----------
+  function brandAt(i: number): { name: string; kind: string } | null {
+    if (i === START) return { name: 'Tingly Box', kind: 'gateway' };
+    const icon = layouts[round.variant][i];
+    const k = side(i);
+    const list = k === 'agent' ? AGENTS : k === 'provider' ? PROVIDERS : CHANNELS;
+    const b = list.find((x) => x.icon === icon);
+    return b ? { name: b.name, kind: k === 'channel' ? 'remote channel' : k } : null;
+  }
+
+  function mountTooltip(tip: HTMLElement): void {
+    if (!window.matchMedia('(hover: hover)').matches) return;
+    const hide = (): void => { tip.hidden = true; };
+    canvas.addEventListener('pointerleave', hide);
+    canvas.addEventListener('pointermove', (ev) => {
+      const rect = canvas.getBoundingClientRect();
+      const p = boxSize / SPAN;
+      const c = Math.round((ev.clientX - rect.left - originX) / p + CENTER);
+      const r = Math.round((ev.clientY - rect.top - originY) / p + CENTER);
+      const i = r * N + c;
+      const folding = round.doneAt && performance.now() - round.doneAt > HOLD;
+      const info = c >= 0 && r >= 0 && c < N && r < N && round.cells.has(i) && !folding ? brandAt(i) : null;
+      if (!info) { hide(); return; }
+      tip.innerHTML = '';
+      const kind = document.createElement('small');
+      kind.textContent = info.kind;
+      tip.append(kind, info.name);
+      tip.style.left = `${canvas.offsetLeft + originX + (c - CENTER) * p}px`;
+      tip.style.top = `${canvas.offsetTop + originY + (r - CENTER) * p - (p * TILE) / 2}px`;
+      tip.hidden = false;
+    });
   }
 
   // ---------- loop ----------
@@ -304,6 +370,7 @@ export function startHero(canvas: HTMLCanvasElement, caption: HTMLElement | null
     new ResizeObserver(layout).observe(canvas);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', layout);
 
+    if (tooltip) mountTooltip(tooltip);
     if (reducedMotion) { showFinal(); return; }
     round = newRound(0, performance.now());
     setCaption(0);

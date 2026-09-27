@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lobehub/icons-static-svg": "^1.95.1"
+    "@lobehub/icons-static-svg": "^1.95.1",
+    "@tabler/icons": "^3.48.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
