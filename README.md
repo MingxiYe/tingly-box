@@ -33,7 +33,7 @@ Tingly Box **serves agents, coordinates AI models, optimizes context, and routes
   * Intuitive workflows that make complex operations easy to understand and control
 * **Production-Ready**
   * Smart Routing — Intelligently route requests across models and tokens based on cost, speed, or custom policies
-  * Remote Control — Control AI agents remotely through Telegram, DingTalk, Feishu, Lark, Weixin, WeCom, Slack, and Discord
+  * Remote Control — Control AI agents remotely through Telegram, Weixin, WeCom, Feishu, Lark, and DingTalk
   * Image API — Route image generation and editing through the same gateway, with a built-in playground
   * Team Management — Isolate data per user with dedicated API tokens, usage tracking, provider access, and configuration
   * Usage Analytics — Track token consumption, latency, cost estimates, and model selection per request
