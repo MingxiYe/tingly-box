@@ -1,21 +1,21 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+# Build the homepage (homepage/, Vite + TypeScript) and deploy it to GitHub Pages
+name: Deploy homepage to Pages
 
 on:
-  # Runs on pushes targeting the default branch that touch the site
   push:
     branches: ["main"]
     paths:
       - "homepage/**"
-      - "docs/images/**"
-      - "docs/hero.png"
-      - "scripts/build-homepage.sh"
+      # the homepage reuses the app's IM / editor icons
+      - "frontend/src/assets/icons/**"
       - ".github/workflows/homepage.yml"
-
-  # Allows you to run this workflow manually from the Actions tab
+  pull_request:
+    paths:
+      - "homepage/**"
+      - "frontend/src/assets/icons/**"
+      - ".github/workflows/homepage.yml"
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
@@ -24,27 +24,49 @@ permissions:
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
-  group: "pages"
+  group: "pages-${{ github.event_name }}-${{ github.ref }}"
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: homepage
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Install pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Upload artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: homepage/dist
+
   deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Build site
-        run: scripts/build-homepage.sh _site
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '_site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
