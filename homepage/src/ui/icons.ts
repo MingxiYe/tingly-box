@@ -4,6 +4,14 @@ import arrowUpRight from '@tabler/icons/outline/arrow-up-right.svg?raw';
 import book from '@tabler/icons/outline/book.svg?raw';
 import github from '@tabler/icons/outline/brand-github.svg?raw';
 import bug from '@tabler/icons/outline/bug.svg?raw';
+import clock from '@tabler/icons/outline/clock.svg?raw';
+import coin from '@tabler/icons/outline/coin.svg?raw';
+import eyeOff from '@tabler/icons/outline/eye-off.svg?raw';
+import folder from '@tabler/icons/outline/folder.svg?raw';
+import lock from '@tabler/icons/outline/lock.svg?raw';
+import users from '@tabler/icons/outline/users.svg?raw';
+import worldSearch from '@tabler/icons/outline/world-search.svg?raw';
+import worldWww from '@tabler/icons/outline/world-www.svg?raw';
 import chartBar from '@tabler/icons/outline/chart-bar.svg?raw';
 import click from '@tabler/icons/outline/click.svg?raw';
 import mobileMessage from '@tabler/icons/outline/device-mobile-message.svg?raw';
@@ -35,6 +43,14 @@ const ICONS: Record<string, string> = {
   route,
   server,
   'shield-check': shield,
+  clock,
+  coin,
+  'eye-off': eyeOff,
+  folder,
+  lock,
+  users,
+  'world-search': worldSearch,
+  'world-www': worldWww,
 };
 
 export function iconSvg(name: string): string {

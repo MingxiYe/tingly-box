@@ -3,6 +3,7 @@
 // SVG viewBox — pans from the agents out to the whole team picture.
 // Narrow screens and reduced motion get the complete picture, statically.
 import { byName, AGENTS, CHANNELS, PROVIDERS } from '../data/brands';
+import { iconSvg } from '../ui/icons';
 
 type Item =
   | { kind: 'edge'; el: SVGGElement; step: number; order: number }
@@ -54,6 +55,18 @@ export function mountFlow(svg: SVGSVGElement, scroller: HTMLElement): void {
     el('rect', { x: x - size / 2, y: y - size / 2, width: size, height: size, rx: size * 0.26, fill: '#fff', stroke: 'rgba(22,24,29,0.14)' }, parent);
     el('image', { href: icon, x: x - size * 0.29, y: y - size * 0.29, width: size * 0.58, height: size * 0.58 }, parent);
   }
+  /** A white icon card like iconCard, holding a Tabler icon instead of a brand logo. */
+  function tablerCard(parent: Element, x: number, y: number, name: string, size = 24): void {
+    el('rect', { x: x - size / 2, y: y - size / 2, width: size, height: size, rx: size * 0.26, fill: '#fff', stroke: 'rgba(22,24,29,0.14)' }, parent);
+    const icon = new DOMParser().parseFromString(iconSvg(name), 'image/svg+xml').documentElement;
+    const s = size * 0.62;
+    for (const [k, v] of Object.entries({ x: x - s / 2, y: y - s / 2, width: s, height: s, class: 'fl-tabler' })) icon.setAttribute(k, String(v));
+    parent.append(document.importNode(icon, true));
+  }
+  /** Lays out four icons centred under a bottom-row card title. */
+  function iconRow(cx: number, draw: (x: number, i: number) => void): void {
+    for (let i = 0; i < 4; i++) draw(cx - 49 + i * 30, i);
+  }
   function card(step: number, order: number, cx: number, title: string): SVGGElement {
     const g = pop(step, order, [cx, 575]);
     el('rect', { x: cx - 75, y: 544, width: 150, height: 62, rx: 12, class: 'fl-card' }, g);
@@ -93,20 +106,28 @@ export function mountFlow(svg: SVGSVGElement, scroller: HTMLElement): void {
     text(e, BOX.x, BOX.y - BOX.s / 2 - 23, 'fl-accent-text', 'localhost:12580/tingly/…', { 'text-anchor': 'middle' });
   }
 
-  // 03 — providers, a routing rule, protocol translation
+  // 03 — providers and a routing rule
   providers.forEach((p, i) => {
     const g = pop(2, i + 1, [800, provY(i)]);
     iconCard(g, 800, provY(i), p.icon, 36);
     text(g, 828, provY(i) + 5, 'fl-label', p.name);
   });
   {
-    const g = pop(2, 0, [BOX.x, BOX.y + BOX.s / 2 + 38]);
-    el('rect', { x: BOX.x - 150, y: BOX.y + BOX.s / 2 + 14, width: 300, height: 48, rx: 12, class: 'fl-card' }, g);
-    text(g, BOX.x - 134, BOX.y + BOX.s / 2 + 34, 'fl-mono', 'rule  claude-sonnet');
-    text(g, BOX.x - 134, BOX.y + BOX.s / 2 + 52, 'fl-label', '→ Anthropic · fallback DeepSeek');
-    const p = pop(2, 3, [745, 149]);
-    el('rect', { x: 660, y: 136, width: 170, height: 26, rx: 13, class: 'fl-soft' }, p);
-    text(p, 745, 153, 'fl-mono', 'Anthropic ⇄ OpenAI ⇄ Gemini', { 'text-anchor': 'middle' });
+    // a routing rule, drawn as a route: model name → primary provider ┄→ fallback
+    const y = BOX.y + BOX.s / 2 + 38;
+    const g = pop(2, 0, [BOX.x, y]);
+    el('rect', { x: BOX.x - 150, y: y - 24, width: 300, height: 48, rx: 12, class: 'fl-card' }, g);
+    el('rect', { x: BOX.x - 136, y: y - 12, width: 118, height: 24, rx: 12, class: 'fl-accent-soft' }, g);
+    text(g, BOX.x - 77, y + 4, 'fl-accent-text', 'claude-sonnet', { 'text-anchor': 'middle' });
+    const arrow = (x1: number, x2: number, dashed: boolean): void => {
+      el('path', { d: `M ${x1} ${y} H ${x2 - 5}`, class: dashed ? 'fl-rule fl-rule-dashed' : 'fl-rule' }, g);
+      el('path', { d: `M ${x2 - 6} ${y - 4} L ${x2} ${y} L ${x2 - 6} ${y + 4}`, class: 'fl-rule' }, g);
+    };
+    arrow(BOX.x - 12, BOX.x + 22, false);
+    iconCard(g, BOX.x + 42, y, byName(PROVIDERS, 'Anthropic').icon, 30);
+    arrow(BOX.x + 62, BOX.x + 96, true);
+    const fallback = el('g', { opacity: 0.55 }, g);
+    iconCard(fallback, BOX.x + 116, y, byName(PROVIDERS, 'DeepSeek').icon, 30);
   }
 
   // 04 — team members, one sharing key each
@@ -124,29 +145,18 @@ export function mountFlow(svg: SVGSVGElement, scroller: HTMLElement): void {
     text(g, 300, 98, 'fl-mono', 'one key each', { 'text-anchor': 'end' });
   }
 
-  // 05 — govern, extend & observe
-  {
-    const g = card(4, 0, bottom[0], 'Guardrails');
-    el('path', { d: `M ${bottom[0] - 60} 578 l 9 -3 l 9 3 v 7 c 0 6 -4 10 -9 11 c -5 -1 -9 -5 -9 -11 z`, class: 'fl-accent' }, g);
-    text(g, bottom[0] - 36, 592, 'fl-mono fl-small', 'keys masked');
-  }
-  {
-    const g = card(4, 1, bottom[1], 'MCP tools');
-    ['web_search', 'fs', '+ yours'].forEach((t, i) => {
-      const x = bottom[1] - 61 + [0, 66, 90][i];
-      el('rect', { x, y: 578, width: [62, 20, 38][i], height: 16, rx: 8, class: i === 0 ? 'fl-accent-soft' : 'fl-soft' }, g);
-      text(g, x + [31, 10, 19][i], 590, 'fl-mono fl-small', t, { 'text-anchor': 'middle' });
-    });
-  }
-  {
-    const g = card(4, 2, bottom[2], 'Usage');
-    [14, 22, 12, 28, 20, 32, 24].forEach((h, i) => {
-      el('rect', { x: bottom[2] - 61 + i * 17, y: 598 - h * 0.6, width: 10, height: h * 0.6, rx: 2, class: i === 5 ? 'fl-accent' : 'fl-soft' }, g);
-    });
-  }
+  // 05 — govern, extend & observe: every card is a row of icons
+  const tablerRow = (step: number, order: number, title: string, names: string[]): void => {
+    const g = card(step, order, bottom[order], title);
+    iconRow(bottom[order], (x, i) => tablerCard(g, x, 588, names[i]));
+  };
+  tablerRow(4, 0, 'Guardrails', ['shield-check', 'eye-off', 'lock', 'users']);
+  tablerRow(4, 1, 'MCP tools', ['world-search', 'world-www', 'folder', 'plus']);
+  tablerRow(4, 2, 'Usage', ['chart-bar', 'coin', 'clock', 'users']);
   {
     const g = card(4, 3, bottom[3], 'Remote');
-    ['Telegram', 'Weixin', 'Feishu / Lark', 'DingTalk'].forEach((n, i) => iconCard(g, bottom[3] - 49 + i * 30, 588, byName(CHANNELS, n).icon, 24));
+    const channels = ['Telegram', 'Weixin', 'Feishu / Lark', 'DingTalk'].map((n) => byName(CHANNELS, n).icon);
+    iconRow(bottom[3], (x, i) => iconCard(g, x, 588, channels[i], 24));
   }
 
   const steps = [...document.querySelectorAll<HTMLElement>('.flow-step')];
