@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -121,53 +122,87 @@ func (h *Handler) GetClaudeCodeStatusLine(c *gin.Context) {
 	// Update cache with new input (even if partial)
 	h.cache.Update(&input)
 
-	// Build status line as two rows, split by semantic dimension:
-	//   row 1 (session + requested routing): ruleModel @ profile  📁 <cwd>  <session>
-	//   row 2 (real model + consumption):     realModel @ provider | ▓▓░░░░░░ 7% | $0.05 | Cache: 87% | Quota: 60% left | Balance: $12.40
-	ccModel := cmp.Or(merged.Model.DisplayName, "unknown")
-
-	usedPct := int(merged.ContextWindow.UsedPercentage)
-	cost := merged.Cost.TotalCostUSD
-
-	// Build context bar (8 characters wide)
-	barWidth := 8
-	filled := min(max(usedPct*barWidth/100, 0), barWidth)
-	bar := strings.Repeat("▓", filled) + strings.Repeat("░", barWidth-filled)
-
-	// Build profile label: "p1:name" or "default" when none configured.
-	profileLabel := "default"
-	base, profileID := typ.ParseScenarioProfile(typ.RuleScenario(scenario))
-	if profileID != "" {
-		profileName := profileID
-		if meta, ok := h.config.GetProfile(base, profileID); ok {
-			profileName = profileID + ":" + meta.Name
-		}
-		profileLabel = profileName
+	// The script asks for plain text when the terminal can't render emoji.
+	icons := emojiIcons
+	if c.Query("icons") == "plain" {
+		icons = plainIcons
 	}
 
-	// Query Tingly Box model mapping
+	// Build status line as two rows, split by the question each answers:
+	//   row 1 (where am I):             📁 proj/sub  🌿 branch  💬 "title"  ~$0.05
+	//   row 2 (how is it routed, left): rule → p1:work → realModel @ provider | ▓▓░░░░░░ 7% | Cache: 87% | Quota: 60% left | Balance: $12.40
+	// Cost is Claude Code's estimate at Anthropic prices, not what the routed
+	// provider charges, so it stays on row 1 (marked ~) away from Balance.
+	row1 := strings.Join(locationParts(merged, icons), "  ")
+
 	mapping := h.getTBModelMapping(merged.Model.ID, typ.RuleScenario(scenario))
-	ruleModel := cmp.Or(merged.Model.ID, ccModel)
+	usedPct := int(merged.ContextWindow.UsedPercentage)
 
-	// Row 1: requested routing first, then session identity.
-	// @ reads as "belongs to / via" (profile, provider).
-	row1 := fmt.Sprintf("%s @ %s  📁 %s%s", ruleModel, profileLabel, shortenPath(merged.CWD), sessionLabel(merged.SessionName, merged.SessionID))
-
-	// Row 2: real model + consumption.
-	row2 := ""
-	if mapping != nil && mapping.model != "" {
-		row2 = fmt.Sprintf("%s @ %s | ", mapping.model, mapping.providerName)
-	}
-	row2 += fmt.Sprintf("%s %d%% | $%.2f", bar, usedPct, cost)
+	row2 := strings.Join(h.routeChain(scenario, merged, mapping), " → ")
+	row2 += fmt.Sprintf(" | %s %d%%", icons.bar(usedPct), usedPct)
 	row2 += buildCacheInline(merged.ContextWindow.CurrentUsage)
-
-	// Add remaining quota and balance to the same line if available.
-	quotaInfo := h.buildQuotaInline(mapping)
-	if quotaInfo != "" {
-		row2 += quotaInfo
-	}
+	row2 += h.buildQuotaInline(mapping)
 
 	c.String(http.StatusOK, row1+"\n"+row2)
+}
+
+// iconSet is the glyph set the status line renders with. Emoji are limited to
+// Emoji_Presentation=Yes code points, which terminals draw two cells wide
+// without a VS16 selector, so column math stays right across platforms.
+type iconSet struct {
+	dir, branch, session string
+	barFull, barEmpty    string
+	barOpen, barClose    string
+}
+
+var (
+	emojiIcons = iconSet{dir: "📁 ", branch: "🌿 ", session: "💬 ", barFull: "▓", barEmpty: "░"}
+	plainIcons = iconSet{branch: "git:", session: "session:", barFull: "#", barEmpty: "-", barOpen: "[", barClose: "]"}
+)
+
+// bar renders the 8-cell context usage bar.
+func (i iconSet) bar(usedPct int) string {
+	const width = 8
+	filled := min(max(usedPct*width/100, 0), width)
+	return i.barOpen + strings.Repeat(i.barFull, filled) + strings.Repeat(i.barEmpty, width-filled) + i.barClose
+}
+
+// locationParts renders row 1: directory, branch, session, estimated cost.
+// Empty parts are dropped rather than shown as placeholders.
+func locationParts(input *StatusInput, icons iconSet) []string {
+	dir := cmp.Or(input.Workspace.CurrentDir, input.CWD)
+	parts := []string{icons.dir + locationLabel(dir, input.Workspace.ProjectDir)}
+	// Claude Code reports a branch only in worktree sessions; we don't read
+	// git ourselves, so other sessions show none.
+	if branch := input.Worktree.Branch; branch != "" {
+		parts = append(parts, icons.branch+branch)
+	}
+	if session := sessionLabel(input.SessionName, input.SessionID); session != "" {
+		parts = append(parts, icons.session+session)
+	}
+	if cost := input.Cost.TotalCostUSD; cost > 0 {
+		parts = append(parts, fmt.Sprintf("~$%.2f", cost))
+	}
+	return parts
+}
+
+// routeChain renders the route a request takes: rule → profile → real model.
+// The profile hop is omitted for the default profile, where it says nothing.
+func (h *Handler) routeChain(scenario string, input *StatusInput, mapping *tbModelMappingResult) []string {
+	chain := []string{cmp.Or(input.Model.ID, input.Model.DisplayName, "unknown")}
+
+	if base, profileID := typ.ParseScenarioProfile(typ.RuleScenario(scenario)); profileID != "" {
+		label := profileID
+		if meta, ok := h.config.GetProfile(base, profileID); ok {
+			label = profileID + ":" + meta.Name
+		}
+		chain = append(chain, label)
+	}
+
+	if mapping != nil && mapping.model != "" {
+		return append(chain, fmt.Sprintf("%s @ %s", mapping.model, mapping.providerName))
+	}
+	return append(chain, "(no rule)")
 }
 
 func cacheHitPct(usage CurrentUsage) int {
@@ -205,8 +240,12 @@ func shortenPath(path string) string {
 		return "~"
 	}
 
-	if home, err := os.UserHomeDir(); err == nil && home != "" && strings.HasPrefix(path, home) {
-		path = "~" + strings.TrimPrefix(path, home)
+	// Windows paths arrive with backslashes; split on / regardless of OS.
+	path = strings.ReplaceAll(path, `\`, "/")
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		if home = strings.ReplaceAll(home, `\`, "/"); strings.HasPrefix(path, home) {
+			path = "~" + strings.TrimPrefix(path, home)
+		}
 	}
 
 	// Clean slashes so splitting is predictable, but keep the leading ~.
@@ -257,15 +296,40 @@ func firstN(s string, n int) string {
 // Prefers the human-readable title (quoted — literally copy-resumeable via
 // `claude --resume <title>`); falls back to #<first8> of the id when no title
 // exists (early / `claude -p` sessions). Returns "" when neither is available.
-// The result always carries a leading space when non-empty.
 func sessionLabel(name, id string) string {
 	if name != "" {
-		return fmt.Sprintf(" %q", name)
+		return fmt.Sprintf("%q", name)
 	}
 	if id != "" {
-		return " #" + firstN(id, 8)
+		return "#" + firstN(id, 8)
 	}
 	return ""
+}
+
+// locationLabel names the working directory by its project: "proj" at the
+// project root, "proj/a/b" up to two levels below it, "proj/.../leaf" when
+// deeper. It is pure string work on the paths Claude Code reports — the
+// endpoint is unauthenticated, so it must never touch the filesystem. Outside
+// the project (or with no project dir) it falls back to shortenPath.
+func locationLabel(dir, projectDir string) string {
+	dir = strings.TrimRight(strings.ReplaceAll(dir, `\`, "/"), "/")
+	projectDir = strings.TrimRight(strings.ReplaceAll(projectDir, `\`, "/"), "/")
+	if projectDir == "" {
+		return shortenPath(dir)
+	}
+	name := path.Base(projectDir)
+	if dir == "" || dir == projectDir {
+		return name
+	}
+	rel, ok := strings.CutPrefix(dir, projectDir+"/")
+	if !ok {
+		return shortenPath(dir)
+	}
+	segments := strings.Split(rel, "/")
+	if len(segments) > 2 {
+		return name + "/.../" + segments[len(segments)-1]
+	}
+	return name + "/" + rel
 }
 
 // tbModelMappingResult contains the result of model mapping lookup

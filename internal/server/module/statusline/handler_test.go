@@ -565,18 +565,50 @@ func TestGetClaudeCodeStatusLine_TwoRowsWithTitle(t *testing.T) {
 	lines := strings.Split(out, "\n")
 	assert.Len(t, lines, 2, "statusline should be exactly two rows; got: %q", out)
 
-	// Row 1: requested routing FIRST (ruleModel @ default), then cwd + title.
-	assert.True(t, strings.HasPrefix(lines[0], "cc[1m] @ default"),
-		"row 1 should start with the routing block; got: %q", lines[0])
+	// Row 1: where am I — location, session title, estimated cost.
+	assert.True(t, strings.HasPrefix(lines[0], "📁 "), "row 1 starts with the location; got: %q", lines[0])
 	assert.Contains(t, lines[0], "tingly-box")
-	assert.Contains(t, lines[0], `"fix-login-bug"`)
-	// No wrapping [...] around the routing block, no consumption % on row 1.
-	assert.NotContains(t, lines[0], "7%", "consumption % belongs on row 2")
+	assert.Contains(t, lines[0], `💬 "fix-login-bug"`)
+	assert.Contains(t, lines[0], "~$0.05", "cost is an estimate and lives on row 1")
+	assert.NotContains(t, lines[0], "7%", "context usage belongs on row 2")
 
-	// Row 2: consumption only (no routing block on this row when no mapping
-	// resolves in the test config — just bar, %, cost).
-	assert.Contains(t, lines[1], "7%")
-	assert.Contains(t, lines[1], "$0.05")
+	// Row 2: route chain (no rule in the test config, default profile hop
+	// omitted), then context usage. No cost next to quota/balance.
+	assert.True(t, strings.HasPrefix(lines[1], "cc[1m] → (no rule) | "), "got: %q", lines[1])
+	assert.Contains(t, lines[1], "░░░░░░░░ 7%")
+	assert.NotContains(t, lines[1], "$")
+}
+
+func TestGetClaudeCodeStatusLine_ProfileHop(t *testing.T) {
+	cfg, _ := config.NewConfig(config.WithConfigDir(t.TempDir()))
+	router := setupTestRouter(cfg)
+
+	req, _ := http.NewRequest("POST", "/statusline/claude_code:p1", strings.NewReader(`{"model": {"id": "cc"}}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	row2 := strings.Split(w.Body.String(), "\n")[1]
+	assert.True(t, strings.HasPrefix(row2, "cc → p1 → (no rule) | "), "got: %q", row2)
+}
+
+func TestGetClaudeCodeStatusLine_PlainIcons(t *testing.T) {
+	cfg, _ := config.NewConfig(config.WithConfigDir(t.TempDir()))
+	router := setupTestRouter(cfg)
+
+	body := `{"model": {"id": "cc"}, "workspace": {"current_dir": "/x/repo", "project_dir": "/x/repo"},
+		"worktree": {"branch": "main"}, "session_name": "t", "context_window": {"used_percentage": 50}}`
+	req, _ := http.NewRequest("POST", "/statusline/claude_code?icons=plain", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	lines := strings.Split(w.Body.String(), "\n")
+	assert.Equal(t, `repo  git:main  session:"t"`, lines[0])
+	assert.Contains(t, lines[1], "[####----] 50%")
+	for _, r := range w.Body.String() {
+		assert.True(t, r < 0x2000 || r == '→', "plain output must avoid emoji/blocks, got %q", r)
+	}
 }
 
 func TestGetClaudeCodeStatusLine_FallbackToShortID(t *testing.T) {
@@ -597,7 +629,7 @@ func TestGetClaudeCodeStatusLine_FallbackToShortID(t *testing.T) {
 
 	out := w.Body.String()
 	row1 := strings.Split(out, "\n")[0]
-	assert.Contains(t, row1, "#a3f9b2c1")
+	assert.Contains(t, row1, "💬 #a3f9b2c1")
 	assert.NotContains(t, row1, "#a3f9b2c1-") // only first 8 chars
 	assert.NotContains(t, row1, `"`, "no quoted title when session_name absent")
 }
@@ -674,11 +706,11 @@ func TestSessionLabel(t *testing.T) {
 		n, i string
 		want string
 	}{
-		{"title wins", "fix-login-bug", "a3f9b2c1-dead", ` "fix-login-bug"`},
-		{"id fallback", "", "a3f9b2c1-dead", " #a3f9b2c1"},
+		{"title wins", "fix-login-bug", "a3f9b2c1-dead", `"fix-login-bug"`},
+		{"id fallback", "", "a3f9b2c1-dead", "#a3f9b2c1"},
 		{"both empty", "", "", ""},
-		{"id truncated to 8", "", "1234567890abcdef", " #12345678"},
-		{"short id kept whole", "", "abc", " #abc"},
+		{"id truncated to 8", "", "1234567890abcdef", "#12345678"},
+		{"short id kept whole", "", "abc", "#abc"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -692,4 +724,27 @@ func TestFirstN(t *testing.T) {
 	assert.Equal(t, "abcdef", firstN("abcdef", 10))
 	assert.Equal(t, "", firstN("abcdef", 0))
 	assert.Equal(t, "", firstN("", 5))
+}
+
+func TestLocationLabel(t *testing.T) {
+	proj := "/x/tingly-box"
+	assert.Equal(t, "tingly-box", locationLabel(proj, proj))
+	assert.Equal(t, "tingly-box", locationLabel("", proj))
+	assert.Equal(t, "tingly-box/internal", locationLabel(proj+"/internal", proj))
+	assert.Equal(t, "tingly-box/internal/server", locationLabel(proj+"/internal/server", proj))
+	assert.Equal(t, "tingly-box/.../statusline", locationLabel(proj+"/internal/server/statusline", proj))
+	assert.Equal(t, "tingly-box/sub", locationLabel(`C:\x\tingly-box\sub`, `C:\x\tingly-box`))
+	// Not under the project, or a sibling sharing the prefix: plain path.
+	assert.Equal(t, "~/tmp/repo", locationLabel("/tmp/repo", proj))
+	assert.Equal(t, "~/x/tingly-box-2", locationLabel("/x/tingly-box-2", proj))
+	assert.Equal(t, "~/tmp/repo", locationLabel("/tmp/repo", ""))
+}
+
+func TestLocationPartsWorktreeBranchWins(t *testing.T) {
+	parts := locationParts(&StatusInput{CWD: "/nonexistent", Worktree: Worktree{Branch: "worktree-x"}}, plainIcons)
+	assert.Equal(t, []string{"~/nonexistent", "git:worktree-x"}, parts)
+}
+
+func TestShortenPathWindows(t *testing.T) {
+	assert.Equal(t, "~/.../b/repo", shortenPath(`C:\a\b\repo`))
 }
