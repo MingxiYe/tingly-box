@@ -2208,7 +2208,7 @@ export default {
     }
   },
   "scenarioOverview": {
-    "title": "Agents",
+    "title": "Agent",
     "subtitle": "Pick a scenario to configure. Hide the ones you don't use to keep the sidebar tidy.",
     "showInSidebar": "Show in sidebar",
     "hideFromSidebar": "Hide from sidebar",
@@ -2217,6 +2217,15 @@ export default {
     "ruleCountOne": "1 rule",
     "ruleCount": "{{count}} rules",
     "editTooltip": "Manage visible agents",
+    "powerUps": {
+      "title": "Power-ups",
+      "subtitle": "Optional capabilities that extend your agents. Turn one on to add it to the sidebar.",
+      "experimental": "Exp.",
+      "experimentalTooltip": "Experimental feature",
+      "beta": "Beta",
+      "betaTooltip": "Beta — usable, still evolving",
+      "remoteDesc": "Drive your agents from IM — connect bots for remote control and notifications."
+    },
     // Full product names for overview cards where the short nav label is ambiguous.
     "titles": {
       "dsh": "DeepSeek Harness",
