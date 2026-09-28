@@ -473,3 +473,234 @@ func MixedToolScenario() Scenario {
 		},
 	}
 }
+
+// ─── Tool-round edge fixtures ────────────────────────────────────────────────
+
+// sseData renders one SSE data line from v; sseEvent renders an Anthropic
+// event/data pair.
+func sseData(v any) string { return "data: " + string(mustMarshal(v)) }
+
+func sseEvent(event string, v any) []string {
+	return []string{"event: " + event, sseData(v)}
+}
+
+// anthropicToolUseStart returns the message_start and content_block_start
+// events that open an Anthropic tool_use block; input is what the start block
+// carries (the Anthropic API sends {} and streams the input as deltas).
+func anthropicToolUseStart(msgID, toolID, name string, input map[string]any) []string {
+	var lines []string
+	lines = append(lines, sseEvent("message_start", map[string]any{"type": "message_start", "message": map[string]any{
+		"id": msgID, "type": "message", "role": "assistant", "model": "worker-model", "content": []any{},
+		"stop_reason": nil, "usage": map[string]any{"input_tokens": 8, "output_tokens": 0},
+	}})...)
+	lines = append(lines, sseEvent("content_block_start", map[string]any{"type": "content_block_start", "index": 0,
+		"content_block": map[string]any{"type": "tool_use", "id": toolID, "name": name, "input": input}})...)
+	return lines
+}
+
+// anthropicToolUseEnd closes the single tool_use block and the message.
+func anthropicToolUseEnd() []string {
+	var lines []string
+	lines = append(lines, sseEvent("content_block_stop", map[string]any{"type": "content_block_stop", "index": 0})...)
+	lines = append(lines, sseEvent("message_delta", map[string]any{"type": "message_delta",
+		"delta": map[string]any{"stop_reason": "tool_use", "stop_sequence": nil}, "usage": map[string]any{"output_tokens": 3}})...)
+	lines = append(lines, sseEvent("message_stop", map[string]any{"type": "message_stop"})...)
+	return lines
+}
+
+// anthropicToolUseStream is a complete Anthropic tool_use stream whose input
+// arrives as one input_json_delta.
+func anthropicToolUseStream(msgID, toolID, name, inputJSON string) []string {
+	lines := anthropicToolUseStart(msgID, toolID, name, map[string]any{})
+	lines = append(lines, sseEvent("content_block_delta", map[string]any{"type": "content_block_delta", "index": 0,
+		"delta": map[string]any{"type": "input_json_delta", "partial_json": inputJSON}})...)
+	return append(lines, anthropicToolUseEnd()...)
+}
+
+func anthropicToolUseMessage(msgID, toolID, name string, input map[string]any) map[string]any {
+	return map[string]any{
+		"id": msgID, "type": "message", "role": "assistant", "model": "worker-model",
+		"content":     []map[string]any{{"type": "tool_use", "id": toolID, "name": name, "input": input}},
+		"stop_reason": "tool_use",
+		"usage":       map[string]any{"input_tokens": 8, "output_tokens": 3},
+	}
+}
+
+func chatToolCallChunk(chatID, callID, name, args string) string {
+	return sseData(map[string]any{"id": chatID, "object": "chat.completion.chunk", "created": 1, "model": "worker-model",
+		"choices": []map[string]any{{"index": 0, "finish_reason": nil, "delta": map[string]any{"role": "assistant",
+			"tool_calls": []map[string]any{{"index": 0, "id": callID, "type": "function", "function": map[string]any{"name": name, "arguments": args}}}}}}})
+}
+
+func chatToolCallStream(chatID, callID, name, args string) []string {
+	return []string{
+		chatToolCallChunk(chatID, callID, name, args),
+		sseData(map[string]any{"id": chatID, "object": "chat.completion.chunk", "created": 1, "model": "worker-model",
+			"choices": []map[string]any{{"index": 0, "delta": map[string]any{}, "finish_reason": "tool_calls"}}}),
+		`data: [DONE]`,
+	}
+}
+
+func chatToolCallCompletion(chatID, callID, name, args string) map[string]any {
+	return map[string]any{
+		"id": chatID, "object": "chat.completion", "created": 1, "model": "worker-model",
+		"choices": []map[string]any{{
+			"index": 0,
+			"message": map[string]any{"role": "assistant", "content": "", "tool_calls": []map[string]any{{
+				"id": callID, "type": "function", "function": map[string]any{"name": name, "arguments": args},
+			}}},
+			"finish_reason": "tool_calls",
+		}},
+		"usage": map[string]any{"prompt_tokens": 8, "completion_tokens": 3, "total_tokens": 11},
+	}
+}
+
+func responsesFunctionCallItem(callID, name, args, status string) map[string]any {
+	return map[string]any{"id": "fc-" + callID, "type": "function_call", "call_id": callID, "name": name, "arguments": args, "status": status}
+}
+
+func responsesFunctionCallStart(respID, callID, name string) []string {
+	item := responsesFunctionCallItem(callID, name, "", "in_progress")
+	delete(item, "arguments")
+	return []string{
+		sseData(map[string]any{"type": "response.created", "response": map[string]any{"id": respID, "object": "response", "created_at": 1, "model": "worker-model", "status": "in_progress", "output": []any{}}}),
+		sseData(map[string]any{"type": "response.output_item.added", "response_id": respID, "output_index": 0, "item": item}),
+	}
+}
+
+func responsesArgumentsDelta(respID, callID, delta string) string {
+	return sseData(map[string]any{"type": "response.function_call_arguments.delta", "response_id": respID, "item_id": "fc-" + callID, "output_index": 0, "delta": delta})
+}
+
+func responsesFunctionCallStream(respID, callID, name, args string) []string {
+	lines := responsesFunctionCallStart(respID, callID, name)
+	return append(lines,
+		responsesArgumentsDelta(respID, callID, args),
+		sseData(map[string]any{"type": "response.function_call_arguments.done", "response_id": respID, "item_id": "fc-" + callID, "output_index": 0, "arguments": args}),
+		sseData(map[string]any{"type": "response.completed", "response": map[string]any{"id": respID, "object": "response", "created_at": 1, "model": "worker-model", "status": "completed",
+			"output": []any{responsesFunctionCallItem(callID, name, args, "completed")},
+			"usage":  map[string]any{"input_tokens": 8, "output_tokens": 3, "total_tokens": 11}}}),
+		`data: [DONE]`,
+	)
+}
+
+func responsesFunctionCallResponse(respID, callID, name, args string) map[string]any {
+	return map[string]any{
+		"id": respID, "object": "response", "created_at": 1, "model": "worker-model", "status": "completed",
+		"output": []any{responsesFunctionCallItem(callID, name, args, "completed")},
+		"usage":  map[string]any{"input_tokens": 8, "output_tokens": 3, "total_tokens": 11},
+	}
+}
+
+// ownedToolRoundOr serves the owned-tool fixtures while the gateway offers
+// the echo tool and its call is not yet in the conversation, and next
+// otherwise — the shape every multi-round fixture below shares.
+func ownedToolRoundOr(format ResponseFormat, next MockResponseBuilder) MockResponseBuilder {
+	owned := OwnedToolScenario().MockResponses[format]
+	b := MockResponseBuilder{}
+	if next.NonStreamFor != nil {
+		b.NonStreamFor = func(request []byte) (int, []byte) {
+			if callsOwnedTool(request) {
+				return owned.NonStreamFor(request)
+			}
+			return next.NonStreamFor(request)
+		}
+	}
+	if next.StreamFor != nil {
+		b.StreamFor = func(request []byte) []string {
+			if callsOwnedTool(request) {
+				return owned.StreamFor(request)
+			}
+			return next.StreamFor(request)
+		}
+	}
+	return b
+}
+
+// TruncatedOwnedToolScenario: when the gateway offers the echo tool, the
+// provider's stream is cut inside the tool call — its arguments are half
+// sent and no terminal event (message_stop / finish_reason / [DONE] /
+// response.completed) follows. Without the tool offered the model answers.
+func TruncatedOwnedToolScenario() Scenario {
+	const partial = `{"q":`
+	cut := func(truncated []string, final []string) MockResponseBuilder {
+		return MockResponseBuilder{StreamFor: func(request []byte) []string {
+			if callsOwnedTool(request) {
+				return truncated
+			}
+			return final
+		}}
+	}
+	anthropicCut := append(anthropicToolUseStart("msg-owned-tool", "toolu-owned-tool", OwnedToolWireName, map[string]any{}),
+		sseEvent("content_block_delta", map[string]any{"type": "content_block_delta", "index": 0,
+			"delta": map[string]any{"type": "input_json_delta", "partial_json": partial}})...)
+	chatCut := []string{chatToolCallChunk("chatcmpl-owned-tool", "call-owned-tool", OwnedToolWireName, partial)}
+	responsesCut := append(responsesFunctionCallStart("resp-owned-tool", "call-owned-tool", OwnedToolWireName),
+		responsesArgumentsDelta("resp-owned-tool", "call-owned-tool", partial))
+	return Scenario{
+		Name:        "mcp_truncated_owned_tool",
+		Description: "Provider stream ends inside a server tool call, with no terminal event",
+		Tags:        []string{"mcp", "servertool"},
+		MockResponses: map[ResponseFormat]MockResponseBuilder{
+			FormatAnthropic:       cut(anthropicCut, matrixAnthropicOwnedToolFinalStream()),
+			FormatOpenAIChat:      cut(chatCut, matrixChatOwnedToolFinalStream()),
+			FormatOpenAIResponses: cut(responsesCut, matrixResponsesOwnedToolFinalStream()),
+		},
+	}
+}
+
+// BlockStartInputOwnedToolScenario: an Anthropic provider streams the owned
+// tool call with its full input already on content_block_start and no
+// input_json_delta (valid on the wire: the block's input is complete at
+// start). Once the call's result is in the request it answers with
+// OwnedToolFinalText.
+func BlockStartInputOwnedToolScenario() Scenario {
+	round := append(anthropicToolUseStart("msg-owned-tool", "toolu-owned-tool", OwnedToolWireName, map[string]any{"q": "x"}),
+		anthropicToolUseEnd()...)
+	return Scenario{
+		Name:        "mcp_block_start_input",
+		Description: "Server tool input carried on content_block_start, no input_json_delta",
+		Tags:        []string{"mcp", "servertool"},
+		MockResponses: map[ResponseFormat]MockResponseBuilder{
+			FormatAnthropic: {StreamFor: func(request []byte) []string {
+				if callsOwnedTool(request) {
+					return round
+				}
+				return matrixAnthropicOwnedToolFinalStream()
+			}},
+		},
+	}
+}
+
+// CredentialAliasClientToolScenario: round 1 calls the owned echo tool (when
+// offered); the next round calls the client tool get_weather with the
+// credential's alias as its input — the model only ever saw the masked
+// request, so the alias is all it can echo back.
+func CredentialAliasClientToolScenario(alias string) Scenario {
+	args := string(mustMarshal(map[string]any{"location": alias}))
+	nonStream := func(v any) func([]byte) (int, []byte) {
+		return func([]byte) (int, []byte) { return http.StatusOK, mustMarshal(v) }
+	}
+	stream := func(lines []string) func([]byte) []string {
+		return func([]byte) []string { return lines }
+	}
+	return Scenario{
+		Name:        "mcp_credential_alias_client_tool",
+		Description: "Client tool call whose input carries a protected credential's alias",
+		Tags:        []string{"mcp", "servertool", "guardrails"},
+		MockResponses: map[ResponseFormat]MockResponseBuilder{
+			FormatAnthropic: ownedToolRoundOr(FormatAnthropic, MockResponseBuilder{
+				NonStreamFor: nonStream(anthropicToolUseMessage("msg-client-tool", "toolu-client-tool", clientToolName, map[string]any{"location": alias})),
+				StreamFor:    stream(anthropicToolUseStream("msg-client-tool", "toolu-client-tool", clientToolName, args)),
+			}),
+			FormatOpenAIChat: ownedToolRoundOr(FormatOpenAIChat, MockResponseBuilder{
+				NonStreamFor: nonStream(chatToolCallCompletion("chatcmpl-client-tool", "call-client-tool", clientToolName, args)),
+				StreamFor:    stream(chatToolCallStream("chatcmpl-client-tool", "call-client-tool", clientToolName, args)),
+			}),
+			FormatOpenAIResponses: ownedToolRoundOr(FormatOpenAIResponses, MockResponseBuilder{
+				NonStreamFor: nonStream(responsesFunctionCallResponse("resp-client-tool", "call-client-tool", clientToolName, args)),
+				StreamFor:    stream(responsesFunctionCallStream("resp-client-tool", "call-client-tool", clientToolName, args)),
+			}),
+		},
+	}
+}

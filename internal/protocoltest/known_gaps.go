@@ -1,6 +1,7 @@
 package protocoltest
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -9,15 +10,16 @@ import (
 // which current code does not yet deliver. Registering it keeps the suite
 // green while making the gap visible (the case is reported, not hidden), and
 // a fix is forced to delete the entry: a registered case that starts passing
-// fails the run.
-//
-// IDs match .design/protocol-stage-v2.md.
+// fails the run — under `go test` and in the harness CLI alike.
 type KnownGap struct {
 	ID     string
 	Reason string
 }
 
-// knownGaps is keyed by test-case name (t.Name() below the top-level test).
+// knownGaps is keyed by test-case name: t.Name() of the go test (sub)test,
+// which is also the case key the harness CLI section reports under.
+// Registrations live below, in one place, so both entry points read the same
+// registry.
 var knownGaps = map[string]KnownGap{}
 
 func registerKnownGaps(gap KnownGap, cases ...string) bool {
@@ -27,18 +29,156 @@ func registerKnownGaps(gap KnownGap, cases ...string) bool {
 	return true
 }
 
+// KnownGapReason returns the reason registered for a known-gap ID ("" when
+// no case is registered under it).
+func KnownGapReason(id string) string {
+	for _, gap := range knownGaps {
+		if gap.ID == id {
+			return gap.Reason
+		}
+	}
+	return ""
+}
+
+// judgeCase applies the known-gap registry to one case. failures is the list
+// of violated expectations (empty = pass). It returns the errors to report as
+// failures — the case's own failures, or a "gap is fixed" error for a
+// registered case that passes — and, for a registered case that still fails,
+// the gap it matches.
+func judgeCase(key string, failures []string) (errs []string, gap *KnownGap) {
+	return judgeCaseIn(knownGaps, key, failures)
+}
+
+// judgeCaseIn is judgeCase against an explicit registry.
+func judgeCaseIn(registry map[string]KnownGap, key string, failures []string) (errs []string, gap *KnownGap) {
+	registered, known := registry[key]
+	switch {
+	case known && len(failures) == 0:
+		return []string{fmt.Sprintf("known gap %s is fixed for %s: remove it from knownGaps", registered.ID, key)}, nil
+	case known:
+		return nil, &registered
+	default:
+		return failures, nil
+	}
+}
+
 // checkCase reports one case, honoring the known-gap registry. failures is
 // the list of violated expectations (empty = pass); detail (e.g. the client
 // response) is printed only for unexpected failures.
 func checkCase(t *testing.T, key string, failures []string, detail string) {
 	t.Helper()
-	gap, known := knownGaps[key]
+	errs, gap := judgeCase(key, failures)
 	switch {
-	case known && len(failures) == 0:
-		t.Fatalf("known gap %s is fixed for %s: remove it from knownGaps", gap.ID, key)
-	case known:
+	case gap != nil:
 		t.Logf("known gap %s: %s", gap.ID, strings.Join(failures, "; "))
-	case len(failures) > 0:
-		t.Errorf("%s\n%s", strings.Join(failures, "\n"), detail)
+	case len(errs) > 0 && len(failures) == 0:
+		t.Fatal(errs[0])
+	case len(errs) > 0:
+		t.Errorf("%s\n%s", strings.Join(errs, "\n"), detail)
 	}
 }
+
+// ─── Registry ────────────────────────────────────────────────────────────────
+
+var _ = registerKnownGaps(KnownGap{
+	ID:     "M1",
+	Reason: "Responses client on an Anthropic provider: the server tool is injected upstream but its call is not intercepted, so it leaks to the client",
+},
+	"TestMCPOwnedToolLoop/openai_responses->anthropic_beta/stream=false",
+	"TestMCPOwnedToolLoop/openai_responses->anthropic_beta/stream=true",
+	"TestMCPTruncatedToolStream/openai_responses->anthropic_beta/stream=true",
+	"TestMCPToolInputOnBlockStart/openai_responses->anthropic_beta/stream=true",
+	"TestMCPNoFailoverAfterServerTool/openai_responses->anthropic_beta/stream=false",
+	"TestMCPNoFailoverAfterServerTool/openai_responses->anthropic_beta/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "M3",
+	Reason: "Anthropic client on an OpenAI Responses provider: server tools are not offered to the model at all",
+},
+	"TestMCPOwnedToolLoop/anthropic_v1->openai_responses/stream=false",
+	"TestMCPOwnedToolLoop/anthropic_v1->openai_responses/stream=true",
+	"TestMCPOwnedToolLoop/anthropic_beta->openai_responses/stream=false",
+	"TestMCPOwnedToolLoop/anthropic_beta->openai_responses/stream=true",
+	"TestMCPTruncatedToolStream/anthropic_v1->openai_responses/stream=true",
+	"TestMCPTruncatedToolStream/anthropic_beta->openai_responses/stream=true",
+	"TestMCPNoFailoverAfterServerTool/anthropic_v1->openai_responses/stream=false",
+	"TestMCPNoFailoverAfterServerTool/anthropic_v1->openai_responses/stream=true",
+	"TestMCPNoFailoverAfterServerTool/anthropic_beta->openai_responses/stream=false",
+	"TestMCPNoFailoverAfterServerTool/anthropic_beta->openai_responses/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "M4",
+	Reason: "Anthropic client -> Chat provider streaming loop fails the request (500) at the round limit instead of ending it like other paths",
+},
+	"TestMCPToolLoopBounded/anthropic_v1->openai_chat/stream=true",
+	"TestMCPToolLoopBounded/anthropic_beta->openai_chat/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "M5",
+	Reason: "Chat client -> Anthropic provider streaming: the mixed round's server-tool result is not spliced into the follow-up",
+},
+	"TestMCPMixedToolContinuation/openai_chat->anthropic_beta/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "G2",
+	Reason: "server-owned tool calls are executed without consulting guardrails",
+},
+	"TestGuardrailsBlocksServerTool/anthropic_v1->anthropic_beta/stream=false",
+	"TestGuardrailsBlocksServerTool/anthropic_v1->anthropic_beta/stream=true",
+	"TestGuardrailsBlocksServerTool/anthropic_v1->openai_chat/stream=false",
+	"TestGuardrailsBlocksServerTool/anthropic_v1->openai_chat/stream=true",
+	"TestGuardrailsBlocksServerTool/anthropic_beta->anthropic_beta/stream=false",
+	"TestGuardrailsBlocksServerTool/anthropic_beta->anthropic_beta/stream=true",
+	"TestGuardrailsBlocksServerTool/anthropic_beta->openai_chat/stream=false",
+	"TestGuardrailsBlocksServerTool/anthropic_beta->openai_chat/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "G8",
+	Reason: "cross-protocol paths (Anthropic client, OpenAI provider) apply no response guardrails",
+},
+	"TestGuardrailsBlocksToolUse/anthropic_v1->openai_chat/stream=false",
+	"TestGuardrailsBlocksToolUse/anthropic_v1->openai_chat/stream=true",
+	"TestGuardrailsBlocksToolUse/anthropic_v1->openai_responses/stream=false",
+	"TestGuardrailsBlocksToolUse/anthropic_v1->openai_responses/stream=true",
+	"TestGuardrailsBlocksToolUse/anthropic_beta->openai_chat/stream=false",
+	"TestGuardrailsBlocksToolUse/anthropic_beta->openai_chat/stream=true",
+	"TestGuardrailsBlocksToolUse/anthropic_beta->openai_responses/stream=false",
+	"TestGuardrailsBlocksToolUse/anthropic_beta->openai_responses/stream=true",
+	"TestGuardrailsBlocksClientToolAfterServerRound/anthropic_v1->openai_chat/stream=false",
+	"TestGuardrailsBlocksClientToolAfterServerRound/anthropic_v1->openai_chat/stream=true",
+	"TestGuardrailsBlocksClientToolAfterServerRound/anthropic_beta->openai_chat/stream=false",
+	"TestGuardrailsBlocksClientToolAfterServerRound/anthropic_beta->openai_chat/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "T1",
+	Reason: "Anthropic client -> Chat provider streaming: a provider stream cut inside a server tool call ends the response with 200 and no error event",
+},
+	"TestMCPTruncatedToolStream/anthropic_v1->openai_chat/stream=true",
+	"TestMCPTruncatedToolStream/anthropic_beta->openai_chat/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "T2",
+	Reason: "Chat client -> Anthropic provider streaming: server tool input carried on content_block_start (no input_json_delta) is dropped; the tool runs with empty arguments",
+},
+	"TestMCPToolInputOnBlockStart/openai_chat->anthropic_beta/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "T3",
+	Reason: "a retryable failure after a server tool ran fails over to the next service, which replays the whole request: the tool runs again and the client gets a 200",
+},
+	"TestMCPNoFailoverAfterServerTool/anthropic_v1->anthropic_beta/stream=false",
+	"TestMCPNoFailoverAfterServerTool/anthropic_v1->anthropic_beta/stream=true",
+	"TestMCPNoFailoverAfterServerTool/anthropic_v1->openai_chat/stream=false",
+	"TestMCPNoFailoverAfterServerTool/anthropic_v1->openai_chat/stream=true",
+	"TestMCPNoFailoverAfterServerTool/anthropic_beta->anthropic_beta/stream=false",
+	"TestMCPNoFailoverAfterServerTool/anthropic_beta->anthropic_beta/stream=true",
+	"TestMCPNoFailoverAfterServerTool/anthropic_beta->openai_chat/stream=false",
+	"TestMCPNoFailoverAfterServerTool/anthropic_beta->openai_chat/stream=true",
+	"TestMCPNoFailoverAfterServerTool/openai_chat->anthropic_beta/stream=false",
+	"TestMCPNoFailoverAfterServerTool/openai_chat->openai_chat/stream=false",
+	"TestMCPNoFailoverAfterServerTool/openai_chat->openai_chat/stream=true",
+) && registerKnownGaps(KnownGap{
+	ID:     "T4",
+	Reason: "cross-protocol paths (Anthropic client, OpenAI provider) do not restore credential aliases in the client's tool input",
+},
+	"TestGuardrailsCredentialAliasClientTool/anthropic_v1->openai_chat/stream=false",
+	"TestGuardrailsCredentialAliasClientTool/anthropic_v1->openai_chat/stream=true",
+	"TestGuardrailsCredentialAliasClientTool/anthropic_v1->openai_responses/stream=false",
+	"TestGuardrailsCredentialAliasClientTool/anthropic_v1->openai_responses/stream=true",
+	"TestGuardrailsCredentialAliasClientTool/anthropic_beta->openai_chat/stream=false",
+	"TestGuardrailsCredentialAliasClientTool/anthropic_beta->openai_chat/stream=true",
+	"TestGuardrailsCredentialAliasClientTool/anthropic_beta->openai_responses/stream=false",
+	"TestGuardrailsCredentialAliasClientTool/anthropic_beta->openai_responses/stream=true",
+)

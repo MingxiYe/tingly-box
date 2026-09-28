@@ -4,18 +4,18 @@ import (
 	"bytes"
 	"io"
 	"net/http"
-	"testing"
 )
 
 // sendRaw posts body to the gateway over real HTTP and returns the status and
-// the full response body (JSON or the raw SSE stream).
-func sendRaw(t *testing.T, env *TestEnv, path string, body []byte) (int, string) {
+// the full response body (JSON or the raw SSE stream). It takes a flagTB so
+// the same helper serves go tests and the harness CLI sections.
+func sendRaw(t flagTB, env *TestEnv, path string, body []byte) (int, string) {
 	t.Helper()
 	return sendRawWithHeaders(t, env, path, body, nil)
 }
 
 // sendRawWithHeaders is sendRaw with extra request headers (e.g. a session id).
-func sendRawWithHeaders(t *testing.T, env *TestEnv, path string, body []byte, headers map[string]string) (int, string) {
+func sendRawWithHeaders(t flagTB, env *TestEnv, path string, body []byte, headers map[string]string) (int, string) {
 	t.Helper()
 	req, err := http.NewRequest(http.MethodPost, env.GatewayURL()+path, bytes.NewReader(body))
 	if err != nil {

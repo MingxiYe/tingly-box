@@ -13,14 +13,6 @@ import (
 	"github.com/tingly-dev/tingly-box/internal/protocol"
 )
 
-// guardrailsPolicyFunc adapts a function into a guardrails policy so a test
-// can decide verdicts from the evaluated input.
-type guardrailsPolicyFunc func(context.Context, guardrailscore.Input) (guardrailscore.Result, error)
-
-func (f guardrailsPolicyFunc) Evaluate(ctx context.Context, input guardrailscore.Input) (guardrailscore.Result, error) {
-	return f(ctx, input)
-}
-
 // newBlockToolUseGuardrails returns an active runtime that blocks every
 // response-side tool call and allows everything else.
 func newBlockToolUseGuardrails() *guardrails.Guardrails {
@@ -41,27 +33,6 @@ func newBlockToolUseGuardrails() *guardrails.Guardrails {
 		HasActivePolicies: true,
 	}
 }
-
-// Guardrails applies to the Anthropic scenarios only (GuardrailsSupportedScenarios);
-// whether OpenAI ingress gets it is an open product decision, so only
-// Anthropic sources are asserted here.
-var anthropicSources = []protocol.APIType{protocol.TypeAnthropicV1, protocol.TypeAnthropicBeta}
-
-var guardrailsTargets = []protocol.APIType{protocol.TypeAnthropicBeta, protocol.TypeOpenAIChat, protocol.TypeOpenAIResponses}
-
-var _ = registerKnownGaps(KnownGap{
-	ID:     "G8",
-	Reason: "cross-protocol paths (Anthropic client, OpenAI provider) apply no response guardrails",
-},
-	"TestGuardrailsBlocksToolUse/anthropic_v1->openai_chat/stream=false",
-	"TestGuardrailsBlocksToolUse/anthropic_v1->openai_chat/stream=true",
-	"TestGuardrailsBlocksToolUse/anthropic_v1->openai_responses/stream=false",
-	"TestGuardrailsBlocksToolUse/anthropic_v1->openai_responses/stream=true",
-	"TestGuardrailsBlocksToolUse/anthropic_beta->openai_chat/stream=false",
-	"TestGuardrailsBlocksToolUse/anthropic_beta->openai_chat/stream=true",
-	"TestGuardrailsBlocksToolUse/anthropic_beta->openai_responses/stream=false",
-	"TestGuardrailsBlocksToolUse/anthropic_beta->openai_responses/stream=true",
-)
 
 // TestGuardrailsBlocksToolUse pins that a blocked response tool_use never
 // reaches an Anthropic client, whichever provider protocol served it.
@@ -92,25 +63,6 @@ func TestGuardrailsBlocksToolUse(t *testing.T) {
 	}
 }
 
-// blockedToolUseFailures lists how an Anthropic client response violates
-// "the blocked tool_use was replaced by the guardrails message".
-func blockedToolUseFailures(status int, raw string) []string {
-	var failures []string
-	if status != http.StatusOK {
-		failures = append(failures, fmt.Sprintf("status = %d", status))
-	}
-	if strings.Contains(raw, `"type":"tool_use"`) {
-		failures = append(failures, "blocked tool_use leaked to client")
-	}
-	if strings.Contains(raw, `"stop_reason":"tool_use"`) {
-		failures = append(failures, "stop_reason still tool_use after block")
-	}
-	if !strings.Contains(raw, "Blocked by guardrails") {
-		failures = append(failures, "no block message in response")
-	}
-	return failures
-}
-
 // TestGuardrailsRestoresCredentialAliasAnthropic pins that a protected
 // credential masked on the way upstream comes back to the client as the real
 // value in a non-stream response, not as the alias token.
@@ -133,15 +85,7 @@ func TestGuardrailsRestoresCredentialAliasAnthropic(t *testing.T) {
 				HasActivePolicies: true,
 			}
 			env := NewTestEnv(t, NewTestEnvOptionWithGuardrails(runtime))
-			// Server boot refreshes the runtime's cache from the (empty) test
-			// database, so install the credential on the live runtime afterwards.
-			env.srv.CurrentGuardrailsRuntime().SetCredentialCache(guardrails.BuildCredentialCache(
-				[]guardrailscore.ProtectedCredential{{
-					ID: "protocoltest-credential", Name: "protocoltest credential",
-					Type: guardrailscore.ProtectedCredentialTypeToken, Secret: secret, AliasToken: alias, Enabled: true,
-				}},
-				[]string{"anthropic"},
-			))
+			installProtectedCredential(env, secret, alias)
 
 			scenario := Scenario{
 				Name: "credential_restore",

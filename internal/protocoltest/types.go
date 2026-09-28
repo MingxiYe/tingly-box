@@ -49,6 +49,11 @@ type TestResult struct {
 	Skipped    bool   // true if test was skipped
 	SkipReason string // reason for skipping
 
+	// KnownGap is the ID of the registered known gap (see known_gaps.go) this
+	// failing case matches. Such a result has Passed=false but is reported
+	// as a known gap, not as a failure; see Failed.
+	KnownGap string
+
 	// Error details
 	Errors   []AssertionError // list of assertion failures
 	Duration time.Duration    // test execution time
@@ -64,6 +69,12 @@ type TestResult struct {
 	// Response details (for debugging/verbose output)
 	HTTPStatus int              // HTTP status code
 	Response   *RoundTripResult // full round-trip result (from first or last execution)
+}
+
+// Failed reports whether r counts as a failure: not passed, not skipped, and
+// not a registered known gap.
+func (r TestResult) Failed() bool {
+	return !r.Passed && !r.Skipped && r.KnownGap == ""
 }
 
 // AssertionError represents a single assertion failure.

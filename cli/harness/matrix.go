@@ -26,7 +26,7 @@ type MatrixCmd struct {
 	Targets    []string `kong:"name='target',sep=',',help='Filter by target protocol (can repeat or comma-separate)'"`
 	Streaming  bool     `kong:"name='streaming',help='Run only streaming tests'"`
 	NonStream  bool     `kong:"name='non-streaming',help='Run only non-streaming tests'"`
-	Mode       string   `kong:"name='mode',default='default',enum='default,all,single,transitive,idempotent,flags,content_shapes,cache_controls,cache_prefix,vendor',help='Section selection: default (single + idempotent round-trip; two-hop OFF), all (every section), single (A→B only), transitive (A→B→C only), idempotent (round-trip g(f(A))==A only), flags (per-rule flag behavior only), content_shapes (request content-shape regression only), cache_controls (single-hop + ABA cache/no-cache requests), cache_prefix (cross-request prompt-cache prefix stability, per client shape), vendor (ApplyProviderTransforms dispatch against real vendor APIBase discriminators)'"`
+	Mode       string   `kong:"name='mode',default='default',enum='default,all,single,transitive,idempotent,flags,content_shapes,cache_controls,cache_prefix,vendor,servertool',help='Section selection: default (single + idempotent round-trip; two-hop OFF), all (every section), single (A→B only), transitive (A→B→C only), idempotent (round-trip g(f(A))==A only), flags (per-rule flag behavior only), content_shapes (request content-shape regression only), cache_controls (single-hop + ABA cache/no-cache requests), cache_prefix (cross-request prompt-cache prefix stability, per client shape), vendor (ApplyProviderTransforms dispatch against real vendor APIBase discriminators), servertool (server-tool loop and Guardrails x MCP through the real gateway; known gaps reported as KNOWN_GAP)'"`
 	Client     string   `kong:"name='client',default='http',enum='http,gosdk,python,node,aisdk',help='Client driver: http (raw JSON over net/http, default), gosdk (official anthropic-sdk-go / openai-go), python (real Python SDKs via subprocess driver), node (real Node SDKs via subprocess driver), aisdk (AI SDK by Vercel via subprocess driver)'"`
 	JsonOutput bool     `kong:"name='json',help='Output results as JSON'"`
 	Verbose    int      `kong:"name='verbose',short='v',type='counter',help='Verbose output (repeat for more detail)'"`
@@ -57,6 +57,7 @@ var matrixSections = []matrixSection{
 	{name: "cache_controls", modes: []string{"all", "cache_controls"}, httpOnly: true, exec: (*protocoltest.Matrix).ExecuteAllCacheControls},
 	{name: "cache_prefix", modes: []string{"all", "cache_prefix"}, httpOnly: true, exec: (*protocoltest.Matrix).ExecuteAllCachePrefix},
 	{name: "vendor", modes: []string{"all", "vendor"}, httpOnly: true, exec: (*protocoltest.Matrix).ExecuteAllVendorTransforms},
+	{name: "servertool", modes: []string{"all", "servertool"}, httpOnly: true, exec: (*protocoltest.Matrix).ExecuteAllServerTool},
 }
 
 // Help returns extended help text shown by `harness matrix --help`.
@@ -89,6 +90,10 @@ func (*MatrixCmd) Help() string {
 
   # Run vendor-dispatch tests (ApplyProviderTransforms against real vendor APIBase)
   harness matrix --mode=vendor
+
+  # Run server-tool (MCP) loop and Guardrails x MCP cases through the real
+  # gateway; registered known gaps show as KNOWN_GAP and do not fail the run
+  harness matrix --mode=servertool
 
   # Run only single-hop (A→B) tests
   harness matrix --mode=single
@@ -208,7 +213,7 @@ func (m *MatrixCmd) Run() error {
 
 	// Determine exit code
 	for _, r := range results {
-		if !r.Passed && !r.Skipped {
+		if r.Failed() {
 			return fmt.Errorf("some tests failed")
 		}
 	}
