@@ -315,6 +315,8 @@
                 <button role="tab" aria-selected="true" aria-controls="i-npm" id="it-npm">npm</button>
                 <button role="tab" aria-selected="false" aria-controls="i-npx" id="it-npx" tabindex="-1">npx</button>
                 <button role="tab" aria-selected="false" aria-controls="i-docker" id="it-docker" tabindex="-1">Docker</button>
+                <button role="tab" aria-selected="false" aria-controls="i-openai" id="it-openai" tabindex="-1">OpenAI SDK</button>
+                <button role="tab" aria-selected="false" aria-controls="i-anthropic" id="it-anthropic" tabindex="-1">Anthropic SDK</button>
               </div>
               <button class="copy" type="button" aria-label="Copy commands">Copy</button>
             </div>
@@ -339,6 +341,20 @@ docker run -d --name tingly-box \
   -p 12580:12580 \
   -v "$(pwd)/tingly-data:/home/tingly/.tingly-box" \
   ghcr.io/tingly-dev/tingly-box</code></pre>
+<pre role="tabpanel" id="i-openai" aria-labelledby="it-openai" hidden><code><span class="c"># any OpenAI-compatible client works the same way</span>
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="your-tingly-model-token",
+    base_url="http://localhost:12580/tingly/openai/v1",
+)</code></pre>
+<pre role="tabpanel" id="i-anthropic" aria-labelledby="it-anthropic" hidden><code><span class="c"># any Anthropic-compatible client works the same way</span>
+from anthropic import Anthropic
+
+client = Anthropic(
+    api_key="your-tingly-model-token",
+    base_url="http://localhost:12580/tingly/anthropic",
+)</code></pre>
           </div>
           <ol class="next-steps">
             <li><span class="num">1</span><div><b>Open the UI</b><p><code>tb open</code>, or <code>http://localhost:12580</code></p></div></li>
@@ -346,29 +362,6 @@ docker run -d --name tingly-box \
             <li><span class="num">3</span><div><b>Pick an agent</b><p>Claude Code, Codex, OpenCode… and apply the config.</p></div></li>
             <li><span class="num">4</span><div><b>Invite your team</b><p>Optional: set rules and hand out sharing keys.</p></div></li>
           </ol>
-        </div>
-
-        <div class="sdk">
-          <div class="code">
-            <p class="code-title">OpenAI SDK</p>
-            <button class="copy" type="button" aria-label="Copy OpenAI example">Copy</button>
-<pre><code>from openai import OpenAI
-
-client = OpenAI(
-    api_key="your-tingly-model-token",
-    base_url="http://localhost:12580/tingly/openai/v1",
-)</code></pre>
-          </div>
-          <div class="code">
-            <p class="code-title">Anthropic SDK</p>
-            <button class="copy" type="button" aria-label="Copy Anthropic example">Copy</button>
-<pre><code>from anthropic import Anthropic
-
-client = Anthropic(
-    api_key="your-tingly-model-token",
-    base_url="http://localhost:12580/tingly/anthropic",
-)</code></pre>
-          </div>
         </div>
       </div>
     </section>

@@ -1,12 +1,12 @@
 /**
  * `.copy` buttons copy, in order of preference: `data-copy` on a host element,
- * the visible tab panel of a terminal window, or the sibling `pre code`.
+ * or the visible tab panel of the terminal window.
  * Comment spans (`.c`) are left out so pasted commands run as-is.
  */
 function textOf(btn: HTMLElement): string | undefined {
   const host = btn.closest<HTMLElement>('[data-copy]');
   if (host?.dataset.copy) return host.dataset.copy;
-  const scope = btn.closest('.term, .code');
+  const scope = btn.closest('.term');
   const pre = scope?.querySelector<HTMLElement>('pre:not([hidden]) code');
   if (!pre) return undefined;
   const clone = pre.cloneNode(true) as HTMLElement;

@@ -11,6 +11,8 @@ export function mountTabs(root: ParentNode = document): void {
         if (panel) panel.hidden = !on;
       }
       if (focus) tab.focus();
+      // tab strips can scroll sideways on narrow screens
+      tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     };
     tabs.forEach((tab, i) => {
       tab.addEventListener('click', () => select(tab));
