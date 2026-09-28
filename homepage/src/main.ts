@@ -1,17 +1,17 @@
 import './styles.css';
-import { AGENTS, CHANNELS, PROVIDERS } from './data/brands';
+import { AGENT_GROUPS, AGENTS, CHANNELS, PROVIDER_GROUPS, PROVIDERS } from './data/brands';
 import { mountFlow } from './flow/stage';
 import { startHero } from './hero/hero';
 import { mountCopyButtons } from './ui/copy';
 import { mountIcons } from './ui/icons';
-import { renderCounts, renderLogos } from './ui/logos';
+import { renderCounts, renderLogoGroups, renderLogos } from './ui/logos';
 import { mountNavHighlight } from './ui/nav';
 import { mountReveal } from './ui/reveal';
 import { mountTabs } from './ui/tabs';
 
 mountIcons();
-renderLogos('logos-agents', AGENTS, { more: 'Any OpenAI / Anthropic client' });
-renderLogos('logos-providers', PROVIDERS, { more: 'Any compatible endpoint' });
+renderLogoGroups('logos-agents', AGENT_GROUPS);
+renderLogoGroups('logos-providers', PROVIDER_GROUPS);
 renderLogos('logos-im', CHANNELS, { labelled: false });
 renderCounts({ agents: AGENTS.length, providers: PROVIDERS.length });
 mountTabs();

@@ -1,4 +1,4 @@
-import type { Brand } from '../data/brands';
+import type { Brand, BrandGroup } from '../data/brands';
 import { iconSvg } from './icons';
 
 function logo(b: Brand, labelled: boolean): HTMLLIElement {
@@ -43,5 +43,24 @@ export function renderCounts(counts: Record<string, number>): void {
   for (const el of document.querySelectorAll<HTMLElement>('[data-count]')) {
     const n = counts[el.dataset.count ?? ''];
     if (n !== undefined) el.textContent = String(n);
+  }
+}
+
+/** Renders groups into a container: one grid per group, separated by a divider carrying a small label. */
+export function renderLogoGroups(id: string, groups: BrandGroup[]): void {
+  const root = document.getElementById(id);
+  if (!root) return;
+  for (const [i, g] of groups.entries()) {
+    const section = document.createElement('div');
+    section.className = 'brand-sub';
+    const label = document.createElement('p');
+    label.className = 'sub-label';
+    label.textContent = g.label;
+    const ul = document.createElement('ul');
+    ul.className = 'brand-grid';
+    ul.id = `${id}-${i}`;
+    section.append(label, ul);
+    root.append(section);
+    renderLogos(ul.id, g.brands, { more: g.more });
   }
 }

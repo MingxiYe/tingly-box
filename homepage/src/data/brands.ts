@@ -49,50 +49,92 @@ export interface Brand {
   icon: string;
 }
 
-export const AGENTS: Brand[] = [
-  { name: 'Claude Code', icon: claudeCode },
-  { name: 'Claude Desktop', icon: claude },
-  { name: 'Codex', icon: codex },
-  { name: 'OpenCode', icon: opencode },
-  { name: 'Cursor', icon: cursor },
-  { name: 'Xcode', icon: xcode },
-  { name: 'VS Code', icon: vscode },
-  { name: 'Pi', icon: pi },
-  { name: 'OpenClaw', icon: openclaw },
-  { name: 'Cherry Studio', icon: cherryStudio },
-  { name: 'OpenAI SDK', icon: openai },
-  { name: 'Anthropic SDK', icon: anthropic },
+export interface BrandGroup {
+  label: string;
+  brands: Brand[];
+  /** closing "and more" tile for the group */
+  more?: string;
+}
+
+export const AGENT_GROUPS: BrandGroup[] = [
+  {
+    label: 'Coding agents',
+    brands: [
+      { name: 'Claude Code', icon: claudeCode },
+      { name: 'Codex', icon: codex },
+      { name: 'OpenCode', icon: opencode },
+      { name: 'Cursor', icon: cursor },
+      { name: 'Pi', icon: pi },
+      { name: 'OpenClaw', icon: openclaw },
+    ],
+  },
+  {
+    label: 'Apps & IDEs',
+    brands: [
+      { name: 'Claude Desktop', icon: claude },
+      { name: 'Xcode', icon: xcode },
+      { name: 'VS Code', icon: vscode },
+      { name: 'Cherry Studio', icon: cherryStudio },
+    ],
+  },
+  {
+    label: 'SDKs',
+    brands: [
+      { name: 'OpenAI SDK', icon: openai },
+      { name: 'Anthropic SDK', icon: anthropic },
+    ],
+    more: 'Any OpenAI / Anthropic client',
+  },
 ];
 
-export const PROVIDERS: Brand[] = [
-  { name: 'Anthropic', icon: anthropic },
-  { name: 'OpenAI', icon: openai },
-  { name: 'Gemini', icon: gemini },
-  { name: 'DeepSeek', icon: deepseek },
-  { name: 'Qwen', icon: qwen },
-  { name: 'Kimi', icon: kimi },
-  { name: 'Zhipu', icon: zhipu },
-  { name: 'MiniMax', icon: minimax },
-  { name: 'xAI', icon: xai },
-  { name: 'Mistral', icon: mistral },
-  { name: 'OpenRouter', icon: openrouter },
-  { name: 'Groq', icon: groq },
-  { name: 'Doubao', icon: doubao },
-  { name: 'Hunyuan', icon: hunyuan },
-  { name: 'Bedrock', icon: bedrock },
-  { name: 'Azure', icon: azure },
-  { name: 'Vertex AI', icon: vertex },
-  { name: 'NVIDIA', icon: nvidia },
-  { name: 'SiliconFlow', icon: siliconflow },
-  { name: 'StepFun', icon: stepfun },
-  { name: 'ModelScope', icon: modelscope },
-  { name: 'Xiaomi MiMo', icon: mimo },
-  { name: 'Fireworks', icon: fireworks },
-  { name: 'Together', icon: together },
-  { name: 'Ollama', icon: ollama },
-  { name: 'vLLM', icon: vllm },
-  { name: 'LM Studio', icon: lmstudio },
+export const PROVIDER_GROUPS: BrandGroup[] = [
+  {
+    label: 'Model makers',
+    brands: [
+      { name: 'Anthropic', icon: anthropic },
+      { name: 'OpenAI', icon: openai },
+      { name: 'Gemini', icon: gemini },
+      { name: 'DeepSeek', icon: deepseek },
+      { name: 'Qwen', icon: qwen },
+      { name: 'Kimi', icon: kimi },
+      { name: 'Zhipu', icon: zhipu },
+      { name: 'MiniMax', icon: minimax },
+      { name: 'xAI', icon: xai },
+      { name: 'Mistral', icon: mistral },
+      { name: 'Doubao', icon: doubao },
+      { name: 'Hunyuan', icon: hunyuan },
+      { name: 'StepFun', icon: stepfun },
+      { name: 'Xiaomi MiMo', icon: mimo },
+    ],
+  },
+  {
+    label: 'Cloud & inference',
+    brands: [
+      { name: 'Bedrock', icon: bedrock },
+      { name: 'Azure', icon: azure },
+      { name: 'Vertex AI', icon: vertex },
+      { name: 'NVIDIA', icon: nvidia },
+      { name: 'OpenRouter', icon: openrouter },
+      { name: 'Groq', icon: groq },
+      { name: 'SiliconFlow', icon: siliconflow },
+      { name: 'ModelScope', icon: modelscope },
+      { name: 'Fireworks', icon: fireworks },
+      { name: 'Together', icon: together },
+    ],
+  },
+  {
+    label: 'Self-hosted',
+    brands: [
+      { name: 'Ollama', icon: ollama },
+      { name: 'vLLM', icon: vllm },
+      { name: 'LM Studio', icon: lmstudio },
+    ],
+    more: 'SGLang, LocalAI, Jan & more',
+  },
 ];
+
+export const AGENTS: Brand[] = AGENT_GROUPS.flatMap((g) => g.brands);
+export const PROVIDERS: Brand[] = PROVIDER_GROUPS.flatMap((g) => g.brands);
 
 // Remote-control channels. Slack and Discord are not shipped yet — add them
 // back here once they are.
