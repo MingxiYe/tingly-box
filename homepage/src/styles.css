@@ -131,7 +131,6 @@ h3 { font-size: 1.02rem; font-weight: 600; }
   transition: background 0.2s, border-color 0.2s, transform 0.2s;
 }
 .btn:hover { transform: translateY(-1px); }
-.btn-primary { background: var(--ink); color: var(--bg); }
 .btn-ghost { border-color: var(--line-strong); color: var(--ink); }
 .btn-ghost:hover { background: var(--surface); }
 .btn-light { background: #fff; color: #16181d; }
