@@ -2,91 +2,28 @@
 //
 // Growth starts from the Tingly Box icon. Walkers — requests — hop between free
 // neighbouring cells of a T-shaped grid; every cell they land on flips in as an
-// agent (left), IM channel (middle) or model provider (right). Once the T is
-// complete it folds back into the Tingly Box icon, and assembly starts again
-// from there with a different mix — for as long as the hero is on screen.
+// agent (left), IM channel (middle) or model provider (right). The camera
+// starts close on the icon and pulls back as the T grows; once the T is
+// complete it folds back into the icon while the camera pushes in again, and
+// assembly restarts from there with a different mix. After a few rounds the
+// hero rests on the icon and stops drawing until it is clicked or hovered for
+// a long while.
 //
 // Idea adapted from the recursive hero on anthropic.com/institute; the
 // implementation here is independent.
-import { AGENTS, CHANNELS, PROVIDERS } from '../data/brands';
-import { CENTER, N, START, cells as shapeCells, col, neighbours, row, side } from './shape';
+import { type Camera, camTarget, foldCam, follow, startCam, wideCam } from './camera';
+import { DWELL, FADE, FOLD, HOLD, PAUSE, POP, ROUNDS, SPAN, TICK, TILE, VARIANTS } from './config';
+import { ALL_TILES, layouts } from './layouts';
+import { clamp01, easeInOut, rng } from './math';
+import { type Round, newRound, step } from './round';
+import { CENTER, N, START, cells as shapeCells, col, row } from './shape';
 import { ctx2d, iconTile, loadSvg, makeCanvas, tTile, type Palette } from './tiles';
-
-const TILE = 0.84;                  // tile edge as a fraction of the cell pitch
-const SPAN = N - 1 + TILE;          // T edge measured in pitches
-const TICK = 150;                   // ms per walker step
-const POP = 460;                    // ms tile pop-in
-const HOLD = 1500;                  // ms the finished T rests before folding
-const FOLD = 1300;                  // ms for the T to drain back into the icon
-const VARIANTS = 6;                 // icon shuffles, cycled round after round
 
 const CAPTIONS = [
   'Any agent ⇄ any provider',
   'Shared keys, rules and usage for your team',
   'Guardrails, MCP tools and remote control',
 ];
-
-interface Walker { idx: number; prev: number; since: number; bornAt: number; dieAt: number }
-interface Round { variant: number; cells: Map<number, number>; walkers: Walker[]; lastTick: number; ticks: number; doneAt: number }
-
-function rng(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
-const easeInOut = (t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
-
-function shuffled<T>(list: T[], r: () => number): T[] {
-  const a = list.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = (r() * (i + 1)) | 0;
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-type Kind = 'agent' | 'channel' | 'provider';
-interface Tile { icon: string; name: string; kind: Kind }
-
-// Every distinct icon once (the OpenAI / Anthropic / DeepSeek logos appear as
-// both agent-side SDKs and providers; the first claim wins).
-const ALL_TILES: Tile[] = (() => {
-  const seen = new Set<string>();
-  const out: Tile[] = [];
-  const add = (kind: Kind, list: typeof AGENTS): void => {
-    for (const b of list) if (!seen.has(b.icon)) { seen.add(b.icon); out.push({ icon: b.icon, name: b.name, kind }); }
-  };
-  add('provider', PROVIDERS);
-  add('agent', AGENTS);
-  add('channel', CHANNELS);
-  return out;
-})();
-
-// Tile per cell for each round. Cells prefer their side's kind (agents left,
-// channels centre, providers right); a side that runs short borrows unused
-// icons from the rest, so nothing repeats within a T until every icon is used.
-// Each round reshuffles, so consecutive rounds show different mixes.
-const layouts: Tile[][] = Array.from({ length: VARIANTS }, (_, v) => {
-  const r = rng(1000 + v * 97);
-  const unused = new Set(shuffled(ALL_TILES, r));
-  const take = (kind: Kind): Tile => {
-    if (!unused.size) ALL_TILES.forEach((t) => unused.add(t));   // every icon used: start over
-    let pick: Tile | undefined;
-    for (const t of unused) if (t.kind === kind) { pick = t; break; }
-    pick ??= unused.values().next().value as Tile;
-    unused.delete(pick);
-    return pick;
-  };
-  const out: Tile[] = new Array(N * N);
-  // fill in random cell order so borrowed icons do not always land in the same spots
-  for (const i of shuffled(shapeCells.filter((c) => c !== START), r)) out[i] = take(side(i));
-  return out;
-});
 
 // farthest cell from the start, in grid steps; orders the fold
 const MAX_DIST = Math.max(...shapeCells.map((i) => Math.abs(col(i) - col(START)) + Math.abs(row(i) - row(START))));
@@ -113,57 +50,10 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
 
   let round: Round = newRound(0, 0);
   const random = rng(0xc0ffee);
-  let running = false, finished = false, raf = 0;
-
-  function newRound(variant: number, now: number): Round {
-    return {
-      variant,
-      cells: new Map([[START, now - POP * 2]]),
-      walkers: [{ idx: START, prev: START, since: now, bornAt: now, dieAt: 0 }],
-      lastTick: now, ticks: 0, doneAt: 0,
-    };
-  }
-
-  function step(r: Round, now: number): void {
-    // after a background tab or a pause, pick up where we were instead of catching up
-    if (now - r.lastTick > 1000) r.lastTick = now - TICK;
-    while (!r.doneAt && now - r.lastTick >= TICK) {
-      r.lastTick += TICK;
-      r.ticks++;
-      const t = r.lastTick;
-      const taken = new Set(r.walkers.filter((w) => !w.dieAt).map((w) => w.idx));
-      const kept: Walker[] = [];
-      for (const w of r.walkers) {
-        if (w.dieAt) { if (t - w.dieAt < 300) kept.push(w); continue; }
-        if (!r.cells.has(w.idx)) r.cells.set(w.idx, t);
-        const options = (neighbours.get(w.idx) ?? []).filter((j) => !r.cells.has(j) && !taken.has(j));
-        if (!options.length) { w.dieAt = t; kept.push(w); continue; }
-        const next = options[(random() * options.length) | 0];
-        w.prev = w.idx; w.idx = next; w.since = t;
-        taken.add(next);
-        kept.push(w);
-      }
-      r.walkers = kept;
-
-      const alive = kept.filter((w) => !w.dieAt).length;
-      const frontier: number[] = [];
-      const seen = new Set<number>();
-      for (const i of r.cells.keys()) {
-        for (const j of neighbours.get(i) ?? []) {
-          if (!r.cells.has(j) && !taken.has(j) && !seen.has(j)) { seen.add(j); frontier.push(j); }
-        }
-      }
-      if (!frontier.length && !alive) { r.doneAt = t; break; }
-      const target = Math.min(10, Math.max(1, Math.floor((r.ticks / 3) ** 2)));
-      for (let n = alive; n < target && frontier.length; n++) {
-        const k = (random() * frontier.length) | 0;
-        const j = frontier[k];
-        frontier[k] = frontier[frontier.length - 1];
-        frontier.pop();
-        r.walkers.push({ idx: j, prev: j, since: t, bornAt: t, dieAt: 0 });
-      }
-    }
-  }
+  // `resting`: the loop is stopped on the icon (or on the whole T, for reduced motion)
+  let running = false, resting = false, visible = false, raf = 0, lastFrame = 0;
+  let roundsLeft = ROUNDS - 1;       // rounds still to start after the current one
+  let cam: Camera = startCam();
 
   function setCaption(i: number): void {
     if (caption && caption.dataset.round !== String(i)) {
@@ -172,6 +62,10 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
     }
   }
 
+  /** Screen position of a grid coordinate under the current camera. */
+  const sx = (c: number): number => originX + (c - CENTER - cam.x) * (boxSize / SPAN) * cam.z;
+  const sy = (r: number): number => originY + (r - CENTER - cam.y) * (boxSize / SPAN) * cam.z;
+
   // ---------- drawing ----------
   function drawTile(img: CanvasImageSource, x: number, y: number, size: number, alpha: number): void {
     if (alpha <= 0.004 || size < 0.5) return;
@@ -179,14 +73,13 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
     ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
   }
 
-  /** Draws the grown cells of a T of edge `size` centred at (cx, cy). */
-  function drawT(r: Round, cx: number, cy: number, size: number, now: number, alpha: number): void {
-    const p = size / SPAN;
+  /** Draws the grown cells of the T. */
+  function drawT(r: Round, tile: number, now: number): void {
     for (const [i, bornAt] of r.cells) {
-      const x = cx + (col(i) - CENTER) * p;
-      const y = cy + (row(i) - CENTER) * p;
-      let s = p * TILE;
-      let a = alpha;
+      const x = sx(col(i));
+      const y = sy(row(i));
+      let s = tile;
+      let a = 1;
       const age = now - bornAt;
       if (age < POP) {
         const t = age / POP;
@@ -210,28 +103,28 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
 
   function draw(now: number): void {
     ctx.clearRect(0, 0, W, H);
-    const p = boxSize / SPAN;
+    const p = (boxSize / SPAN) * cam.z;
     const tile = p * TILE;
-    dots(p, originX + p / 2, originY + p / 2, 0.5);
+    dots(p, sx(0.5), sy(0.5), 0.5);
 
-    const fold = round.doneAt && !finished ? clamp01((now - round.doneAt - HOLD) / FOLD) : 0;
-    if (fold > 0) drawFold(fold, p, tile);
-    else drawT(round, originX, originY, boxSize, now, 1);
+    const fold = foldAt(now);
+    if (fold > 0) drawFold(fold, tile);
+    else drawT(round, tile, now);
 
     // walkers: small "requests" hopping between cells, with a short trail
-    const radius = Math.max(2, Math.min(5, tile * 0.075));
+    const radius = Math.max(2, Math.min(7, tile * 0.075));
     ctx.fillStyle = accent;
     ctx.strokeStyle = accent;
     ctx.lineCap = 'round';
     ctx.lineWidth = radius * 1.2;
     for (const w of round.walkers) {
       const life = w.dieAt
-        ? (1 - Math.min(1, (now - w.dieAt) / 300)) ** 2
-        : 1 - (1 - Math.min(1, (now - w.bornAt) / 300)) ** 3;
+        ? (1 - Math.min(1, (now - w.dieAt) / FADE)) ** 2
+        : 1 - (1 - Math.min(1, (now - w.bornAt) / FADE)) ** 3;
       if (life <= 0) continue;
       const e = 1 - (1 - Math.min(1, (now - w.since) / (TICK * 0.9))) ** 2;
-      const ax = originX + (col(w.prev) - CENTER) * p, ay = originY + (row(w.prev) - CENTER) * p;
-      const bx = originX + (col(w.idx) - CENTER) * p, by = originY + (row(w.idx) - CENTER) * p;
+      const ax = sx(col(w.prev)), ay = sy(row(w.prev));
+      const bx = sx(col(w.idx)), by = sy(row(w.idx));
       const x = ax + (bx - ax) * e, y = ay + (by - ay) * e;
       if (e < 1) {
         ctx.globalAlpha = 0.3 * life * (1 - e);
@@ -250,18 +143,18 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
    * nearest-first and vanish into it, the icon swells as it takes them in, and
    * a ring goes out as the last one lands.
    */
-  function drawFold(t: number, p: number, tile: number): void {
-    const sx = originX + (col(START) - CENTER) * p;
-    const sy = originY + (row(START) - CENTER) * p;
+  function drawFold(t: number, tile: number): void {
+    const bx = sx(col(START));
+    const by = sy(row(START));
     for (const [i] of round.cells) {
       if (i === START) continue;
       const d = Math.abs(col(i) - col(START)) + Math.abs(row(i) - row(START));
       const local = clamp01((t - (d / MAX_DIST) * 0.5) / 0.42);
       const e = local * local;
-      const x = originX + (col(i) - CENTER) * p;
-      const y = originY + (row(i) - CENTER) * p;
+      const x = sx(col(i));
+      const y = sy(row(i));
       const img = icons.get(layouts[round.variant][i].icon);
-      if (img) drawTile(img, x + (sx - x) * e, y + (sy - y) * e, tile * (1 - 0.7 * e), 1 - clamp01((e - 0.55) / 0.45));
+      if (img) drawTile(img, x + (bx - x) * e, y + (by - y) * e, tile * (1 - 0.7 * e), 1 - clamp01((e - 0.55) / 0.45));
     }
     const ring = clamp01((t - 0.62) / 0.38);
     if (ring > 0 && ring < 1) {
@@ -270,11 +163,11 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
       ctx.strokeStyle = accent;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(sx - r / 2, sy - r / 2, r, r, r * 0.3);
+      ctx.roundRect(bx - r / 2, by - r / 2, r, r, r * 0.3);
       ctx.stroke();
     }
     const swell = 1 + 0.12 * Math.sin(Math.PI * clamp01((t - 0.1) / 0.9));
-    drawTile(brand, sx, sy, tile * swell, 1);
+    drawTile(brand, bx, by, tile * swell, 1);
     ctx.globalAlpha = 1;
   }
 
@@ -291,48 +184,108 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
     canvas.addEventListener('pointerleave', hide);
     canvas.addEventListener('pointermove', (ev) => {
       const rect = canvas.getBoundingClientRect();
-      const p = boxSize / SPAN;
-      const c = Math.round((ev.clientX - rect.left - originX) / p + CENTER);
-      const r = Math.round((ev.clientY - rect.top - originY) / p + CENTER);
+      const p = (boxSize / SPAN) * cam.z;
+      const c = Math.round((ev.clientX - rect.left - originX) / p + CENTER + cam.x);
+      const r = Math.round((ev.clientY - rect.top - originY) / p + CENTER + cam.y);
       const i = r * N + c;
-      const folding = round.doneAt && performance.now() - round.doneAt > HOLD;
+      const folding = foldAt(performance.now()) > 0;
       const info = c >= 0 && r >= 0 && c < N && r < N && round.cells.has(i) && !folding ? brandAt(i) : null;
       if (!info) { hide(); return; }
       tip.innerHTML = '';
       const kind = document.createElement('small');
       kind.textContent = info.kind;
       tip.append(kind, info.name);
-      tip.style.left = `${canvas.offsetLeft + originX + (c - CENTER) * p}px`;
-      tip.style.top = `${canvas.offsetTop + originY + (r - CENTER) * p - (p * TILE) / 2}px`;
+      tip.style.left = `${canvas.offsetLeft + sx(c)}px`;
+      tip.style.top = `${canvas.offsetTop + sy(r) - (p * TILE) / 2}px`;
       tip.hidden = false;
     });
   }
 
   // ---------- loop ----------
+  /** Fold progress 0..1 of the current round (0 while growing, holding or resting). */
+  function foldAt(now: number): number {
+    return round.doneAt && !resting ? clamp01((now - round.doneAt - HOLD) / FOLD) : 0;
+  }
+
   function frame(now: number): void {
     if (!running) return;
-    step(round, now);
-    if (round.doneAt && now - round.doneAt > HOLD + FOLD) {
+    const dt = Math.min(100, now - (lastFrame || now));
+    lastFrame = now;
+    step(round, now, random);
+    if (round.doneAt && !roundsLeft && now - round.doneAt > HOLD + FOLD) {
+      // folded back into the icon and out of rounds: rest there
+      rest();
+      return;
+    }
+    if (round.doneAt && now - round.doneAt > HOLD + FOLD + PAUSE) {
+      // the icon has paused for a beat: grow the next round from it
+      roundsLeft--;
       round = newRound((round.variant + 1) % VARIANTS, now);
       setCaption(round.variant);
     }
+    const fold = foldAt(now);
+    cam = fold > 0 ? foldCam(fold) : follow(cam, camTarget(round), dt);
     draw(now);
     raf = requestAnimationFrame(frame);
   }
 
+  function pause(): void {
+    running = false;
+    cancelAnimationFrame(raf);
+  }
+
   function resume(): void {
+    if (resting || !visible) return;
     cancelAnimationFrame(raf);
     running = true;
+    lastFrame = 0;
     raf = requestAnimationFrame(frame);
   }
 
-  /** The finished T, without animation (reduced motion). */
+  function setIdle(idle: boolean): void {
+    canvas.classList.toggle('is-idle', idle);
+    caption?.closest('.hero-level')?.classList.toggle('is-idle', idle);
+  }
+
+  /** Stops on the Tingly Box icon, which the next round (on wake) grows from. */
+  function rest(): void {
+    pause();
+    resting = true;
+    round = newRound((round.variant + 1) % VARIANTS, -1e6);
+    round.walkers = [];
+    cam = startCam();
+    setIdle(true);
+    draw(performance.now());
+    armDwell();   // the pointer may already be resting on the icon
+  }
+
+  // a long hover also wakes the resting icon; a passing pointer does not
+  let hovering = false, dwell = 0;
+  function armDwell(): void {
+    window.clearTimeout(dwell);
+    if (hovering && resting) dwell = window.setTimeout(wake, DWELL);
+  }
+
+  /** Clicking the resting icon plays one more round. */
+  function wake(): void {
+    if (!resting || reducedMotion) return;
+    resting = false;
+    roundsLeft = 0;
+    round = newRound(round.variant, performance.now());
+    setCaption(round.variant);
+    if (tooltip) tooltip.hidden = true;
+    setIdle(false);
+    resume();
+  }
+
+  /** The resting T, without animation (reduced motion). */
   function showFinal(): void {
     round = newRound(0, -1e6);
     for (const i of shapeCells) round.cells.set(i, -1e6);
     round.walkers = [];
     round.doneAt = -1e6;
-    finished = true;
+    resting = true;
+    cam = wideCam();
     setCaption(0);
     draw(0);
   }
@@ -364,10 +317,10 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
       const from = textRight + 64;
       const to = W - Math.max(48, (W - 1200) / 2);
       originX = (from + to) / 2;
-      boxSize = Math.max(160, Math.min(to - from, H * 0.7));
+      boxSize = Math.max(160, Math.min(to - from, H * 0.78));
     } else {
       originX = W * 0.5;
-      boxSize = Math.min(W * 0.84, H * 0.84);
+      boxSize = Math.min(W * 0.9, H * 0.9);
     }
     originY = H * 0.5;
     const next = readPalette();
@@ -375,7 +328,7 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
       palette = next;
       brand = tTile(next.brandBg, next.brandFg);
     }
-    if (!running) draw(performance.now() + (finished ? 1e6 : 0));
+    if (!running) draw(performance.now() + (resting ? 1e6 : 0));
   }
 
   // ---------- boot ----------
@@ -389,11 +342,16 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
     if (tooltip) mountTooltip(tooltip);
     if (reducedMotion) { showFinal(); return; }
     round = newRound(0, performance.now());
+    cam = startCam();
     setCaption(0);
+    canvas.addEventListener('click', wake);
+    canvas.addEventListener('pointerenter', (ev) => { hovering = ev.pointerType === 'mouse'; armDwell(); });
+    canvas.addEventListener('pointerleave', () => { hovering = false; window.clearTimeout(dwell); });
     // loop while visible, pause (keeping the current frame) while scrolled away
     new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) resume();
-      else { running = false; cancelAnimationFrame(raf); }
+      visible = entry.isIntersecting;
+      if (visible) resume();
+      else pause();
     }, { threshold: 0.15 }).observe(canvas);
   });
 }
