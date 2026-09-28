@@ -60,6 +60,7 @@ func (ph *ProtocolHandler) completeStageAnthropic(c *gin.Context, endpoint stage
 	message, ok := response.Value.(*anthropic.BetaMessage)
 	if !ok || message == nil {
 		ph.failRequest(c, fmt.Errorf("stage adapter: response has type %T, want *anthropic.BetaMessage", response.Value), "Invalid pipeline response")
+		holdAfterCompletion(c)
 		return
 	}
 
@@ -83,6 +84,7 @@ func (ph *ProtocolHandler) completeStageAnthropic(c *gin.Context, endpoint stage
 	v1, err := sdkstream.AnthropicV1Downgrade(message)
 	if err != nil {
 		ph.failRequest(c, err, "Failed to downgrade response for an Anthropic v1 client")
+		holdAfterCompletion(c)
 		return
 	}
 	v1.Model = anthropic.Model(attempt.ResponseModel)
@@ -123,4 +125,11 @@ func holdAfterSideEffects(c *gin.Context, err error) {
 	if stage.HasCommittedSideEffects(err) {
 		CommitFirstChunkIfGate(c.Writer)
 	}
+}
+
+// holdAfterCompletion commits the failover gate for a failure after the
+// pipeline completed: its rounds may have run server tools, and another
+// service would run them again.
+func holdAfterCompletion(c *gin.Context) {
+	CommitFirstChunkIfGate(c.Writer)
 }

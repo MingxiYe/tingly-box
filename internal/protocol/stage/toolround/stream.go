@@ -10,11 +10,16 @@ import (
 	"sync"
 
 	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 
 	"github.com/tingly-dev/tingly-box/internal/protocol"
 	"github.com/tingly-dev/tingly-box/internal/protocol/stage"
 )
+
+// errTruncatedRound is returned when an upstream round ends without
+// message_stop while tool calls are held.
+var errTruncatedRound = errors.New("tool round: upstream stream ended without message_stop")
 
 func (e *endpoint) Stream(ctx context.Context, call stage.Call) (stage.EventStream, error) {
 	request, err := e.prepare(ctx, call)
@@ -34,6 +39,9 @@ type heldBlock struct {
 	events []anthropic.BetaRawMessageStreamEventUnion
 	call   ToolCall
 	input  strings.Builder
+	// startInput is the input carried by content_block_start, used when the
+	// block streams no input_json_delta.
+	startInput string
 }
 
 // roundStream presents every round of one request as a single client
@@ -48,6 +56,7 @@ type roundStream struct {
 	current        stage.EventStream
 	queue          []stage.Event
 	done           bool
+	err            error // sticky: once the stream failed, every Next returns it
 	started        bool
 	nextIndex      int64
 	executedRounds int
@@ -79,6 +88,17 @@ func (s *roundStream) startRound() error {
 }
 
 func (s *roundStream) Next(ctx context.Context) (stage.Event, error) {
+	if s.err != nil {
+		return stage.Event{}, s.err
+	}
+	event, err := s.next(ctx)
+	if err != nil && !errors.Is(err, io.EOF) {
+		s.err = err
+	}
+	return event, err
+}
+
+func (s *roundStream) next(ctx context.Context) (stage.Event, error) {
 	for {
 		if len(s.queue) > 0 {
 			event := s.queue[0]
@@ -124,9 +144,10 @@ func (s *roundStream) consume(value any) error {
 	case "content_block_start":
 		if event.ContentBlock.Type == "tool_use" {
 			s.held = append(s.held, &heldBlock{
-				index:  event.Index,
-				events: []anthropic.BetaRawMessageStreamEventUnion{event},
-				call:   ToolCall{ID: event.ContentBlock.ID, Name: event.ContentBlock.Name},
+				index:      event.Index,
+				events:     []anthropic.BetaRawMessageStreamEventUnion{event},
+				call:       ToolCall{ID: event.ContentBlock.ID, Name: event.ContentBlock.Name},
+				startInput: gjson.Get(rawEvent(event), "content_block.input").Raw,
 			})
 			return nil
 		}
@@ -170,9 +191,17 @@ func (s *roundStream) heldBlock(index int64) *heldBlock {
 func (s *roundStream) finishRound(ctx context.Context) error {
 	s.absorb()
 	e := s.endpoint
+	if s.stop == nil && len(s.held) > 0 {
+		// The upstream ended without message_stop: its tool calls may be cut
+		// short, so none of them is run or handed to the client.
+		return stage.WrapCommitted(errTruncatedRound, s.committed)
+	}
 	calls := make([]ToolCall, len(s.held))
 	for i, block := range s.held {
 		block.call.Input = json.RawMessage(block.input.String())
+		if len(block.call.Input) == 0 {
+			block.call.Input = json.RawMessage(block.startInput)
+		}
 		if len(block.call.Input) == 0 {
 			block.call.Input = json.RawMessage("{}")
 		}
@@ -184,11 +213,11 @@ func (s *roundStream) finishRound(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
+		turn := s.message.ToParam()
 		var results []anthropic.BetaToolResultBlockParam
-		s.ctx, results = e.execute(s.ctx, s.request, p.execute)
+		s.ctx, results = e.execute(s.ctx, s.request, turn, p.execute)
 		s.committed = true
 		s.executedRounds++
-		turn := s.message.ToParam()
 		if p.continueLoop {
 			s.request = continued(s.request, turn, results)
 			return s.startRound()

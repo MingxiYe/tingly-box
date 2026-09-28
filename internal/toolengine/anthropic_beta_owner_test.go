@@ -99,3 +99,10 @@ func TestAnthropicBetaOwnerContinuation(t *testing.T) {
 		require.Same(t, again, owner.Resume(ctx, again))
 	})
 }
+
+func TestAnthropicBetaOwnerWithoutExecutor(t *testing.T) {
+	owner := NewAnthropicBetaOwner(coretool.NewVirtualToolRegistry(), nil, "provider")
+	_, result := owner.Execute(context.Background(), toolround.ToolCall{ID: "toolu_owned", Name: "tingly_box_mcp__builtin__echo", Input: json.RawMessage(`{}`)}, &anthropic.BetaMessageNewParams{})
+	require.Equal(t, "toolu_owned", result.ToolUseID)
+	require.True(t, result.IsError.Value, "a missing executor is reported to the model, as the existing loops do")
+}

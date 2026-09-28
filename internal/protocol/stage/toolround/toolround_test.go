@@ -184,11 +184,17 @@ func (o *fakeOwner) Suspend(_ context.Context, turn anthropic.BetaMessageParam, 
 }
 
 // fakeGate blocks tools named "danger", aliases SECRET as ALIAS in tool
-// results, and restores ALIAS to REAL in tool inputs.
+// results, and restores ALIAS to REAL in tool inputs and, like the real gate,
+// in the complete answer after screening it.
 type fakeGate struct {
 	decided   []string
 	requests  int
 	responses int
+	// screened is the complete answer as Response saw it, before restoring.
+	screened string
+	// toolResultContext is the last message of the conversation ToolResult
+	// screened against.
+	toolResultContext string
 }
 
 func (g *fakeGate) Request(context.Context, *anthropic.BetaMessageNewParams) error {
@@ -204,7 +210,11 @@ func (g *fakeGate) ToolUse(_ context.Context, _ *anthropic.BetaMessageNewParams,
 	return Verdict{}
 }
 
-func (g *fakeGate) ToolResult(_ context.Context, _ *anthropic.BetaMessageNewParams, _ ToolCall, result *anthropic.BetaToolResultBlockParam) {
+func (g *fakeGate) ToolResult(_ context.Context, request *anthropic.BetaMessageNewParams, _ ToolCall, result *anthropic.BetaToolResultBlockParam) {
+	if n := len(request.Messages); n > 0 {
+		data, _ := json.Marshal(request.Messages[n-1])
+		g.toolResultContext = string(data)
+	}
 	for _, content := range result.Content {
 		if content.OfText != nil {
 			content.OfText.Text = strings.ReplaceAll(content.OfText.Text, "SECRET", "ALIAS")
@@ -216,8 +226,14 @@ func (g *fakeGate) Restore(input json.RawMessage) json.RawMessage {
 	return json.RawMessage(strings.ReplaceAll(string(input), "ALIAS", "REAL"))
 }
 
-func (g *fakeGate) Response(context.Context, *anthropic.BetaMessageNewParams, *anthropic.BetaMessage) {
+func (g *fakeGate) Response(_ context.Context, _ *anthropic.BetaMessageNewParams, message *anthropic.BetaMessage) {
 	g.responses++
+	data, _ := json.Marshal(message)
+	g.screened = string(data)
+	var restored anthropic.BetaMessage
+	if err := json.Unmarshal([]byte(strings.ReplaceAll(g.screened, "ALIAS", "REAL")), &restored); err == nil {
+		*message = restored
+	}
 }
 
 // ─── runner ────────────────────────────────────────────────────────────────
@@ -432,10 +448,13 @@ func TestGateRestoresAndScreens(t *testing.T) {
 		require.NoError(t, err)
 		require.Contains(t, string(fedBack), "token ALIAS", "tool results are screened before the model sees them")
 		require.NotContains(t, string(fedBack), "SECRET")
+		require.Contains(t, gate.toolResultContext, "toolu_s", "a tool result is screened with the assistant turn that called it")
 
 		require.JSONEq(t, `{"key":"REAL"}`, string(toolInput(out.message.Content[len(out.message.Content)-1])), "client tools receive real values")
 		if !streaming {
 			require.Equal(t, 1, gate.responses)
+			require.Contains(t, gate.screened, "ALIAS", "the response check screens the masked answer")
+			require.NotContains(t, gate.screened, "REAL")
 		}
 	})
 }
@@ -471,4 +490,93 @@ func TestRejectsForeignRequest(t *testing.T) {
 	endpoint := New(Config{Owner: &fakeOwner{}}).Wrap(&scriptedEndpoint{})
 	_, err := endpoint.Complete(context.Background(), stage.Call{Request: &anthropic.MessageNewParams{}})
 	require.ErrorContains(t, err, "want anthropic.BetaMessageNewParams")
+}
+
+// ─── stream edge cases ─────────────────────────────────────────────────────
+
+// eventRounds streams rounds[i] as given, so a test can shape the events.
+type eventRounds struct {
+	rounds   [][]stage.Event
+	requests int
+	failAt   int // 1-based round whose open fails; 0 never
+}
+
+func (e *eventRounds) Protocol() protocol.APIType { return protocol.TypeAnthropicBeta }
+
+func (e *eventRounds) Complete(context.Context, stage.Call) (*stage.Response, error) {
+	return nil, errors.New("eventRounds: complete not supported")
+}
+
+func (e *eventRounds) Stream(context.Context, stage.Call) (stage.EventStream, error) {
+	e.requests++
+	if e.requests == e.failAt {
+		return nil, fmt.Errorf("provider failed in round %d", e.requests)
+	}
+	return &scriptedStream{events: e.rounds[min(e.requests, len(e.rounds))-1]}, nil
+}
+
+func drain(t *testing.T, events stage.EventStream) error {
+	t.Helper()
+	for {
+		if _, err := events.Next(context.Background()); err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+func rawEvents(t *testing.T, lines ...string) []stage.Event {
+	t.Helper()
+	events := make([]stage.Event, len(lines))
+	for i, line := range lines {
+		var event anthropic.BetaRawMessageStreamEventUnion
+		require.NoError(t, json.Unmarshal([]byte(line), &event))
+		events[i] = stage.Event{Value: event}
+	}
+	return events
+}
+
+func TestTruncatedRoundRunsNoTool(t *testing.T) {
+	full := messageEvents(message("tool_use", toolUse("toolu_s", "srv_echo", `{"q":"rm -rf /tmp/x"}`)))
+	// Cut inside the tool input: no second input chunk, block stop, delta or message_stop.
+	truncated := full[:3]
+	provider := &eventRounds{rounds: [][]stage.Event{truncated}}
+	owner := &fakeOwner{}
+	events, err := New(Config{Owner: owner}).Wrap(provider).Stream(context.Background(), stage.Call{Request: &anthropic.BetaMessageNewParams{}})
+	require.NoError(t, err)
+	err = drain(t, events)
+	require.ErrorIs(t, err, errTruncatedRound)
+	require.Empty(t, owner.executed, "a truncated round never runs its tool calls")
+	require.Equal(t, 1, provider.requests)
+}
+
+func TestToolInputFromBlockStart(t *testing.T) {
+	round := rawEvents(t,
+		`{"type":"message_start","message":{"id":"msg_1","type":"message","role":"assistant","model":"m","content":[],"stop_reason":null,"usage":{"input_tokens":1,"output_tokens":1}}}`,
+		`{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_s","name":"srv_echo","input":{"cmd":"ls"}}}`,
+		`{"type":"content_block_stop","index":0}`,
+		`{"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null},"usage":{"output_tokens":1}}`,
+		`{"type":"message_stop"}`)
+	final := messageEvents(message("end_turn", text("done")))
+	provider := &eventRounds{rounds: [][]stage.Event{round, final}}
+	owner := &fakeOwner{}
+	events, err := New(Config{Owner: owner}).Wrap(provider).Stream(context.Background(), stage.Call{Request: &anthropic.BetaMessageNewParams{}})
+	require.NoError(t, err)
+	require.NoError(t, drain(t, events))
+	require.Len(t, owner.executed, 1)
+	require.JSONEq(t, `{"cmd":"ls"}`, string(owner.executed[0].Input), "input carried on content_block_start is used when no delta follows")
+}
+
+func TestStreamErrorIsSticky(t *testing.T) {
+	loop := messageEvents(message("tool_use", toolUse("toolu_s", "srv_echo", `{}`)))
+	provider := &eventRounds{rounds: [][]stage.Event{loop}, failAt: 2}
+	events, err := New(Config{Owner: &fakeOwner{}}).Wrap(provider).Stream(context.Background(), stage.Call{Request: &anthropic.BetaMessageNewParams{}})
+	require.NoError(t, err)
+	first := drain(t, events)
+	require.Error(t, first)
+	require.True(t, stage.HasCommittedSideEffects(first))
+	_, again := events.Next(context.Background())
+	require.Equal(t, first, again, "a failed stream keeps returning its error")
 }

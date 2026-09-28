@@ -33,6 +33,14 @@ func (o *AnthropicBetaOwner) Owns(name string) bool {
 }
 
 func (o *AnthropicBetaOwner) Execute(ctx context.Context, call toolround.ToolCall, request *anthropic.BetaMessageNewParams) (context.Context, anthropic.BetaToolResultBlockParam) {
+	if o.executor == nil {
+		// As the existing tool loops: the model gets an error result.
+		return ctx, anthropic.BetaToolResultBlockParam{
+			ToolUseID: call.ID,
+			Content:   toolContentsToAnthropicBeta([]coretool.ToolContent{{Type: coretool.ContentTypeText, Text: "tool executor is not configured"}}),
+			IsError:   anthropic.Bool(true),
+		}
+	}
 	tool := &AnthropicBetaTool{ToolUseBlock: anthropic.BetaToolUseBlock{ID: call.ID, Name: call.Name, Input: call.Input}}
 	next, result, err := o.executor.ExecuteToolWithContext(ctx, tool, extractMessagesForToolCall(request))
 	if err != nil {

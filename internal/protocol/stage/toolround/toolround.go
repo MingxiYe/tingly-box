@@ -33,7 +33,10 @@ import (
 )
 
 // DefaultMaxRounds bounds how many rounds may execute owned tools in one
-// request, matching the existing tool loops.
+// request, as many as the existing tool loops run. Unlike them, the stage then
+// asks the model once more so the turn ends with an answer built on those
+// results (the existing loops ended it with an empty or failed answer), so a
+// request makes at most DefaultMaxRounds+1 upstream calls.
 const DefaultMaxRounds = 3
 
 // ToolCall is one tool_use the model produced.
@@ -116,8 +119,10 @@ type endpoint struct {
 
 func (*endpoint) Protocol() protocol.APIType { return protocol.TypeAnthropicBeta }
 
-// prepare screens the client request and splices a stored continuation,
-// returning a request the stage may extend without touching the caller's.
+// prepare screens the client request and splices a stored continuation. The
+// returned request's message list is the stage's own to extend; the Gate's
+// request screening may rewrite content blocks in place, as the existing
+// request guardrails do.
 func (e *endpoint) prepare(ctx context.Context, call stage.Call) (*anthropic.BetaMessageNewParams, error) {
 	var request anthropic.BetaMessageNewParams
 	switch value := call.Request.(type) {
@@ -206,9 +211,16 @@ func (e *endpoint) decide(ctx context.Context, request *anthropic.BetaMessageNew
 	return p
 }
 
-// execute runs the plan's owned calls in order, screening each result.
-func (e *endpoint) execute(ctx context.Context, request *anthropic.BetaMessageNewParams, calls []ToolCall) (context.Context, []anthropic.BetaToolResultBlockParam) {
+// execute runs the plan's owned calls in order, screening each result. The
+// tool sees the conversation before turn, as in the existing tool loops; the
+// Gate screens each result against the conversation including turn, the
+// assistant message whose calls it answers.
+func (e *endpoint) execute(ctx context.Context, request *anthropic.BetaMessageNewParams, turn anthropic.BetaMessageParam, calls []ToolCall) (context.Context, []anthropic.BetaToolResultBlockParam) {
 	results := make([]anthropic.BetaToolResultBlockParam, 0, len(calls))
+	var screened *anthropic.BetaMessageNewParams
+	if e.config.Gate != nil {
+		screened = withTurn(request, turn)
+	}
 	for _, call := range calls {
 		if e.config.Gate != nil {
 			call.Input = e.config.Gate.Restore(call.Input)
@@ -221,7 +233,7 @@ func (e *endpoint) execute(ctx context.Context, request *anthropic.BetaMessageNe
 			result.ToolUseID = call.ID
 		}
 		if e.config.Gate != nil {
-			e.config.Gate.ToolResult(ctx, request, call, &result)
+			e.config.Gate.ToolResult(ctx, screened, call, &result)
 		}
 		results = append(results, result)
 	}
@@ -232,6 +244,13 @@ func (e *endpoint) execute(ctx context.Context, request *anthropic.BetaMessageNe
 func continued(request *anthropic.BetaMessageNewParams, turn anthropic.BetaMessageParam, results []anthropic.BetaToolResultBlockParam) *anthropic.BetaMessageNewParams {
 	next := *request
 	next.Messages = append(append(make([]anthropic.BetaMessageParam, 0, len(request.Messages)+2), request.Messages...), turn, resultMessage(results))
+	return &next
+}
+
+// withTurn returns request extended with the assistant turn only.
+func withTurn(request *anthropic.BetaMessageNewParams, turn anthropic.BetaMessageParam) *anthropic.BetaMessageNewParams {
+	next := *request
+	next.Messages = append(append(make([]anthropic.BetaMessageParam, 0, len(request.Messages)+1), request.Messages...), turn)
 	return &next
 }
 
@@ -282,7 +301,7 @@ func toolInput(block anthropic.BetaContentBlockUnion) json.RawMessage {
 
 // clientBlock renders one content block for the client under plan p, or
 // reports false when the block is withheld.
-func (e *endpoint) clientBlock(p plan, raw string) (string, bool) {
+func (e *endpoint) clientBlock(p plan, raw string, restore bool) (string, bool) {
 	if gjson.Get(raw, "type").String() != "tool_use" {
 		return raw, true
 	}
@@ -293,7 +312,7 @@ func (e *endpoint) clientBlock(p plan, raw string) (string, bool) {
 	if !p.keep[id] {
 		return "", false
 	}
-	if e.config.Gate != nil {
+	if restore && e.config.Gate != nil {
 		input := gjson.Get(raw, "input").Raw
 		if restored := string(e.config.Gate.Restore(json.RawMessage(input))); restored != input && restored != "" {
 			raw, _ = sjson.SetRaw(raw, "input", restored)
@@ -302,9 +321,11 @@ func (e *endpoint) clientBlock(p plan, raw string) (string, bool) {
 	return raw, true
 }
 
-// clientMessage applies plan p to a round's message for the client.
-func (e *endpoint) clientMessage(message *anthropic.BetaMessage, p plan) (*anthropic.BetaMessage, error) {
-	if len(p.blocked) == 0 && p.stopReason == "" && e.config.Gate == nil && len(p.keep) == len(toolCalls(message)) {
+// clientMessage applies plan p to a round's message for the client. restore
+// replaces alias tokens in kept tool inputs; a complete answer leaves that to
+// the Gate's response check, which screens the masked message first.
+func (e *endpoint) clientMessage(message *anthropic.BetaMessage, p plan, restore bool) (*anthropic.BetaMessage, error) {
+	if len(p.blocked) == 0 && p.stopReason == "" && (!restore || e.config.Gate == nil) && len(p.keep) == len(toolCalls(message)) {
 		return message, nil
 	}
 	raw := message.RawJSON()
@@ -317,7 +338,7 @@ func (e *endpoint) clientMessage(message *anthropic.BetaMessage, p plan) (*anthr
 	}
 	blocks := make([]string, 0, len(message.Content))
 	for _, block := range gjson.Get(raw, "content").Array() {
-		if out, ok := e.clientBlock(p, block.Raw); ok {
+		if out, ok := e.clientBlock(p, block.Raw, restore); ok {
 			blocks = append(blocks, out)
 		}
 	}
@@ -361,11 +382,11 @@ func (e *endpoint) Complete(ctx context.Context, call stage.Call) (*stage.Respon
 
 		p := e.decide(ctx, request, toolCalls(message), executedRounds)
 		if len(p.execute) > 0 {
+			turn := assistantTurn(message)
 			var results []anthropic.BetaToolResultBlockParam
-			ctx, results = e.execute(ctx, request, p.execute)
+			ctx, results = e.execute(ctx, request, turn, p.execute)
 			committed = true
 			executedRounds++
-			turn := assistantTurn(message)
 			if p.continueLoop {
 				request = continued(request, turn, results)
 				continue
@@ -373,7 +394,9 @@ func (e *endpoint) Complete(ctx context.Context, call stage.Call) (*stage.Respon
 			e.config.Owner.Suspend(ctx, turn, results)
 		}
 
-		out, err := e.clientMessage(message, p)
+		// The Gate's response check restores credentials itself once the
+		// masked message passes, as the existing response guardrails do.
+		out, err := e.clientMessage(message, p, e.config.Gate == nil)
 		if err != nil {
 			return nil, stage.WrapCommitted(err, committed)
 		}

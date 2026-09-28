@@ -3,6 +3,7 @@ package protocolserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -337,4 +338,38 @@ func TestStageAnthropicAdapterHoldsFailoverAfterSideEffects(t *testing.T) {
 			})
 		}
 	}
+}
+
+// betaOnlyEndpoint answers with a message a V1 client cannot receive.
+type betaOnlyEndpoint struct{}
+
+func (betaOnlyEndpoint) Protocol() protocol.APIType { return protocol.TypeAnthropicBeta }
+func (betaOnlyEndpoint) Complete(context.Context, stage.Call) (*stage.Response, error) {
+	var message anthropic.BetaMessage
+	if err := json.Unmarshal([]byte(`{"id":"msg_1","type":"message","role":"assistant","model":"m","content":[{"type":"mcp_tool_use","id":"mcptoolu_1","name":"t","server_name":"s","input":{}}],"stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}`), &message); err != nil {
+		return nil, err
+	}
+	return &stage.Response{Value: &message}, nil
+}
+func (betaOnlyEndpoint) Stream(context.Context, stage.Call) (stage.EventStream, error) {
+	return nil, errors.New("not used")
+}
+
+// A failure after the pipeline completed may follow server tools that already
+// ran, so it must not fail over.
+func TestStageAnthropicAdapterHoldsFailoverAfterCompletion(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := &closeNotifyRecorder{httptest.NewRecorder()}
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/tingly/anthropic/v1/messages", nil)
+	gate := newFirstChunkGate(c.Writer)
+	c.Writer = gate
+
+	ph := &ProtocolHandler{}
+	ph.serveStageAnthropic(c, betaOnlyEndpoint{}, stageAnthropicAttempt{
+		Client: protocol.TypeAnthropicV1, Request: &anthropic.BetaMessageNewParams{},
+		Provider: &typ.Provider{Name: "p"}, ResponseModel: "m",
+	})
+	require.Equal(t, http.StatusInternalServerError, gate.Status())
+	require.True(t, gate.Committed(), "the V1 downgrade failure goes to the client instead of failing over")
 }
