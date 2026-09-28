@@ -38,26 +38,25 @@ export function renderLogos(id: string, brands: Brand[], opts: { labelled?: bool
   }
 }
 
-/** Writes list sizes into `[data-count="key"]`, so counts never drift from the data. */
-export function renderCounts(counts: Record<string, number>): void {
-  for (const el of document.querySelectorAll<HTMLElement>('[data-count]')) {
-    const n = counts[el.dataset.count ?? ''];
-    if (n !== undefined) el.textContent = String(n);
-  }
-}
-
-/** Renders groups into a container: one grid per group, separated by a divider carrying a small label. */
-export function renderLogoGroups(id: string, groups: BrandGroup[]): void {
+/**
+ * Renders groups into a container: one grid per group, separated by a divider
+ * carrying a small label. `columns` is the widest column count the grid uses;
+ * every group must fill whole rows at that width, ending on its "more" tile.
+ */
+export function renderLogoGroups(id: string, groups: BrandGroup[], columns: 2 | 4): void {
   const root = document.getElementById(id);
   if (!root) return;
   for (const [i, g] of groups.entries()) {
+    if (import.meta.env.DEV && (g.brands.length + 1) % columns !== 0) {
+      console.warn(`brand group "${g.label}" leaves a gap: ${g.brands.length} brands + more tile is not a multiple of ${columns}`);
+    }
     const section = document.createElement('div');
     section.className = 'brand-sub';
     const label = document.createElement('p');
     label.className = 'sub-label';
     label.textContent = g.label;
     const ul = document.createElement('ul');
-    ul.className = 'brand-grid';
+    ul.className = `brand-grid cols-${columns}`;
     ul.id = `${id}-${i}`;
     section.append(label, ul);
     root.append(section);

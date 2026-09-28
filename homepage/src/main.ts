@@ -1,19 +1,18 @@
 import './styles.css';
-import { AGENT_GROUPS, AGENTS, CHANNELS, PROVIDER_GROUPS, PROVIDERS } from './data/brands';
+import { AGENT_GROUPS, CHANNELS, PROVIDER_GROUPS } from './data/brands';
 import { mountFlow } from './flow/stage';
 import { startHero } from './hero/hero';
 import { mountCopyButtons } from './ui/copy';
 import { mountIcons } from './ui/icons';
-import { renderCounts, renderLogoGroups, renderLogos } from './ui/logos';
+import { renderLogoGroups, renderLogos } from './ui/logos';
 import { mountNavHighlight } from './ui/nav';
 import { mountReveal } from './ui/reveal';
 import { mountTabs } from './ui/tabs';
 
 mountIcons();
-renderLogoGroups('logos-agents', AGENT_GROUPS);
-renderLogoGroups('logos-providers', PROVIDER_GROUPS);
+renderLogoGroups('logos-agents', AGENT_GROUPS, 2);
+renderLogoGroups('logos-providers', PROVIDER_GROUPS, 4);
 renderLogos('logos-im', CHANNELS, { labelled: false });
-renderCounts({ agents: AGENTS.length, providers: PROVIDERS.length });
 mountTabs();
 mountCopyButtons();
 mountNavHighlight();

@@ -2,7 +2,9 @@
 // what the product actually supports (see frontend/src/components/BrandIcons.tsx).
 import anthropic from '@lobehub/icons-static-svg/icons/anthropic.svg?url';
 import azure from '@lobehub/icons-static-svg/icons/azure-color.svg?url';
+import baidu from '@lobehub/icons-static-svg/icons/baidu-color.svg?url';
 import bedrock from '@lobehub/icons-static-svg/icons/bedrock-color.svg?url';
+import cerebras from '@lobehub/icons-static-svg/icons/cerebras-color.svg?url';
 import cherryStudio from '@lobehub/icons-static-svg/icons/cherrystudio-color.svg?url';
 import claude from '@lobehub/icons-static-svg/icons/claude-color.svg?url';
 import claudeCode from '@lobehub/icons-static-svg/icons/claudecode-color.svg?url';
@@ -49,11 +51,16 @@ export interface Brand {
   icon: string;
 }
 
+/**
+ * A row-aligned block of logos. Each group fills its grid exactly: the number
+ * of brands plus the closing "more" tile must be a multiple of the grid's
+ * column count (2 for agents, 4 for providers) — the page warns in dev if not.
+ */
 export interface BrandGroup {
   label: string;
   brands: Brand[];
-  /** closing "and more" tile for the group */
-  more?: string;
+  /** text of the closing "more" tile */
+  more: string;
 }
 
 export const AGENT_GROUPS: BrandGroup[] = [
@@ -65,8 +72,10 @@ export const AGENT_GROUPS: BrandGroup[] = [
       { name: 'OpenCode', icon: opencode },
       { name: 'Cursor', icon: cursor },
       { name: 'Pi', icon: pi },
+      { name: 'DeepSeek Harness', icon: deepseek },
       { name: 'OpenClaw', icon: openclaw },
     ],
+    more: 'More agents',
   },
   {
     label: 'Apps & IDEs',
@@ -74,16 +83,17 @@ export const AGENT_GROUPS: BrandGroup[] = [
       { name: 'Claude Desktop', icon: claude },
       { name: 'Xcode', icon: xcode },
       { name: 'VS Code', icon: vscode },
-      { name: 'Cherry Studio', icon: cherryStudio },
     ],
+    more: 'More apps',
   },
   {
-    label: 'SDKs',
+    label: 'Clients & SDKs',
     brands: [
+      { name: 'Cherry Studio', icon: cherryStudio },
       { name: 'OpenAI SDK', icon: openai },
       { name: 'Anthropic SDK', icon: anthropic },
     ],
-    more: 'Any OpenAI / Anthropic client',
+    more: 'Any client',
   },
 ];
 
@@ -105,7 +115,9 @@ export const PROVIDER_GROUPS: BrandGroup[] = [
       { name: 'Hunyuan', icon: hunyuan },
       { name: 'StepFun', icon: stepfun },
       { name: 'Xiaomi MiMo', icon: mimo },
+      { name: 'Baidu Qianfan', icon: baidu },
     ],
+    more: 'More models',
   },
   {
     label: 'Cloud & inference',
@@ -120,7 +132,9 @@ export const PROVIDER_GROUPS: BrandGroup[] = [
       { name: 'ModelScope', icon: modelscope },
       { name: 'Fireworks', icon: fireworks },
       { name: 'Together', icon: together },
+      { name: 'Cerebras', icon: cerebras },
     ],
+    more: 'Any compatible API',
   },
   {
     label: 'Self-hosted',
@@ -129,7 +143,7 @@ export const PROVIDER_GROUPS: BrandGroup[] = [
       { name: 'vLLM', icon: vllm },
       { name: 'LM Studio', icon: lmstudio },
     ],
-    more: 'SGLang, LocalAI, Jan & more',
+    more: 'SGLang, LocalAI, Jan…',
   },
 ];
 
