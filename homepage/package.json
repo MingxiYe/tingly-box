@@ -1,0 +1,22 @@
+{
+  "name": "tingly-box-homepage",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.33.4",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lobehub/icons-static-svg": "^1.95.1",
+    "@tabler/icons": "^3.48.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "^5.9.3",
+    "vite": "8.1.5"
+  }
+}

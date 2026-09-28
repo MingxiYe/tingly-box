@@ -231,6 +231,22 @@ tasks:
         mkdir -p internal/web/dist/
         cp -R frontend/dist/* internal/web/dist/
 
+  homepage:
+    aliases:
+      - homepage:dev
+    desc: Run the GitHub Pages homepage (homepage/) with hot reload
+    dir: homepage
+    cmds:
+      - pnpm install
+      - pnpm dev
+
+  homepage:build:
+    desc: Build the GitHub Pages homepage into homepage/dist
+    dir: homepage
+    cmds:
+      - pnpm install --frozen-lockfile
+      - pnpm build
+
   check:zig:
     summary: Check if zig is installed
     cmds:
