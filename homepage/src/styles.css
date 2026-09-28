@@ -421,7 +421,7 @@ h3 { font-size: 1.02rem; font-weight: 600; }
 @media (max-width: 900px) { .team-grid { grid-template-columns: 1fr; gap: 40px; } .team-steps { padding-top: 0; } }
 
 /* ================= quick start ================= */
-.start-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 40px; align-items: start; }
+.start-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 40px; align-items: stretch; }
 .term, .code { background: var(--code-bg); color: var(--code-ink); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow); }
 .term-bar {
   display: flex; align-items: center; gap: 16px;
@@ -437,6 +437,11 @@ h3 { font-size: 1.02rem; font-weight: 600; }
 .term-tabs button[aria-selected="true"] { background: rgba(255, 255, 255, 0.08); color: var(--code-ink); }
 .term pre, .code pre { margin: 0; padding: 20px 24px 24px; overflow-x: auto; font: 0.86rem/1.75 var(--mono); }
 .term .c, .code .c { color: var(--code-dim); }
+/* all install panels share one grid cell, so the window keeps the height of the
+   tallest one (or of the step cards beside it) whichever tab is selected */
+.term { display: grid; grid-template-rows: auto 1fr; }
+.term pre { grid-area: 2 / 1; }
+.term pre[hidden] { display: block; visibility: hidden; }
 .code { position: relative; }
 .code .copy { position: absolute; top: 10px; right: 10px; }
 .code-title { margin: 0; padding: 16px 24px 0; font: 500 0.74rem/1 var(--mono); color: var(--code-dim); text-transform: uppercase; letter-spacing: 0.08em; }
