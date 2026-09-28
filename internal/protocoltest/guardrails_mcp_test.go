@@ -1,142 +1,27 @@
 package protocoltest
 
-import (
-	"context"
-	"fmt"
-	"net/http"
-	"strings"
-	"testing"
+import "testing"
 
-	"github.com/tingly-dev/tingly-box/internal/guardrails"
-	guardrailscore "github.com/tingly-dev/tingly-box/internal/guardrails/core"
-	"github.com/tingly-dev/tingly-box/internal/protocol"
-)
-
-// Guardrails x MCP composition. The intended order is one decision point per
-// tool call: guardrails first, then ownership — a blocked server tool never
-// runs, and a client tool produced after server rounds is still checked.
-// Responses targets are left out: they are never offered server tools (M3).
-var guardrailsMCPTargets = []protocol.APIType{protocol.TypeAnthropicBeta, protocol.TypeOpenAIChat}
-
-// newBlockToolNamedGuardrails blocks response tool calls whose name contains
-// fragment and allows everything else.
-func newBlockToolNamedGuardrails(fragment string) *guardrails.Guardrails {
-	return &guardrails.Guardrails{
-		Policy: guardrailsPolicyFunc(func(_ context.Context, input guardrailscore.Input) (guardrailscore.Result, error) {
-			if input.Direction == guardrailscore.DirectionResponse && input.Content.Command != nil &&
-				strings.Contains(input.Content.Command.Name, fragment) {
-				return guardrailscore.Result{
-					Verdict: guardrailscore.VerdictBlock,
-					Reasons: []guardrailscore.PolicyResult{{PolicyID: "protocoltest-block-named", Verdict: guardrailscore.VerdictBlock, Reason: "denied by test policy"}},
-				}, nil
-			}
-			return guardrailscore.Result{Verdict: guardrailscore.VerdictAllow}, nil
-		}),
-		HasActivePolicies: true,
-	}
-}
-
-var _ = registerKnownGaps(KnownGap{
-	ID:     "G2",
-	Reason: "server-owned tool calls are executed without consulting guardrails",
-},
-	"TestGuardrailsBlocksServerTool/anthropic_v1->anthropic_beta/stream=false",
-	"TestGuardrailsBlocksServerTool/anthropic_v1->anthropic_beta/stream=true",
-	"TestGuardrailsBlocksServerTool/anthropic_v1->openai_chat/stream=false",
-	"TestGuardrailsBlocksServerTool/anthropic_v1->openai_chat/stream=true",
-	"TestGuardrailsBlocksServerTool/anthropic_beta->anthropic_beta/stream=false",
-	"TestGuardrailsBlocksServerTool/anthropic_beta->anthropic_beta/stream=true",
-	"TestGuardrailsBlocksServerTool/anthropic_beta->openai_chat/stream=false",
-	"TestGuardrailsBlocksServerTool/anthropic_beta->openai_chat/stream=true",
-)
+// Guardrails x MCP composition through the real HTTP gateway. The case
+// bodies live in servertool.go and also run in the harness CLI
+// (--mode=servertool); known gaps are registered in known_gaps.go under
+// these test names.
 
 // TestGuardrailsBlocksServerTool pins that a server-owned tool call blocked
 // by guardrails is not executed and the client gets the block message.
 func TestGuardrailsBlocksServerTool(t *testing.T) {
-	t.Parallel()
-
-	for _, source := range anthropicSources {
-		for _, target := range guardrailsMCPTargets {
-			for _, streaming := range []bool{false, true} {
-				source, target, streaming := source, target, streaming
-				t.Run(fmt.Sprintf("%s->%s/stream=%v", source, target, streaming), func(t *testing.T) {
-					t.Parallel()
-
-					echo := NewEchoServertoolProvider()
-					env := NewTestEnv(t,
-						NewTestEnvOptionWithServertoolProviders(echo),
-						NewTestEnvOptionWithGuardrails(newBlockToolNamedGuardrails("echo")),
-					)
-					scenario := OwnedToolScenario()
-					env.SetupRoute(source, target, scenario)
-					model := env.findRouteModel(source, target, scenario.Name)
-					path, body := buildRequest(source, model, streaming)
-
-					status, raw := sendRaw(t, env, path, body)
-					var failures []string
-					if status != http.StatusOK {
-						failures = append(failures, fmt.Sprintf("status = %d", status))
-					}
-					if n := len(echo.Calls()); n != 0 {
-						failures = append(failures, fmt.Sprintf("blocked server tool executed %d times", n))
-					}
-					if strings.Contains(raw, OwnedToolWireName) {
-						failures = append(failures, "server tool call leaked to client")
-					}
-					if !strings.Contains(raw, "Blocked by guardrails") {
-						failures = append(failures, "no block message in response")
-					}
-					checkCase(t, t.Name(), failures, "client response:\n"+raw)
-				})
-			}
-		}
-	}
+	runServerToolTest(t, "TestGuardrailsBlocksServerTool")
 }
 
-var _ = registerKnownGaps(KnownGap{
-	ID:     "G8",
-	Reason: "cross-protocol paths (Anthropic client, OpenAI provider) apply no response guardrails",
-},
-	"TestGuardrailsBlocksClientToolAfterServerRound/anthropic_v1->openai_chat/stream=false",
-	"TestGuardrailsBlocksClientToolAfterServerRound/anthropic_v1->openai_chat/stream=true",
-	"TestGuardrailsBlocksClientToolAfterServerRound/anthropic_beta->openai_chat/stream=false",
-	"TestGuardrailsBlocksClientToolAfterServerRound/anthropic_beta->openai_chat/stream=true",
-)
-
-// TestGuardrailsBlocksClientToolAfterServerRound pins the composition order:
-// the server tool runs (allowed), and the client tool the model calls in the
-// next round is blocked before it reaches the client.
+// TestGuardrailsBlocksClientToolAfterServerRound pins that the client tool
+// the model calls after a server round is still checked and blocked.
 func TestGuardrailsBlocksClientToolAfterServerRound(t *testing.T) {
-	t.Parallel()
+	runServerToolTest(t, "TestGuardrailsBlocksClientToolAfterServerRound")
+}
 
-	for _, source := range anthropicSources {
-		for _, target := range guardrailsMCPTargets {
-			for _, streaming := range []bool{false, true} {
-				source, target, streaming := source, target, streaming
-				t.Run(fmt.Sprintf("%s->%s/stream=%v", source, target, streaming), func(t *testing.T) {
-					t.Parallel()
-
-					echo := NewEchoServertoolProvider()
-					env := NewTestEnv(t,
-						NewTestEnvOptionWithServertoolProviders(echo),
-						NewTestEnvOptionWithGuardrails(newBlockToolNamedGuardrails(clientToolName)),
-					)
-					scenario := OwnedThenClientToolScenario()
-					env.SetupRoute(source, target, scenario)
-					model := env.findRouteModel(source, target, scenario.Name)
-					path, body := buildRequest(source, model, streaming)
-
-					status, raw := sendRaw(t, env, path, body)
-					failures := blockedToolUseFailures(status, raw)
-					if n := len(echo.Calls()); n != 1 {
-						failures = append(failures, fmt.Sprintf("allowed server tool executed %d times, want 1", n))
-					}
-					if strings.Contains(raw, clientToolName) && !strings.Contains(raw, "Blocked by guardrails") {
-						failures = append(failures, "blocked client tool leaked to client")
-					}
-					checkCase(t, t.Name(), failures, "client response:\n"+raw)
-				})
-			}
-		}
-	}
+// TestGuardrailsCredentialAliasClientTool pins that response checks see the
+// model's masked output (not the restored secret) and that the client's tool
+// input carries the real credential.
+func TestGuardrailsCredentialAliasClientTool(t *testing.T) {
+	runServerToolTest(t, "TestGuardrailsCredentialAliasClientTool")
 }

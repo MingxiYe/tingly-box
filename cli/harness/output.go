@@ -17,10 +17,15 @@ func printTable(results []protocoltest.TestResult, verbose int) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 
 	// Summary
-	pass, fail, skip := countResults(results)
+	pass, fail, skip, gaps := countResults(results)
 	fmt.Printf("\n📊 Matrix Test Results\n")
-	fmt.Printf("Total: %d | ✓ Pass: %d | ✗ Fail: %d | ⊘ Skip: %d\n",
+	fmt.Printf("Total: %d | ✓ Pass: %d | ✗ Fail: %d | ⊘ Skip: %d",
 		len(results), pass, fail, skip)
+	if gaps > 0 {
+		// Known gaps: registered cases that still fail. Not failures.
+		fmt.Printf(" | ◌ Known gap: %d", gaps)
+	}
+	fmt.Println()
 
 	// Device info
 	fmt.Printf("Host: %s/%s | CPUs: %d | Go: %s | Time: %s\n\n",
@@ -47,6 +52,8 @@ func printTable(results []protocoltest.TestResult, verbose int) {
 		var status string
 		if r.Skipped {
 			status = fmt.Sprintf("⊘ SKIP: %s", truncateString(r.SkipReason, 30))
+		} else if r.KnownGap != "" {
+			status = "◌ KNOWN_GAP " + r.KnownGap
 		} else if r.Passed {
 			status = fmt.Sprintf("✓ PASS %d/%d", batchPassed, batchCount)
 		} else {
@@ -99,6 +106,7 @@ func printJSON(results []protocoltest.TestResult) error {
 		Streaming  bool   `json:"streaming"`
 		Status     string `json:"status"`
 		SkipReason string `json:"skip_reason,omitempty"`
+		KnownGap   string `json:"known_gap,omitempty"`
 		Errors     []struct {
 			Assertion string `json:"assertion"`
 			Error     string `json:"error"`
@@ -124,6 +132,10 @@ func printJSON(results []protocoltest.TestResult) error {
 			out[i].Status = "pass"
 		} else {
 			out[i].Status = "fail"
+			if r.KnownGap != "" {
+				out[i].Status = "known_gap"
+				out[i].KnownGap = r.KnownGap
+			}
 			for _, e := range r.Errors {
 				out[i].Errors = append(out[i].Errors, struct {
 					Assertion string `json:"assertion"`
@@ -143,9 +155,11 @@ func printJSON(results []protocoltest.TestResult) error {
 
 // printFailures prints detailed information about failed tests.
 func printFailures(results []protocoltest.TestResult, verbose int) {
+	printKnownGaps(results)
+
 	hasFailures := false
 	for _, r := range results {
-		if !r.Passed && !r.Skipped {
+		if r.Failed() {
 			hasFailures = true
 			break
 		}
@@ -159,7 +173,7 @@ func printFailures(results []protocoltest.TestResult, verbose int) {
 	fmt.Println(strings.Repeat("=", 70))
 
 	for _, r := range results {
-		if !r.Passed && !r.Skipped {
+		if r.Failed() {
 			fmt.Printf("\n✗ %s\n", r.Name)
 			for _, e := range r.Errors {
 				fmt.Printf("  Assertion failed: %s\n", e.Assertion)
@@ -173,18 +187,51 @@ func printFailures(results []protocoltest.TestResult, verbose int) {
 	fmt.Println()
 }
 
-// countResults counts pass/fail/skip totals.
-func countResults(results []protocoltest.TestResult) (pass, fail, skip int) {
+// countResults counts pass/fail/skip totals, plus registered known gaps
+// (failing cases the known-gap registry expects; not counted as failures).
+func countResults(results []protocoltest.TestResult) (pass, fail, skip, gaps int) {
 	for _, r := range results {
-		if r.Skipped {
+		switch {
+		case r.Skipped:
 			skip++
-		} else if r.Passed {
+		case r.KnownGap != "":
+			gaps++
+		case r.Passed:
 			pass++
-		} else {
+		default:
 			fail++
 		}
 	}
 	return
+}
+
+// printKnownGaps lists the registered known gaps the run hit, one block per
+// gap ID with its reason and cases.
+func printKnownGaps(results []protocoltest.TestResult) {
+	var ids []string
+	byID := map[string][]protocoltest.TestResult{}
+	for _, r := range results {
+		if r.KnownGap == "" {
+			continue
+		}
+		if _, seen := byID[r.KnownGap]; !seen {
+			ids = append(ids, r.KnownGap)
+		}
+		byID[r.KnownGap] = append(byID[r.KnownGap], r)
+	}
+	if len(ids) == 0 {
+		return
+	}
+
+	fmt.Printf("\n◌ Known Gaps\n")
+	fmt.Println(strings.Repeat("=", 70))
+	for _, id := range ids {
+		fmt.Printf("\n%s: %s\n", id, protocoltest.KnownGapReason(id))
+		for _, r := range byID[id] {
+			fmt.Printf("  %s\n", r.Name)
+		}
+	}
+	fmt.Println()
 }
 
 // truncateString truncates a string to max length.
