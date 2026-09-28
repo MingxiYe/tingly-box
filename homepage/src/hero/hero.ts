@@ -50,22 +50,41 @@ function shuffled<T>(list: T[], r: () => number): T[] {
   return a;
 }
 
-// Icon per cell for each round: same structure (agents left, channels centre,
-// providers right), a different shuffle each time.
-const layouts: string[][] = Array.from({ length: VARIANTS }, (_, v) => {
-  const r = rng(1000 + v * 97);
-  const pools = {
-    agent: shuffled(AGENTS.map((b) => b.icon), r),
-    channel: shuffled(CHANNELS.map((b) => b.icon), r),
-    provider: shuffled(PROVIDERS.map((b) => b.icon), r),
+type Kind = 'agent' | 'channel' | 'provider';
+interface Tile { icon: string; name: string; kind: Kind }
+
+// Every distinct icon once (the OpenAI / Anthropic / DeepSeek logos appear as
+// both agent-side SDKs and providers; the first claim wins).
+const ALL_TILES: Tile[] = (() => {
+  const seen = new Set<string>();
+  const out: Tile[] = [];
+  const add = (kind: Kind, list: typeof AGENTS): void => {
+    for (const b of list) if (!seen.has(b.icon)) { seen.add(b.icon); out.push({ icon: b.icon, name: b.name, kind }); }
   };
-  const used = { agent: 0, channel: 0, provider: 0 };
-  const out: string[] = new Array(N * N);
-  for (const i of shapeCells) {
-    if (i === START) continue;
-    const k = side(i);
-    out[i] = pools[k][used[k]++ % pools[k].length];
-  }
+  add('provider', PROVIDERS);
+  add('agent', AGENTS);
+  add('channel', CHANNELS);
+  return out;
+})();
+
+// Tile per cell for each round. Cells prefer their side's kind (agents left,
+// channels centre, providers right); a side that runs short borrows unused
+// icons from the rest, so nothing repeats within a T until every icon is used.
+// Each round reshuffles, so consecutive rounds show different mixes.
+const layouts: Tile[][] = Array.from({ length: VARIANTS }, (_, v) => {
+  const r = rng(1000 + v * 97);
+  const unused = new Set(shuffled(ALL_TILES, r));
+  const take = (kind: Kind): Tile => {
+    if (!unused.size) ALL_TILES.forEach((t) => unused.add(t));   // every icon used: start over
+    let pick: Tile | undefined;
+    for (const t of unused) if (t.kind === kind) { pick = t; break; }
+    pick ??= unused.values().next().value as Tile;
+    unused.delete(pick);
+    return pick;
+  };
+  const out: Tile[] = new Array(N * N);
+  // fill in random cell order so borrowed icons do not always land in the same spots
+  for (const i of shuffled(shapeCells.filter((c) => c !== START), r)) out[i] = take(side(i));
   return out;
 });
 
@@ -174,7 +193,7 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
         s *= Math.max(0, 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2);
         a *= Math.min(1, age / 120);
       }
-      const img = i === START ? brand : icons.get(layouts[r.variant][i]);
+      const img = i === START ? brand : icons.get(layouts[r.variant][i].icon);
       if (img) drawTile(img, x, y, s, a);
     }
     ctx.globalAlpha = 1;
@@ -241,7 +260,7 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
       const e = local * local;
       const x = originX + (col(i) - CENTER) * p;
       const y = originY + (row(i) - CENTER) * p;
-      const img = icons.get(layouts[round.variant][i]);
+      const img = icons.get(layouts[round.variant][i].icon);
       if (img) drawTile(img, x + (sx - x) * e, y + (sy - y) * e, tile * (1 - 0.7 * e), 1 - clamp01((e - 0.55) / 0.45));
     }
     const ring = clamp01((t - 0.62) / 0.38);
@@ -262,11 +281,8 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
   // ---------- hover labels ----------
   function brandAt(i: number): { name: string; kind: string } | null {
     if (i === START) return { name: 'Tingly Box', kind: 'gateway' };
-    const icon = layouts[round.variant][i];
-    const k = side(i);
-    const list = k === 'agent' ? AGENTS : k === 'provider' ? PROVIDERS : CHANNELS;
-    const b = list.find((x) => x.icon === icon);
-    return b ? { name: b.name, kind: k === 'channel' ? 'remote channel' : k } : null;
+    const t = layouts[round.variant][i];
+    return t ? { name: t.name, kind: t.kind === 'channel' ? 'remote channel' : t.kind } : null;
   }
 
   function mountTooltip(tip: HTMLElement): void {
@@ -363,7 +379,7 @@ export function startHero(canvas: HTMLCanvasElement, { caption, textColumn, tool
   }
 
   // ---------- boot ----------
-  const urls = [...new Set([...AGENTS, ...CHANNELS, ...PROVIDERS].map((b) => b.icon))];
+  const urls = ALL_TILES.map((t) => t.icon);
   const fontsReady = document.fonts ? document.fonts.ready : Promise.resolve();
   Promise.all([fontsReady, ...urls.map(async (u) => icons.set(u, iconTile(await loadSvg(u))))]).then(() => {
     layout();
