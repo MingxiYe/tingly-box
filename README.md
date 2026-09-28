@@ -16,28 +16,29 @@
   <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="Platform" />
 </p>
 
-Tingly Box **serves agents, coordinates AI models, optimizes context, and routes requests** for maximum efficiency — with built-in **remote control and secure, customizable integrations**.
+Tingly Box **connects any agent to any model** — for you and your whole team, with built-in power-ups.
 
 ## Key Features
 
-* **Agent-First Model Gateway**
-  * Unified endpoint for AI — seamlessly bridge any providers
-  * One-click config for Agents - Claude Code, OpenCode, Codex, Xcode, and more 
-  * Profiles for Claude Code — switch between profiles with different models under different scenarios
-  * Both API keys and OAuth - use your existing quotas anywhere
-* **Harness-Driven Infra**
-  * VModel (Virtual Model) - for testing, validation, benchmarking, and harness-driven evaluation
-  * Harness-driven - for robustness across protocols, routing, load balancing, clients, and more
-* **UX-First**
-  * Visual management of providers, routes, aliases, models, and remote bots
-  * Intuitive workflows that make complex operations easy to understand and control
+* **Any Agent ⇄ Any Model**
+  * Unified endpoint for AI — bridge any providers, with protocols translated both ways
+  * One-click config for Agents — Claude Code, OpenCode, Codex, Xcode, and more
+  * Profiles for Claude Code — switch models for different scenarios
+  * Both API keys and OAuth — use your existing quotas anywhere
+  * Smart Routing — route across models and tokens by cost, speed, or custom policies
+* **Team AI Management**
+  * Shared team endpoint with centrally managed model rules
+  * Dedicated keys per member, with data isolated per user
+  * Per-member usage tracking
+* **Power-ups**
+  * Guardrails, MCP Gateway, and Usage Analytics
+  * Image API — image generation and editing through the same gateway, with a built-in playground
+  * Remote Control — drive agents via Telegram, Weixin, WeCom, Feishu, Lark, and DingTalk
 * **Production-Ready**
-  * Smart Routing — Intelligently route requests across models and tokens based on cost, speed, or custom policies
-  * Remote Control — Control AI agents remotely through Telegram, Weixin, WeCom, Feishu, Lark, and DingTalk
-  * Image API — Route image generation and editing through the same gateway, with a built-in playground
-  * Team Management — Isolate data per user with dedicated API tokens, usage tracking, provider access, and configuration
-  * Usage Analytics — Track token consumption, latency, cost estimates, and model selection per request
-  * Blazing Fast Performance — Typically adds **< 1ms** of overhead
+  * VModel (Virtual Model) — for testing, validation, and benchmarking
+  * Harness-driven for robustness across protocols, routing, and clients
+  * UX-first visual management of providers, models, team, and remote bots
+  * Blazing fast — typically adds **< 1ms** of overhead
 
 ## Preview
 
