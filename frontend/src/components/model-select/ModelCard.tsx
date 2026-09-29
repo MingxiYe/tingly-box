@@ -8,6 +8,7 @@ import { ModelTestStatusBadge } from '../probe/ModelTestStatusBadge';
 import { ProbeDialog } from '../probe/ProbeDialog';
 import { useModelTestProbe } from '../probe/useModelTestProbe';
 import { ControlBar } from './ControlBar';
+import { ModelCopyButton } from './ModelCopyButton';
 import { getModelCardActiveColor, getModelCardStateStyles, modelCardTransition } from './cardStyles';
 
 interface ModelCardProps {
@@ -182,6 +183,7 @@ export default function ModelCard({
                 )}
                 {!loading && (
                     <ControlBar>
+                        <ModelCopyButton model={model} />
                         <ModelTestTrigger onOpen={probe.openDialog} />
                     </ControlBar>
                 )}

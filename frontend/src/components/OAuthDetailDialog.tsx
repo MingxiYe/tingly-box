@@ -23,6 +23,9 @@ interface OAuthEditFormData {
     name: string;
     apiBase: string;
     apiStyle: string; // 'openai' | 'anthropic' | 'google'
+    // Dual providers (e.g. ZCode) expose one URL per protocol instead of a single apiBase.
+    apiBaseOpenAI?: string;
+    apiBaseAnthropic?: string;
     enabled: boolean;
     proxyUrl?: string;
 }
@@ -40,6 +43,8 @@ const OAuthDetailDialog = ({ open, provider, onClose, onSubmit, onNotification }
         name: provider?.name || '',
         apiBase: provider?.api_base || '',
         apiStyle: provider?.api_style || 'openai',
+        apiBaseOpenAI: provider?.api_base_openai || '',
+        apiBaseAnthropic: provider?.api_base_anthropic || '',
         enabled: provider?.enabled || false,
         proxyUrl: provider?.proxy_url || '',
     });
@@ -54,11 +59,13 @@ const OAuthDetailDialog = ({ open, provider, onClose, onSubmit, onNotification }
                 name: provider.name,
                 apiBase: provider.api_base,
                 apiStyle: provider.api_style || 'openai',
+                apiBaseOpenAI: provider.api_base_openai || '',
+                apiBaseAnthropic: provider.api_base_anthropic || '',
                 enabled: provider.enabled,
                 proxyUrl: provider.proxy_url || '',
             });
         }
-    }, [provider?.name, provider?.api_base, provider?.api_style, provider?.enabled, provider?.proxy_url]);
+    }, [provider?.name, provider?.api_base, provider?.api_style, provider?.api_base_openai, provider?.api_base_anthropic, provider?.enabled, provider?.proxy_url]);
 
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return 'N/A';
@@ -102,6 +109,8 @@ const OAuthDetailDialog = ({ open, provider, onClose, onSubmit, onNotification }
 
     if (!provider) return null;
 
+    const isDual = !!(provider.api_base_openai && provider.api_base_anthropic);
+
     return (
         <Dialog
             open={open}
@@ -131,24 +140,26 @@ const OAuthDetailDialog = ({ open, provider, onClose, onSubmit, onNotification }
                             </Typography>
                         </Box>
 
-                        {/* API Style Selection */}
-                        <TextField
-                            select
-                            fullWidth
-                            size="small"
-                            label="API Style"
-                            value={formData.apiStyle}
-                            onChange={(e) => setFormData(prev => ({
-                                ...prev,
-                                apiStyle: e.target.value as 'openai' | 'anthropic',
-                            }))}
-                            slotProps={{
-                                select: { native: true }
-                            }}
-                        >
-                            <option value="openai">OpenAI Compatible</option>
-                            <option value="anthropic">Anthropic Compatible</option>
-                        </TextField>
+                        {/* API Style Selection — a dual provider has no single style */}
+                        {!isDual && (
+                            <TextField
+                                select
+                                fullWidth
+                                size="small"
+                                label="API Style"
+                                value={formData.apiStyle}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    apiStyle: e.target.value as 'openai' | 'anthropic',
+                                }))}
+                                slotProps={{
+                                    select: { native: true }
+                                }}
+                            >
+                                <option value="openai">OpenAI Compatible</option>
+                                <option value="anthropic">Anthropic Compatible</option>
+                            </TextField>
+                        )}
 
                         {/* Editable Fields */}
                         <TextField
@@ -161,19 +172,44 @@ const OAuthDetailDialog = ({ open, provider, onClose, onSubmit, onNotification }
                             placeholder="e.g., claude-personal"
                         />
 
-                        <TextField
-                            size="small"
-                            fullWidth
-                            label="API Base URL"
-                            value={formData.apiBase}
-                            onChange={(e) => setFormData(prev => ({ ...prev, apiBase: e.target.value }))}
-                            required
-                            placeholder={
-                                formData.apiStyle === 'openai'
-                                    ? "https://api.openai.com/v1"
-                                    : "https://api.anthropic.com"
-                            }
-                        />
+                        {isDual ? (
+                            <>
+                                <TextField
+                                    size="small"
+                                    fullWidth
+                                    label="OpenAI API Base URL"
+                                    value={formData.apiBaseOpenAI || ''}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, apiBaseOpenAI: e.target.value }))}
+                                    required
+                                    placeholder="https://api.example.com/openai/v1"
+                                    helperText="Used for OpenAI-compatible clients"
+                                />
+                                <TextField
+                                    size="small"
+                                    fullWidth
+                                    label="Anthropic API Base URL"
+                                    value={formData.apiBaseAnthropic || ''}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, apiBaseAnthropic: e.target.value }))}
+                                    required
+                                    placeholder="https://api.example.com/anthropic"
+                                    helperText="Used for Anthropic-compatible clients"
+                                />
+                            </>
+                        ) : (
+                            <TextField
+                                size="small"
+                                fullWidth
+                                label="API Base URL"
+                                value={formData.apiBase}
+                                onChange={(e) => setFormData(prev => ({ ...prev, apiBase: e.target.value }))}
+                                required
+                                placeholder={
+                                    formData.apiStyle === 'openai'
+                                        ? "https://api.openai.com/v1"
+                                        : "https://api.anthropic.com"
+                                }
+                            />
+                        )}
 
                         <TextField
                             size="small"

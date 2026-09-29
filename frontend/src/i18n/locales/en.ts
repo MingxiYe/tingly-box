@@ -17,6 +17,8 @@ export default {
     "applying": "Applying...",
     "copy": "Copy",
     "copied": "Copied",
+    "copyModelName": "Copy model name",
+    "modelNameCopied": "Copied!",
     "refresh": "Refresh",
     "verify": "Verify",
     "saveChanges": "Save Changes",

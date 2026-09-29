@@ -74,7 +74,7 @@ interface ModelListDialogState {
 const COLUMNS: { label: string; width: number; align?: "center"; sx?: object }[] = [
     {label: "Status", width: 72},
     {label: "Name", width: 140},
-    {label: "API Style", width: 88, align: "center", sx: {px: 1, whiteSpace: "nowrap"}},
+    {label: "API Style", width: 96, align: "center", sx: {px: 1, whiteSpace: "nowrap"}},
     {label: "Provider", width: 150},
     {label: "Expires At", width: 140},
     {label: "Proxy", width: 60},
@@ -294,11 +294,19 @@ const OAuthTable = ({
                                     {/* API Style */}
                                     <TableCell align="center" sx={{px: 1}}>
                                         <Box sx={{display: 'flex', justifyContent: 'center'}}>
-                                            <ApiStyleBadge
-                                                minimal
-                                                minimalSize="medium"
-                                                apiStyle={provider.api_style}
-                                            />
+                                            {provider.api_base_openai && provider.api_base_anthropic ? (
+                                                // Dual provider (e.g. ZCode): both protocols are served natively
+                                                <Stack direction="row" spacing={0.5} sx={{alignItems: "center"}}>
+                                                    <ApiStyleBadge apiStyle="openai" minimal minimalSize="medium"/>
+                                                    <ApiStyleBadge apiStyle="anthropic" minimal minimalSize="medium"/>
+                                                </Stack>
+                                            ) : (
+                                                <ApiStyleBadge
+                                                    minimal
+                                                    minimalSize="medium"
+                                                    apiStyle={provider.api_style}
+                                                />
+                                            )}
                                         </Box>
                                     </TableCell>
                                     {/* Provider Type */}

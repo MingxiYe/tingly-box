@@ -17,6 +17,8 @@ export default {
     "applying": "Применение...",
     "copy": "Копировать",
     "copied": "Скопировано",
+    "copyModelName": "Копировать имя модели",
+    "modelNameCopied": "Скопировано!",
     "refresh": "Обновить",
     "verify": "Проверить",
     "saveChanges": "Сохранить изменения",

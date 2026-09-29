@@ -17,6 +17,8 @@ export default {
     "applying": "应用中...",
     "copy": "复制",
     "copied": "已复制",
+    "copyModelName": "复制模型名",
+    "modelNameCopied": "已复制",
     "refresh": "刷新",
     "verify": "验证",
     "saveChanges": "保存更改",
