@@ -1,4 +1,5 @@
-import {Close, ContentCopy, OpenInNew} from '@/components/icons';
+import {Close, OpenInNew} from '@/components/icons';
+import CopyIconButton from '@/components/CopyIconButton';
 import {
     Alert,
     Box,
@@ -196,12 +197,6 @@ const OAuthAuthorizationDialog = ({
         setPollingIntervalId(intervalId);
     };
 
-    const copyUserCode = () => {
-        if (authData?.user_code) {
-            void navigator.clipboard.writeText(authData.user_code);
-        }
-    };
-
     const handleCompleted = () => {
         // User confirms completion - let polling continue to verify
         setShowConfirmDialog(false);
@@ -323,9 +318,11 @@ const OAuthAuthorizationDialog = ({
                                         {authData.user_code || '------'}
                                     </Typography>
                                     {authData.user_code && (
-                                        <IconButton onClick={copyUserCode} size="small" aria-label="Copy user code to clipboard">
-                                            <ContentCopy/>
-                                        </IconButton>
+                                        <CopyIconButton
+                                            value={authData.user_code}
+                                            label="Copy code"
+                                            aria-label="Copy user code to clipboard"
+                                        />
                                     )}
                                 </Box>
                             </Box>
