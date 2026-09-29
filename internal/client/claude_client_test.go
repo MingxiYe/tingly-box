@@ -263,7 +263,7 @@ func TestGuard_UsesAdaptiveThinkingForModelsRejectingDisabled(t *testing.T) {
 	require.NoError(t, err)
 
 	userID := `{"device_id":"dev1","account_uuid":"acc1","session_id":"550e8400-e29b-41d4-a716-446655440000"}`
-	for _, model := range []string{"claude-opus-5-5", "claude-fable-5", "claude-fable-5-1"} {
+	for _, model := range []string{"claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5", "claude-fable-5-1"} {
 		for name, thinking := range map[string]anthropic.ThinkingConfigParamUnion{
 			"unset":    {},
 			"disabled": {OfDisabled: &anthropic.ThinkingConfigDisabledParam{}},
@@ -310,7 +310,7 @@ func TestGuardBeta_UsesAdaptiveThinkingForModelsRejectingDisabled(t *testing.T) 
 	require.NoError(t, err)
 
 	userID := `{"device_id":"dev1","account_uuid":"acc1","session_id":"550e8400-e29b-41d4-a716-446655440000"}`
-	for _, model := range []string{"claude-opus-5-5", "claude-fable-5", "claude-fable-5-1"} {
+	for _, model := range []string{"claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5", "claude-fable-5-1"} {
 		req := &anthropic.BetaMessageNewParams{
 			Model:     anthropic.Model(model),
 			MaxTokens: 512,
