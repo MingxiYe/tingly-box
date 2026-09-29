@@ -11,6 +11,8 @@ interface OAuthEditFormData {
     name: string;
     apiBase: string;
     apiStyle: string;
+    apiBaseOpenAI?: string;
+    apiBaseAnthropic?: string;
     enabled: boolean;
     proxyUrl?: string;
 }
@@ -129,13 +131,18 @@ export function useProviderEditDialog({ onUpdated, showNotification }: UseProvid
             name: data.name,
             api_base: data.apiBase,
             api_style: data.apiStyle,
+            // Only sent for dual providers; omitted otherwise so a single-URL
+            // provider never accidentally gains dual URLs.
+            ...(oauthDetailProvider.api_base_openai && oauthDetailProvider.api_base_anthropic
+                ? {api_base_openai: data.apiBaseOpenAI ?? '', api_base_anthropic: data.apiBaseAnthropic ?? ''}
+                : {}),
             enabled: data.enabled,
             proxy_url: data.proxyUrl ?? '',
         });
         if (!result.success) throw new Error(result.error || 'Failed to update provider');
         showNotification?.('Provider updated successfully!', 'success');
         await onUpdated?.(oauthDetailProvider.uuid);
-    }, [oauthDetailProvider?.uuid, onUpdated, showNotification]);
+    }, [oauthDetailProvider, onUpdated, showNotification]);
 
     const providerEditDialogs = useMemo(() => (
         <>
