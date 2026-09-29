@@ -270,7 +270,10 @@ type E2ERequest struct {
 	// providers the matching dual URL is selected; for through-TB probes the
 	// loopback speaks the requested protocol and TB's transform pipeline
 	// handles the upstream exactly as production traffic does.
-	// Not supported for rule targets (the rule's scenario fixes the protocol).
+	// Rule targets accept any protocol too: the probe sends what a real client
+	// choosing it would send to /tingly/{scenario}, and TB's answer is the
+	// result (e.g. TB's Responses handler rejects scenarios without the
+	// OpenAI transport). Empty keeps the scenario's default (ScenarioEndpoint).
 	Protocol ProbeProtocol `json:"protocol,omitempty" example:"openai_responses"`
 
 	// Thinking sets the extended-thinking effort for the probe. Orthogonal to
@@ -300,9 +303,8 @@ type E2ERequest struct {
 	// chain converts it to the upstream exactly as for production traffic.
 	// A raw request replaces the fixture: Message and the Tool / Vision /
 	// Thinking knobs (which only shape the fixture) are rejected alongside
-	// it; Stream still applies. Provider targets speak RequestProtocol on
-	// the wire (Protocol, if given, must agree); rule targets require the
-	// scenario's protocol family.
+	// it; Stream still applies. The probe speaks RequestProtocol on the wire
+	// for every target (Protocol, if given, must agree).
 	Request         json.RawMessage `json:"request,omitempty" swaggertype:"object"`
 	RequestProtocol ProbeProtocol   `json:"request_protocol,omitempty" example:"anthropic_v1"`
 
@@ -447,11 +449,9 @@ func ValidateE2ERequest(req *E2ERequest) error {
 		return &ValidationError{Field: "protocol", Message: "protocol must be 'openai_chat', 'openai_responses', or 'anthropic_v1'"}
 	}
 
-	// A rule's scenario already fixes the wire protocol; an override there
-	// would be silently ignored, so reject it instead.
-	if req.TargetType == E2ETargetRule && req.Protocol != "" {
-		return &ValidationError{Field: "protocol", Message: "protocol override is not supported for rule targets (fixed by the rule's scenario)"}
-	}
+	// Rule targets accept any protocol: the scenario only picks the default
+	// (ScenarioEndpoint). Whether TB serves that protocol for the scenario is
+	// answered by the probe itself, on the real path — not pre-judged here.
 
 	// Thinking is optional; empty normalizes to "none". Only the probe-facing
 	// subset of the ladder is accepted (minimal/xhigh are intentionally
@@ -511,19 +511,8 @@ func ValidateE2ERequest(req *E2ERequest) error {
 		if _, err := req.parseRawRequest(); err != nil {
 			return &ValidationError{Field: "request", Message: err.Error()}
 		}
-		switch req.TargetType {
-		case E2ETargetProvider, E2ETargetProviderConfig:
-			if req.Protocol != "" && req.Protocol != req.RequestProtocol {
-				return &ValidationError{Field: "protocol", Message: "protocol and request_protocol disagree; a raw request is sent on its own protocol"}
-			}
-		case E2ETargetRule:
-			scenario := req.Scenario
-			if scenario == "" {
-				scenario = string(typ.ScenarioOpenAI)
-			}
-			if _, style := ScenarioEndpoint(scenario); req.RequestProtocol.Family() != style {
-				return &ValidationError{Field: "request_protocol", Message: fmt.Sprintf("scenario %s speaks the %s protocol; the raw request is %s", scenario, style, req.RequestProtocol)}
-			}
+		if req.Protocol != "" && req.Protocol != req.RequestProtocol {
+			return &ValidationError{Field: "protocol", Message: "protocol and request_protocol disagree; a raw request is sent on its own protocol"}
 		}
 	}
 

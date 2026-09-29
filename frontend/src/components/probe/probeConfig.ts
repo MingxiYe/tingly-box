@@ -22,7 +22,10 @@ export interface ProbeAxes {
 export const DEFAULT_AXES: ProbeAxes = {
     stream: true, // Stream default — closest to production traffic
     tool: false,
-    thinking: 'none',
+    // Medium, not none: a growing share of models reject thinking=none, so a
+    // default of none would make the default probe fail on them. Medium is
+    // accepted everywhere thinking is, and 'none' stays one click away.
+    thinking: 'medium',
     vision: 'none',
     protocol: '',
     direct: false,
@@ -33,7 +36,7 @@ export const DEFAULT_AXES: ProbeAxes = {
 //   2. the pre-computed initialResult — the visible state must match the
 //      result the user is looking at; the backend echoes the request axes
 //      (stream/tool/direct/protocol/thinking) so every axis is restorable
-//   3. defaults (Stream / no tool / no thinking / provider's primary protocol / Through TB)
+//   3. defaults (Stream / no tool / medium thinking / provider's primary protocol / Through TB)
 export function resolveInitialAxes(opts: {
     targetType: ProbeTargetType;
     thinkingLevel?: ProbeThinking;
@@ -60,8 +63,12 @@ export function resolveInitialAxes(opts: {
     // Protocol/scope availability clamp (e.g. '' protocol for google targets
     // is fine, but a result-echoed anthropic protocol must not stick onto a
     // provider that can't speak it).
+    // Rule targets have no provider record; their protocol options come from
+    // the dialog (any protocol, defaulting to the scenario's).
     const avail = protocolAvailability(opts.provider ?? null);
-    if (avail.locked) {
+    if (opts.targetType === 'rule') {
+        // keep the result-echoed protocol as-is
+    } else if (avail.locked) {
         axes.protocol = avail.default;
     } else if (axes.protocol && !avail.options.includes(axes.protocol)) {
         axes.protocol = '';
@@ -88,6 +95,11 @@ export function visionAvailable(provider: Provider | null): boolean {
 export function scopeAvailable(targetType: ProbeTargetType): boolean {
     return targetType === 'provider';
 }
+
+// RULE_PROTOCOLS is the Protocol axis for rule targets: every protocol is
+// offered and the scenario only sets the default (ruleProtocolForScenario).
+// Whether TB serves a given one for the scenario is the probe's answer.
+export const RULE_PROTOCOLS: ProbeProtocol[] = ['openai_chat', 'openai_responses', 'anthropic_v1'];
 
 export interface ProtocolAvailability {
     // Options offered on the Protocol axis, in display order.

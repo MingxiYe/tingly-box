@@ -66,15 +66,19 @@ func TestValidateE2ERequest_NewAxes(t *testing.T) {
 		assert.Contains(t, err.Error(), "protocol")
 	})
 
-	t.Run("protocol rejected for rule targets", func(t *testing.T) {
-		err := ValidateE2ERequest(&E2ERequest{
-			TargetType: E2ETargetRule,
-			Scenario:   "openai",
-			RuleUUID:   "r-1",
-			Protocol:   ProtocolAnthropic,
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "rule")
+	t.Run("any protocol accepted for rule targets", func(t *testing.T) {
+		// The scenario only picks the default; whether TB serves the
+		// protocol is the probe's answer, not a validation error.
+		for _, scenario := range []string{"openai", "claude_code:p1", "team"} {
+			for _, p := range []ProbeProtocol{ProtocolOpenAIChat, ProtocolOpenAIResponses, ProtocolAnthropic} {
+				assert.NoError(t, ValidateE2ERequest(&E2ERequest{
+					TargetType: E2ETargetRule,
+					Scenario:   scenario,
+					RuleUUID:   "r-1",
+					Protocol:   p,
+				}), "scenario %s protocol %s", scenario, p)
+			}
+		}
 	})
 
 	t.Run("all protocol values valid for provider targets", func(t *testing.T) {
@@ -318,4 +322,51 @@ func TestBuildCurl_RuleTarget_ThroughTB_AnthropicScenario(t *testing.T) {
 
 	assert.Equal(t, "http://localhost:18080/tingly/anthropic/v1/messages", curl.URL)
 	assert.Equal(t, "$TB_API_KEY", curl.KeyEnvVar)
+}
+
+// A rule is probed on the protocol the caller picks; without one it keeps
+// its scenario's default (Chat for team, Anthropic for claude_code).
+func TestBuildCurl_RuleTarget_TeamProtocolOverride(t *testing.T) {
+	svc := newCurlTestProber(t)
+	require.NoError(t, svc.config.AddRule(typ.Rule{
+		UUID:         "r-team",
+		Scenario:     "team",
+		RequestModel: "shared-model",
+	}))
+
+	cases := map[ProbeProtocol]string{
+		"":                      "http://localhost:18080/tingly/team/chat/completions",
+		ProtocolOpenAIChat:      "http://localhost:18080/tingly/team/chat/completions",
+		ProtocolOpenAIResponses: "http://localhost:18080/tingly/team/responses",
+		ProtocolAnthropic:       "http://localhost:18080/tingly/team/v1/messages",
+	}
+	for p, wantURL := range cases {
+		curl, err := svc.BuildCurl(context.Background(), &E2ERequest{
+			TargetType: E2ETargetRule,
+			Scenario:   "team",
+			RuleUUID:   "r-team",
+			Protocol:   p,
+		})
+		require.NoError(t, err, "protocol %q", p)
+		assert.Equal(t, wantURL, curl.URL, "protocol %q", p)
+	}
+}
+
+func TestBuildCurl_RuleTarget_AnthropicScenarioOnOpenAI(t *testing.T) {
+	svc := newCurlTestProber(t)
+	require.NoError(t, svc.config.AddRule(typ.Rule{
+		UUID:         "r-cc",
+		Scenario:     "anthropic",
+		RequestModel: "claude-x",
+	}))
+
+	curl, err := svc.BuildCurl(context.Background(), &E2ERequest{
+		TargetType: E2ETargetRule,
+		Scenario:   "anthropic",
+		RuleUUID:   "r-cc",
+		Protocol:   ProtocolOpenAIChat,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "http://localhost:18080/tingly/anthropic/chat/completions", curl.URL)
+	assert.Equal(t, "Bearer $TB_API_KEY", curl.Headers["Authorization"])
 }

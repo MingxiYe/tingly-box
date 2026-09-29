@@ -44,8 +44,9 @@ export const defaultToolMessage = "Please use the bash tool to list the current 
 export const defaultPlainMessage = 'Hello, this is a test message. Please respond with a short greeting.';
 export const defaultMessage = (tool: boolean): string => (tool ? defaultToolMessage : defaultPlainMessage);
 
-// ruleProtocolForScenario derives the (locked) protocol a rule target speaks,
-// mirroring the backend's ScenarioEndpoint scenario→api-style mapping.
+// ruleProtocolForScenario derives the default protocol a rule target is
+// probed on, mirroring the backend's ScenarioEndpoint scenario→api-style
+// mapping. It is only the default — the user may pick any RULE_PROTOCOLS.
 export function ruleProtocolForScenario(scenario?: string): ProbeProtocol {
     const base = (scenario || 'openai').split(':')[0];
     return ['anthropic', 'claude_code', 'opencode'].includes(base) ? 'anthropic_v1' : 'openai_chat';

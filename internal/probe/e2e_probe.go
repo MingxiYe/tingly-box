@@ -338,7 +338,11 @@ func (e *E2EProber) resolveRuleTarget(ctx context.Context, req *E2ERequest) (*ty
 		scenario = typ.ScenarioOpenAI
 	}
 
-	apiBase, apiStyle := loopbackAPIBase(port, scenario)
+	// The scenario only picks the default client protocol; an explicit
+	// protocol (or a raw request's) wins, exactly as a real client that
+	// calls /tingly/{scenario} with that protocol would.
+	apiBase, scenarioStyle := loopbackAPIBase(port, scenario)
+	apiStyle := req.ResolveClientStyle(scenarioStyle)
 
 	logrus.Debugf("[probe-e2e] rule %s -> TB loopback %s (model=%s)", rule.UUID, apiBase, rule.RequestModel)
 
