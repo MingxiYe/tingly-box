@@ -195,7 +195,7 @@ func runStageAnthropic(t *testing.T, s scenario.Scenario, clientProtocol protoco
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/tingly/anthropic/v1/messages", nil)
 	ph := &ProtocolHandler{}
-	ph.serveStageAnthropic(c, endpoint, stageAnthropicAttempt{
+	ph.ServeStageAnthropic(c, endpoint, StageAnthropicAttempt{
 		Client:        clientProtocol,
 		Request:       &beta,
 		Provider:      &typ.Provider{Name: "golden"},
@@ -234,56 +234,12 @@ func TestStageAnthropicAdapterMatchesGoldenV1(t *testing.T) {
 				want, ok := golden[name]
 				require.True(t, ok, "golden case missing")
 				upstreamRequest, status, body := runStageAnthropic(t, s, protocol.TypeAnthropicV1, streaming)
-				want.body = v1Unified(want.body, streaming)
 				require.Equal(t, want.status, status)
-				require.Equal(t, strings.TrimRight(want.upstream, "\n"), normalizeGoldenBody(upstreamRequest), "provider request differs from the existing gateway")
-				if !streaming || status != http.StatusOK {
-					require.Equal(t, want.body, normalizeGoldenBody(body), "client bytes differ from the existing gateway")
-					return
-				}
-				// V1 streams are written by the Beta passthrough writer family
-				// (event:X / data:{...}); the existing V1 path used the MCP
-				// interceptor's spaced framing. Same events, same payloads.
-				require.Equal(t, sseEvents(t, want.body), sseEvents(t, normalizeGoldenBody(body)))
+				require.Equal(t, want.body, normalizeGoldenBody(body), "client bytes differ from the gateway")
+				require.Equal(t, strings.TrimRight(want.upstream, "\n"), normalizeGoldenBody(upstreamRequest), "provider request differs from the gateway")
 			})
 		}
 	}
-}
-
-// v1Unified applies the intended differences for V1 clients, which now share
-// the Beta writers: the existing V1 path reported a failed non-stream forward
-// as a "streaming request" failure, and ended a truncated stream with its own
-// error code. Status codes and every other byte are unchanged.
-func v1Unified(body string, streaming bool) string {
-	if !streaming {
-		return strings.Replace(body, `"message":"Failed to create streaming request: `, `"message":"Failed to forward request: `, 1)
-	}
-	return strings.Replace(body,
-		`{"error":{"code":"upstream_truncated","message":"upstream stream truncated: anthropic stream ended without message_stop","type":"stream_error"},"type":"error"}`,
-		`{"type":"error","error":{"message":"upstream stream ended before completion","type":"stream_error","code":"incomplete_stream"}}`, 1)
-}
-
-// sseEvents parses an SSE body into (event, canonical JSON data) pairs.
-func sseEvents(t *testing.T, body string) []string {
-	t.Helper()
-	var out []string
-	event := ""
-	for _, line := range strings.Split(body, "\n") {
-		switch {
-		case strings.HasPrefix(line, "event:"):
-			event = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
-		case strings.HasPrefix(line, "data:"):
-			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-			var v any
-			if json.Unmarshal([]byte(data), &v) == nil {
-				canonical, _ := json.Marshal(v)
-				data = string(canonical)
-			}
-			out = append(out, event+" "+data)
-			event = ""
-		}
-	}
-	return out
 }
 
 // closeNotifyRecorder adds the CloseNotifier the stream loop expects of a
@@ -329,7 +285,7 @@ func TestStageAnthropicAdapterHoldsFailoverAfterSideEffects(t *testing.T) {
 				c.Writer = gate
 
 				ph := &ProtocolHandler{}
-				ph.serveStageAnthropic(c, failingEndpoint{err: stage.WrapCommitted(upstreamErr, committed)}, stageAnthropicAttempt{
+				ph.ServeStageAnthropic(c, failingEndpoint{err: stage.WrapCommitted(upstreamErr, committed)}, StageAnthropicAttempt{
 					Client: protocol.TypeAnthropicBeta, Request: &anthropic.BetaMessageNewParams{},
 					Provider: &typ.Provider{Name: "p"}, ResponseModel: "m", Streaming: streaming,
 				})
@@ -366,7 +322,7 @@ func TestStageAnthropicAdapterHoldsFailoverAfterCompletion(t *testing.T) {
 	c.Writer = gate
 
 	ph := &ProtocolHandler{}
-	ph.serveStageAnthropic(c, betaOnlyEndpoint{}, stageAnthropicAttempt{
+	ph.ServeStageAnthropic(c, betaOnlyEndpoint{}, StageAnthropicAttempt{
 		Client: protocol.TypeAnthropicV1, Request: &anthropic.BetaMessageNewParams{},
 		Provider: &typ.Provider{Name: "p"}, ResponseModel: "m",
 	})

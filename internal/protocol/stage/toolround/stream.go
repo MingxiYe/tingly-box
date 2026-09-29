@@ -63,6 +63,10 @@ type roundStream struct {
 	committed      bool
 	usage          *protocol.TokenUsage
 
+	// pending is a decided round whose owned calls run on the next pull, so
+	// the Heartbeat announcing them reaches the client first.
+	pending *pendingRound
+
 	// Per round.
 	message anthropic.BetaMessage
 	live    map[int64]int64 // upstream index -> client index
@@ -110,6 +114,14 @@ func (s *roundStream) next(ctx context.Context) (stage.Event, error) {
 		}
 		if err := ctx.Err(); err != nil {
 			return stage.Event{}, err
+		}
+		if s.pending != nil {
+			pending := s.pending
+			s.pending = nil
+			if err := s.runRound(pending); err != nil {
+				return stage.Event{}, err
+			}
+			continue
 		}
 		event, err := s.current.Next(ctx)
 		if errors.Is(err, io.EOF) {
@@ -213,18 +225,36 @@ func (s *roundStream) finishRound(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		turn := s.message.ToParam()
-		var results []anthropic.BetaToolResultBlockParam
-		s.ctx, results = e.execute(s.ctx, s.request, turn, p.execute)
-		s.committed = true
-		s.executedRounds++
-		if p.continueLoop {
-			s.request = continued(s.request, turn, results)
-			return s.startRound()
-		}
-		e.config.Owner.Suspend(s.ctx, turn, results)
+		s.pending = &pendingRound{plan: p, turn: s.message.ToParam()}
+		s.queue = append(s.queue, stage.Event{Value: stage.Heartbeat{}})
+		return nil
 	}
+	return s.emitRound(p)
+}
 
+type pendingRound struct {
+	plan plan
+	turn anthropic.BetaMessageParam
+}
+
+// runRound executes a decided round's owned calls, then starts the next round
+// or ends the message.
+func (s *roundStream) runRound(pending *pendingRound) error {
+	e := s.endpoint
+	var results []anthropic.BetaToolResultBlockParam
+	s.ctx, results = e.execute(s.ctx, s.request, pending.turn, pending.plan.execute)
+	s.committed = true
+	s.executedRounds++
+	if pending.plan.continueLoop {
+		s.request = continued(s.request, pending.turn, results)
+		return s.startRound()
+	}
+	e.config.Owner.Suspend(s.ctx, pending.turn, results)
+	return s.emitRound(pending.plan)
+}
+
+// emitRound sends the client's view of the finished round and ends the message.
+func (s *roundStream) emitRound(p plan) error {
 	for _, block := range s.held {
 		if err := s.emitHeld(block, p); err != nil {
 			return stage.WrapCommitted(err, s.committed)
