@@ -7,6 +7,7 @@ import { Edit as EditIcon } from '@/components/icons';
 import {
     Box,
     Button,
+    Chip,
     CircularProgress,
     IconButton,
     Stack,
@@ -24,6 +25,7 @@ import { getModelTypeInfo } from '@/utils/modelUtils';
 import { useCustomModels } from '@/hooks/useCustomModels';
 import { useProviderModels } from '@/hooks/useProviderModels';
 import { usePagination } from '@/hooks/usePagination';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { useModelSelectContext } from '@/contexts/ModelSelectContext';
 import { useRecentModels } from '@/hooks/useRecentModels';
 import { useNewModels } from '@/hooks/useNewModels';
@@ -171,6 +173,15 @@ export function ModelsPanel({
         ? allModels.filter(({ model }) => model.toLowerCase().includes(searchTerm.toLowerCase()))
         : allModels;
 
+    // Device-local memory of searches that led to a pick (or were submitted
+    // with Enter), so a model found once is one click away next time.
+    const { history: searchHistory, remember: rememberSearch, forget: forgetSearch } = useSearchHistory(provider.uuid);
+
+    const selectModel = useCallback((model: string) => {
+        rememberSearch(searchTerm);
+        onModelSelect(provider, model);
+    }, [onModelSelect, provider, rememberSearch, searchTerm]);
+
     const pagination = getPaginatedData(filteredModels.map(m => m.model), provider.uuid);
     const paginatedItems = filteredModels.slice(
         (pagination.currentPage - 1) * modelsPerPage,
@@ -291,9 +302,30 @@ export function ModelsPanel({
                         placeholder="Search models..."
                         value={searchTerms[provider.uuid] || ''}
                         onChange={(e) => handleSearchChange(provider.uuid, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') rememberSearch(searchTerm); }}
                         sx={{ width: 200 }}
                     />
                 </Stack>
+
+                {/* Recent searches — only while the box is empty, so they never compete with live results */}
+                {!searchTerm && searchHistory.length > 0 && (
+                    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.75 }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            Recent searches
+                        </Typography>
+                        {searchHistory.map((term) => (
+                            <Chip
+                                key={term}
+                                label={term}
+                                size="small"
+                                variant="outlined"
+                                onClick={() => handleSearchChange(provider.uuid, term)}
+                                onDelete={() => forgetSearch(term)}
+                                sx={{ fontFamily: 'monospace', maxWidth: 220 }}
+                            />
+                        ))}
+                    </Stack>
+                )}
 
                 {/* Model count */}
                 <Typography
@@ -311,7 +343,7 @@ export function ModelsPanel({
                         provider={provider}
                         newModels={newModels[provider.uuid].newModels}
                         selectedModel={isProviderSelected ? selectedModel : undefined}
-                        onModelSelect={(model) => onModelSelect(provider, model)}
+                        onModelSelect={selectModel}
                         onDismiss={() => clearNewModels(provider.uuid)}
                         columns={columns}
                     />
@@ -323,7 +355,7 @@ export function ModelsPanel({
                         provider={provider}
                         recentModels={recentModels[provider.uuid]}
                         selectedModel={isProviderSelected ? selectedModel : undefined}
-                        onModelSelect={(model) => onModelSelect(provider, model)}
+                        onModelSelect={selectModel}
                         columns={columns}
                     />
                 )}
@@ -340,7 +372,7 @@ export function ModelsPanel({
                                     key={`${provider.uuid}:${starModel}`}
                                     model={starModel}
                                     isSelected={isProviderSelected && selectedModel === starModel}
-                                    onClick={() => onModelSelect(provider, starModel)}
+                                    onClick={() => selectModel(starModel)}
                                     variant="starred"
                                     description={getDescription(starModel)}
                                     provider={provider}
@@ -374,7 +406,7 @@ export function ModelsPanel({
                                         isSelected={isModelSelected}
                                         onEdit={() => onCustomModelEdit(provider, model)}
                                         onDelete={() => onCustomModelDelete(provider, model)}
-                                        onSelect={() => onModelSelect(provider, model)}
+                                        onSelect={() => selectModel(model)}
                                         variant={variant}
                                     />
                                 );
@@ -384,7 +416,7 @@ export function ModelsPanel({
                                         key={`${provider.uuid}:${model}`}
                                         model={model}
                                         isSelected={isModelSelected}
-                                        onClick={() => onModelSelect(provider, model)}
+                                        onClick={() => selectModel(model)}
                                         variant="standard"
                                         description={getDescription(model)}
                                         provider={provider}
