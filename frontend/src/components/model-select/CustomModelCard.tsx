@@ -8,6 +8,7 @@ import { ModelTestStatusBadge } from '../probe/ModelTestStatusBadge';
 import { ProbeDialog } from '../probe/ProbeDialog';
 import { useModelTestProbe } from '../probe/useModelTestProbe';
 import { ControlBar } from './ControlBar';
+import { ModelCopyButton } from './ModelCopyButton';
 import { getModelCardActiveColor, getModelCardStateStyles, modelCardTransition } from './cardStyles';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -175,6 +176,7 @@ export default function CustomModelCard({
                 {/* Control bar - visible on hover */}
                 {!loading && (
                     <ControlBar>
+                        <ModelCopyButton model={model} />
                         <ModelTestTrigger onOpen={probe.openDialog} />
                         <IconButton
                             size="small"
