@@ -362,6 +362,24 @@ const mockOAuthProviderCatalog: MockProviderCatalogEntry[] = [
         },
         models: ['mock-chat-model', 'mock-reasoning-model'],
     },
+    {
+        // Dual-endpoint OAuth issuer (ZCode): one URL per protocol.
+        provider: {
+            uuid: 'mock-oauth-zcode', name: 'ZCode OAuth',
+            api_base: 'https://api.z.ai/api/anthropic', api_style: 'anthropic', auth_type: 'oauth',
+            token: '', enabled: true, proxy_url: '',
+            api_base_openai: 'https://api.z.ai/api/coding/paas/v4', api_base_anthropic: 'https://api.z.ai/api/anthropic',
+            oauth_detail: {
+                access_token: 'mock-zcode-access-token',
+                refresh_token: '',
+                expires_at: mockOAuthExpiresAt,
+                issuer: 'zcode',
+                provider_type: 'zcode',
+                user_id: 'mock-zcode-user',
+            },
+        },
+        models: ['glm-5.1', 'glm-5-turbo', 'glm-4.7'],
+    },
 ]
 
 const mockVirtualProviders = [
