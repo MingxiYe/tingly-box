@@ -14,10 +14,11 @@
     },
     "models_schema": "每条模型 { id, context?, max_output? }，仅填写已验证的数值，不确定的省略字段或整个数组留空",
     "provider_meta_fields": "可选字段：last_updated（YYYY-MM-DD，该 provider 数据最近一次校验/更新的日期）与 sources（string[]，支撑本次更新的官方参考链接）——仅在确实有验证依据时添加，只需覆盖发生变更的字段，不需要为未改动的 provider 补齐历史。",
-    "model_meta_fields": "可选字段：sources（string[]，支撑该条 model 具体数据/状态——context、max_output、note、deprecated、openai_endpoints——的参考链接）。用法与 provider_meta_fields 的 sources 相同，只是作用域缩小到单个 model：优先选官方文档/changelog/开源仓库 issue，其次官方博客；不确定来源、或多个 model 共享同一条 provider 级 sources 时就不必重复写。同样只在确实核实过这条 model 时添加，不必为未改动的 model 补齐历史。不进入 Go 的 ModelInfo 结构体，encoding/json 会静默丢弃——和 note/created/deprecated 一样，是给读源码的人看的引用轨迹，运行时/前端都看不到。首个试点：codex 模板（见 2026-09-18 的模型刷新）。"
+    "model_meta_fields": "可选字段：sources（string[]，支撑该条 model 具体数据/状态——context、max_output、note、deprecated、openai_endpoints——的参考链接）。用法与 provider_meta_fields 的 sources 相同，只是作用域缩小到单个 model：优先选官方文档/changelog/开源仓库 issue，其次官方博客；不确定来源、或多个 model 共享同一条 provider 级 sources 时就不必重复写。同样只在确实核实过这条 model 时添加，不必为未改动的 model 补齐历史。不进入 Go 的 ModelInfo 结构体，encoding/json 会静默丢弃——和 note/created/deprecated 一样，是给读源码的人看的引用轨迹，运行时/前端都看不到。首个试点：codex 模板（见 2026-09-18 的模型刷新）。",
+    "token_limit_units": "context / max_output 一律写十进制整数：K=1000、M=1000000（1M=1000000、256K=256000、128K=128000、64K=64000），不写 2 的幂（1048576/262144/131072/65536）。官方给出的精确非整数值（如 gpt-3.5-turbo 的 16385）保持原样。"
   },
   "version": "2.4.0",
-  "last_updated": "2026-09-23T00:00:00Z",
+  "last_updated": "2026-09-29T00:00:00Z",
   "providers": {
     "aws-bedrock": {
       "id": "aws-bedrock",
@@ -48,11 +49,14 @@
         { "id": "anthropic.claude-sonnet-4-6" },
         { "id": "anthropic.claude-haiku-4-5-20251001-v1:0" }
       ],
-      "last_updated": "2026-09-23",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://platform.claude.com/docs/en/models/overview",
         "https://platform.claude.com/docs/en/models/fable-5-1/overview",
-        "https://platform.claude.com/docs/en/models/opus-5-5/overview"
+        "https://platform.claude.com/docs/en/models/opus-5-5/overview",
+        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+        "https://platform.claude.com/docs/en/build-with-claude/claude-in-amazon-bedrock",
+        "https://platform.claude.com/docs/en/build-with-claude/claude-on-amazon-bedrock-legacy"
       ]
     },
     "gcp-vertex-claude": {
@@ -84,11 +88,13 @@
         { "id": "claude-sonnet-4-6" },
         { "id": "claude-haiku-4-5@20251001" }
       ],
-      "last_updated": "2026-09-23",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://platform.claude.com/docs/en/models/overview",
         "https://platform.claude.com/docs/en/models/fable-5-1/overview",
-        "https://platform.claude.com/docs/en/models/opus-5-5/overview"
+        "https://platform.claude.com/docs/en/models/opus-5-5/overview",
+        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+        "https://platform.claude.com/docs/en/build-with-claude/claude-on-vertex-ai"
       ]
     },
     "gcp-vertex-gemini": {
@@ -138,11 +144,130 @@
       "api_style": "openai",
       "icon": "azure",
       "models": [
-        { "id": "gpt-5" },
-        { "id": "gpt-5-mini" },
-        { "id": "gpt-4o" },
-        { "id": "o4-mini" },
-        { "id": "o3" }
+        {
+          "id": "gpt-6-astra",
+          "context": 1050000,
+          "max_output": 128000,
+          "created": "2026-09-03",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-6-sol",
+          "context": 1050000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-6-luna",
+          "context": 1050000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-5.6-sol",
+          "context": 1050000,
+          "max_output": 128000,
+          "created": "2026-07-09",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "context": 1050000,
+          "max_output": 128000,
+          "created": "2026-07-09",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "context": 1050000,
+          "max_output": 128000,
+          "created": "2026-07-09",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-5.5",
+          "context": 1050000,
+          "max_output": 128000,
+          "created": "2026-04-24",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-5.4",
+          "context": 1050000,
+          "max_output": 128000,
+          "created": "2026-03-05",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-5.4-mini",
+          "context": 400000,
+          "max_output": 128000,
+          "created": "2026-03-17",
+          "sources": ["https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure"]
+        },
+        {
+          "id": "gpt-5",
+          "context": 400000,
+          "max_output": 128000,
+          "created": "2025-08-07",
+          "note": "version 2025-08-07 retires 2027-02-09 (GA)",
+          "sources": [
+            "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure",
+            "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirement-schedule"
+          ]
+        },
+        {
+          "id": "gpt-5-mini",
+          "context": 400000,
+          "max_output": 128000,
+          "created": "2025-08-07",
+          "note": "version 2025-08-07 retires 2027-02-09 (GA)",
+          "sources": [
+            "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure",
+            "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirement-schedule"
+          ]
+        },
+        {
+          "id": "gpt-4o",
+          "context": 128000,
+          "max_output": 16000,
+          "legacy": true,
+          "note": "per-version lifecycle: 2024-05-13 deprecated (retires 2026-12-09, auto-upgrade to gpt-5.6-sol); 2024-08-06 deprecated (retires 2027-04-14); 2024-11-20 legacy (retires 2027-04-14); suggested replacement gpt-5.1",
+          "sources": [
+            "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure",
+            "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirement-schedule"
+          ]
+        },
+        {
+          "id": "o4-mini",
+          "context": 200000,
+          "max_output": 100000,
+          "deprecated": "version 2025-04-16 deprecated, retires 2026-11-19",
+          "note": "replaced by gpt-5.6-terra",
+          "sources": [
+            "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure",
+            "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirement-schedule"
+          ]
+        },
+        {
+          "id": "o3",
+          "context": 200000,
+          "max_output": 100000,
+          "deprecated": "version 2025-04-16 deprecated, retires 2026-11-19",
+          "note": "replaced by gpt-5.6-sol",
+          "sources": [
+            "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure",
+            "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirement-schedule"
+          ]
+        }
+      ],
+      "last_updated": "2026-09-29",
+      "sources": [
+        "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure",
+        "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirement-schedule",
+        "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirements"
       ]
     },
     "openai-com": {
@@ -241,89 +366,105 @@
         },
         {
           "id": "gpt-4.1",
-          "context": 1047576,
-          "max_output": 32768,
+          "context": 1000000,
+          "max_output": 32000,
           "created": "2025-04",
           "legacy": true
         },
         {
           "id": "gpt-4.1-mini",
-          "context": 1047576,
-          "max_output": 32768,
+          "context": 1000000,
+          "max_output": 32000,
           "created": "2025-04",
           "legacy": true
         },
         {
           "id": "gpt-4.1-nano",
-          "context": 1047576,
-          "max_output": 32768,
+          "context": 1000000,
+          "max_output": 32000,
           "created": "2025-04",
-          "deprecated": "shutdown scheduled 2026-07-23",
-          "note": "replaced by gpt-5.4-nano"
+          "deprecated": "shutdown scheduled 2026-10-23",
+          "note": "replaced by gpt-5.6-luna",
+          "sources": ["https://developers.openai.com/api/docs/deprecations"]
         },
         {
           "id": "gpt-4o",
           "context": 128000,
-          "max_output": 16384,
+          "max_output": 16000,
           "created": "2024-05",
           "legacy": true
         },
         {
           "id": "gpt-4o-mini",
           "context": 128000,
-          "max_output": 16384,
+          "max_output": 16000,
           "created": "2024-07",
           "legacy": true
         },
         {
           "id": "gpt-4",
-          "context": 8192,
-          "max_output": 8192,
+          "context": 8000,
+          "max_output": 8000,
           "created": "2023-03",
           "deprecated": "shutdown scheduled 2026-10-23",
-          "note": "replaced by gpt-5.5"
+          "note": "replaced by gpt-5.6-sol",
+          "sources": ["https://developers.openai.com/api/docs/deprecations"]
         },
         {
           "id": "gpt-4-turbo",
           "context": 128000,
-          "max_output": 4096,
+          "max_output": 4000,
           "created": "2024-04",
           "deprecated": "shutdown scheduled 2026-10-23",
-          "note": "replaced by gpt-5.5"
+          "note": "replaced by gpt-5.6-sol",
+          "sources": ["https://developers.openai.com/api/docs/deprecations"]
         },
         {
           "id": "gpt-3.5-turbo",
           "context": 16385,
-          "max_output": 4096,
+          "max_output": 4000,
           "created": "2023-11",
           "deprecated": "shutdown scheduled 2026-10-23",
-          "note": "replaced by gpt-5.4-mini"
+          "note": "replaced by gpt-5.6-terra",
+          "sources": ["https://developers.openai.com/api/docs/deprecations"]
         },
         {
           "id": "o3",
           "context": 200000,
-          "max_output": 100000
+          "max_output": 100000,
+          "deprecated": "o3-2025-04-16 snapshot shutdown scheduled 2026-12-11",
+          "note": "replaced by gpt-5.6-sol",
+          "sources": ["https://developers.openai.com/api/docs/deprecations"]
         },
         {
           "id": "o3-mini",
           "context": 200000,
-          "max_output": 100000
+          "max_output": 100000,
+          "deprecated": "shutdown scheduled 2026-10-23",
+          "note": "replaced by gpt-5.6-sol",
+          "sources": ["https://developers.openai.com/api/docs/deprecations"]
         },
         {
           "id": "o1",
           "context": 200000,
-          "max_output": 100000
+          "max_output": 100000,
+          "deprecated": "shutdown scheduled 2026-10-23",
+          "note": "replaced by gpt-5.6-sol",
+          "sources": ["https://developers.openai.com/api/docs/deprecations"]
         },
         {
           "id": "o1-mini",
           "context": 128000,
-          "max_output": 65536
+          "max_output": 64000,
+          "deprecated": "shut down 2025-10-27",
+          "note": "replaced by o4-mini",
+          "sources": ["https://developers.openai.com/api/docs/deprecations"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "openai",
       "openai_endpoint_mode": "both",
-      "last_updated": "2026-09-23",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://developers.openai.com/api/docs/models/gpt-6-astra",
         "https://developers.openai.com/api/docs/models/gpt-6-sol",
@@ -358,7 +499,12 @@
         {
           "id": "claude-sonnet-5-5",
           "context": 1000000,
-          "max_output": 128000
+          "max_output": 128000,
+          "created": "2026-09-28",
+          "sources": [
+            "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+            "https://platform.claude.com/docs/en/models/overview"
+          ]
         },
         {
           "id": "claude-fable-5-1",
@@ -368,53 +514,84 @@
         {
           "id": "claude-3-haiku-20240307",
           "context": 200000,
-          "max_output": 4096
+          "max_output": 4000,
+          "deprecated": "retired 2026-04-20",
+          "note": "replaced by claude-haiku-4-5-20251001",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-3-sonnet-20240229",
           "context": 200000,
-          "max_output": 4096
+          "max_output": 4000,
+          "deprecated": "retired 2025-07-21",
+          "note": "replaced by claude-sonnet-4-6",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-3-opus-20240229",
           "context": 200000,
-          "max_output": 4096
+          "max_output": 4000,
+          "deprecated": "retired 2026-01-05",
+          "note": "replaced by claude-opus-4-8",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-3-5-haiku-20241022",
           "context": 200000,
-          "max_output": 8192
+          "max_output": 8000,
+          "deprecated": "retired 2026-02-19",
+          "note": "replaced by claude-haiku-4-5-20251001",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-3-5-sonnet-20241022",
           "context": 200000,
-          "max_output": 8192
+          "max_output": 8000,
+          "deprecated": "retired 2025-10-28",
+          "note": "replaced by claude-sonnet-4-6",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-3-7-sonnet-20250219",
           "context": 200000,
-          "max_output": 64000
+          "max_output": 64000,
+          "deprecated": "retired 2026-02-19",
+          "note": "replaced by claude-sonnet-4-6",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-opus-4-20250514",
           "context": 200000,
-          "max_output": 32000
+          "max_output": 32000,
+          "deprecated": "retired 2026-06-15",
+          "note": "replaced by claude-opus-4-8",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-sonnet-4-20250514",
           "context": 200000,
-          "max_output": 64000
+          "max_output": 64000,
+          "deprecated": "retired 2026-06-15",
+          "note": "replaced by claude-sonnet-4-6",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-opus-4-1-20250805",
           "context": 200000,
           "max_output": 32000,
-          "deprecated": "shutdown scheduled 2026-08-05"
+          "deprecated": "retired 2026-08-05",
+          "note": "replaced by claude-opus-4-8",
+          "sources": ["https://platform.claude.com/docs/en/about-claude/model-deprecations"]
         },
         {
           "id": "claude-sonnet-4-5-20250929",
-          "context": 1000000,
-          "max_output": 64000
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": [
+            "https://platform.claude.com/docs/en/models/sonnet-4-5/overview",
+            "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+          ]
         },
         {
           "id": "claude-haiku-4-5-20251001",
@@ -423,49 +600,71 @@
         },
         {
           "id": "claude-opus-4-5-20251101",
-          "context": 1000000,
-          "max_output": 64000
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/opus-4-5/overview"]
         },
         {
           "id": "claude-opus-4-6",
           "context": 1000000,
-          "max_output": 128000
+          "max_output": 128000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/opus-4-6/overview"]
         },
         {
           "id": "claude-sonnet-4-6",
           "context": 1000000,
-          "max_output": 64000
+          "max_output": 128000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/sonnet-4-6/overview"]
         },
         {
           "id": "claude-opus-4-7",
           "context": 1000000,
-          "max_output": 128000
+          "max_output": 128000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/opus-4-7/overview"]
         },
         {
           "id": "claude-opus-4-8",
           "context": 1000000,
-          "max_output": 128000
+          "max_output": 128000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/opus-4-8/overview"]
+        },
+        {
+          "id": "claude-opus-5",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-07-24",
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/opus-5/overview"]
         },
         {
           "id": "claude-sonnet-5",
           "context": 1000000,
-          "max_output": 128000
+          "max_output": 128000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/sonnet-5/overview"]
         },
         {
           "id": "claude-fable-5",
-          "descritpion": "Limited time available",
           "context": 1000000,
-          "max_output": 128000
+          "max_output": 128000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/fable-5/overview"]
         }
       ],
       "supports_models_endpoint": true,
       "web_search_schema": "web_search_anthropic",
       "icon": "anthropic",
-      "last_updated": "2026-09-23",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://platform.claude.com/docs/en/models/overview",
-        "https://platform.claude.com/docs/en/models/fable-5-1/overview",
-        "https://platform.claude.com/docs/en/models/opus-5-5/overview"
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations",
+        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+        "https://www.anthropic.com/claude-sonnet-5-5"
       ]
     },
     "claude-code": {
@@ -494,7 +693,12 @@
         {
           "id": "claude-sonnet-5-5",
           "context": 1000000,
-          "max_output": 128000
+          "max_output": 128000,
+          "created": "2026-09-28",
+          "sources": [
+            "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+            "https://code.claude.com/docs/en/model-config"
+          ]
         },
         {
           "id": "claude-fable-5-1",
@@ -503,8 +707,10 @@
         },
         {
           "id": "claude-sonnet-4-5",
-          "context": 1000000,
-          "max_output": 64000
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/sonnet-4-5/overview"]
         },
         {
           "id": "claude-haiku-4-5",
@@ -513,8 +719,10 @@
         },
         {
           "id": "claude-opus-4-5",
-          "context": 1000000,
-          "max_output": 64000
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/opus-4-5/overview"]
         },
         {
           "id": "claude-opus-4-6",
@@ -524,7 +732,9 @@
         {
           "id": "claude-sonnet-4-6",
           "context": 1000000,
-          "max_output": 64000
+          "max_output": 128000,
+          "legacy": true,
+          "sources": ["https://platform.claude.com/docs/en/models/sonnet-4-6/overview"]
         },
         {
           "id": "claude-opus-4-7",
@@ -557,10 +767,14 @@
       "oauth_provider": "claude_code",
       "web_search_schema": "web_search_anthropic",
       "icon": "claudecode",
-      "last_updated": "2026-09-23",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://www.anthropic.com/claude-fable-and-mythos-5-1",
-        "https://www.anthropic.com/claude-opus-5-5"
+        "https://www.anthropic.com/claude-opus-5-5",
+        "https://platform.claude.com/docs/en/models/overview",
+        "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
+        "https://code.claude.com/docs/en/model-config",
+        "https://www.anthropic.com/claude-sonnet-5-5"
       ]
     },
     "codex": {
@@ -583,99 +797,141 @@
       "models": [
         {
           "id": "gpt-6-sol",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-09-22",
-          "note": "推荐用于复杂编码和长程 Agent 工作流；按账户套餐、灰度进度和工作区设置开放",
+          "note": "推荐用于复杂编码和长程 Agent 工作流；按账户套餐、灰度进度和工作区设置开放；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"],
           "sources": [
             "https://learn.chatgpt.com/docs/models",
-            "https://learn.chatgpt.com/docs/changelog?type=codex-cli"
+            "https://learn.chatgpt.com/docs/changelog?type=codex-cli",
+            "https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"
           ]
+        },
+        {
+          "id": "gpt-6-sol:fast",
+          "context": 272000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "note": "日常主力模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持（Codex 模型目录 priority 档位标注 1.5x speed）；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
+          "openai_endpoints": ["responses"],
+          "sources": ["https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"]
         },
         {
           "id": "gpt-6-luna",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-09-22",
-          "note": "推荐用于专注、高吞吐量的编码任务；按账户套餐、灰度进度和工作区设置开放",
+          "note": "推荐用于专注、高吞吐量的编码任务；按账户套餐、灰度进度和工作区设置开放；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"],
           "sources": [
             "https://learn.chatgpt.com/docs/models",
-            "https://learn.chatgpt.com/docs/changelog?type=codex-cli"
+            "https://learn.chatgpt.com/docs/changelog?type=codex-cli",
+            "https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"
           ]
         },
         {
+          "id": "gpt-6-luna:fast",
+          "context": 272000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "note": "高效轻量模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持（Codex 模型目录 priority 档位标注 1.5x speed）；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
+          "openai_endpoints": ["responses"],
+          "sources": ["https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"]
+        },
+        {
           "id": "gpt-6-astra",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-09-03",
-          "note": "最新旗舰模型，代码/应用/研究综合能力最强；截至 2026-09-18 Codex CLI 的 /model 选择器仍不默认展示该模型（企业版需管理员在后台开启，Plus/Pro 按节奏灰度），需在 config.toml 显式设置 model = \"gpt-6-astra\" 才能使用，但配置后可直接生效",
+          "note": "最新旗舰模型，代码/应用/研究综合能力最强；Codex 仓库模型目录（models.json）中已为 visibility=list、最低客户端版本 0.153.0，按账户套餐、灰度进度和工作区设置开放（企业版需管理员在后台开启）；旧版客户端或未展示时可在 config.toml 显式设置 model = \"gpt-6-astra\"；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"],
           "sources": [
             "https://learn.chatgpt.com/docs/models",
             "https://openai.com/index/gpt-6-astra/",
-            "https://github.com/openai/codex/issues/43342"
+            "https://github.com/openai/codex/issues/43342",
+            "https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"
           ]
         },
         {
+          "id": "gpt-6-astra:fast",
+          "context": 272000,
+          "max_output": 128000,
+          "created": "2026-09-03",
+          "note": "最新旗舰模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持（Codex 模型目录 priority 档位标注 2x speed, increased usage）；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
+          "openai_endpoints": ["responses"],
+          "sources": ["https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"]
+        },
+        {
           "id": "gpt-5.6-sol",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-07-09",
-          "note": "旗舰模型，能力最强，适合复杂编码、长程 Agent 和高难度推理",
+          "note": "上一代旗舰模型，适合复杂编码、长程 Agent 和高难度推理；Codex 模型目录已将其标为旧模型并指向 gpt-6-sol；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"],
-          "sources": ["https://learn.chatgpt.com/docs/models"]
+          "sources": [
+            "https://learn.chatgpt.com/docs/models",
+            "https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"
+          ]
         },
         {
           "id": "gpt-5.6-sol:fast",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-07-09",
-          "note": "旗舰模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持",
+          "note": "旗舰模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"]
         },
         {
           "id": "gpt-5.6-terra",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-07-09",
-          "note": "平衡能力与成本，适合常规开发任务；已取代于 2026-08-31 退役的 gpt-5.4",
+          "note": "上一代平衡模型，适合常规开发任务；已取代于 2026-08-31 退役的 gpt-5.4，Codex 模型目录已指向 gpt-6-sol；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"],
-          "sources": ["https://learn.chatgpt.com/docs/models"]
+          "sources": [
+            "https://learn.chatgpt.com/docs/models",
+            "https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"
+          ]
         },
         {
           "id": "gpt-5.6-terra:fast",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-07-09",
-          "note": "平衡模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持",
+          "note": "平衡模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"]
         },
         {
           "id": "gpt-5.6-luna",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-07-09",
-          "note": "延迟和成本最低，适合高频、相对简单的任务；已取代于 2026-08-31 退役的 gpt-5.4-mini",
+          "note": "上一代轻量模型，延迟和成本最低；已取代于 2026-08-31 退役的 gpt-5.4-mini，Codex 模型目录已指向 gpt-6-luna；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"],
-          "sources": ["https://learn.chatgpt.com/docs/models"]
+          "sources": [
+            "https://learn.chatgpt.com/docs/models",
+            "https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"
+          ]
         },
         {
           "id": "gpt-5.6-luna:fast",
-          "context": 1050000,
+          "context": 272000,
           "max_output": 128000,
           "created": "2026-07-09",
-          "note": "轻量模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持",
+          "note": "轻量模型 · Fast 模式，请求 OpenAI 优先算力通道，速度更快但消耗更高，仅 Codex 订阅支持；Codex 默认上下文 272000；开启 1M 开关可扩至 872000（依据 openai/codex models.json 的 context_window / max_context_window）",
           "openai_endpoints": ["responses"]
         },
         {
           "id": "gpt-5.5",
           "context": 272000,
-          "note": "上一代旗舰模型，ChatGPT 登录会话默认模型",
-          "deprecated": "shutdown scheduled 2026-10-14 from ChatGPT/ChatGPT Work/Codex on all plans; switch to gpt-5.6-sol",
+          "deprecated": "shutdown scheduled 2026-10-14 from ChatGPT/ChatGPT Work/Codex on all plans (does not apply to the OpenAI API); switch to gpt-6-sol or gpt-5.6-sol",
+          "note": "旧版编码模型（Codex 模型目录标注 Legacy）；ChatGPT/Codex 内将于 2026-10-14 退役，不影响 OpenAI API",
           "openai_endpoints": ["responses"],
-          "sources": ["https://learn.chatgpt.com/docs/changelog?type=codex-cli"]
+          "sources": [
+            "https://learn.chatgpt.com/docs/changelog?type=codex-cli",
+            "https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"
+          ]
         },
         {
           "id": "gpt-5.3-codex-spark",
@@ -690,11 +946,12 @@
       "oauth_provider": "codex",
       "icon": "opencode",
       "openai_endpoint_mode": "responses",
-      "last_updated": "2026-09-23",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://learn.chatgpt.com/docs/models",
         "https://learn.chatgpt.com/docs/changelog?type=codex-cli",
-        "https://openai.com/index/gpt-6-astra/"
+        "https://openai.com/index/gpt-6-astra/",
+        "https://github.com/openai/codex/blob/main/codex-rs/models-manager/models.json"
       ]
     },
     "googleapis-com": {
@@ -716,38 +973,77 @@
       "base_url_anthropic": null,
       "models": [
         {
+          "id": "gemini-3.8-flash",
+          "context": 1024000,
+          "max_output": 64000,
+          "sources": ["https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash"]
+        },
+        {
+          "id": "gemini-3.7-flash",
+          "context": 1024000,
+          "max_output": 64000,
+          "sources": ["https://ai.google.dev/gemini-api/docs/models/gemini-3.7-flash"]
+        },
+        {
+          "id": "gemini-3.6-flash",
+          "context": 1024000,
+          "max_output": 64000,
+          "sources": ["https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash"]
+        },
+        {
+          "id": "gemini-3.5-flash-lite",
+          "context": 1024000,
+          "max_output": 64000,
+          "sources": ["https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite"]
+        },
+        {
           "id": "gemini-3.5-flash",
-          "context": 1000000,
-          "max_output": 65536,
-          "created": "2026-05"
+          "context": 1024000,
+          "max_output": 64000,
+          "created": "2026-05",
+          "sources": ["https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash"]
         },
         {
           "id": "gemini-3.1-flash-lite",
-          "context": 1000000,
-          "max_output": 65536,
-          "created": "2026-02"
+          "context": 1024000,
+          "max_output": 64000,
+          "created": "2026-02",
+          "deprecated": "shutdown scheduled 2027-05-07",
+          "note": "replaced by gemini-3.5-flash-lite",
+          "sources": [
+            "https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite",
+            "https://ai.google.dev/gemini-api/docs/deprecations"
+          ]
         },
         {
           "id": "gemini-3.1-pro-preview",
-          "context": 1000000,
-          "max_output": 65536,
+          "context": 1024000,
+          "max_output": 64000,
           "created": "2026-01",
-          "note": "preview; highest current Pro-tier id, no non-preview GA id published yet"
+          "note": "preview; highest current Pro-tier id, no non-preview GA id published yet",
+          "sources": ["https://ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview"]
         },
         {
           "id": "gemini-3-flash-preview",
-          "context": 1000000,
-          "max_output": 65536,
-          "note": "preview"
+          "context": 1024000,
+          "max_output": 64000,
+          "note": "preview; no shutdown announced, deprecations page lists gemini-3.6-flash as replacement",
+          "sources": [
+            "https://ai.google.dev/gemini-api/docs/models/gemini-3-flash-preview",
+            "https://ai.google.dev/gemini-api/docs/deprecations"
+          ]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "gemini",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://ai.google.dev/gemini-api/docs/models",
         "https://ai.google.dev/gemini-api/docs/deprecations",
-        "https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.5"
+        "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash",
+        "https://ai.google.dev/gemini-api/docs/models/gemini-3.7-flash",
+        "https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash",
+        "https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite"
       ]
     },
     "gemini-cli": {
@@ -770,37 +1066,55 @@
       "models": [
         {
           "id": "gemini-2.5-pro",
-          "context": 1048576,
-          "max_output": 65536
+          "context": 1024000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": [
+            "https://ai.google.dev/gemini-api/docs/models/gemini-2.5-pro",
+            "https://ai.google.dev/gemini-api/docs/deprecations"
+          ]
         },
         {
           "id": "gemini-2.5-flash",
-          "context": 1048576,
-          "max_output": 65536
+          "context": 1024000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": [
+            "https://ai.google.dev/gemini-api/docs/models/gemini-2.5-pro",
+            "https://ai.google.dev/gemini-api/docs/deprecations"
+          ]
         },
         {
           "id": "gemini-2.5-flash-lite",
-          "context": 1048576,
-          "max_output": 65536
+          "context": 1024000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": [
+            "https://ai.google.dev/gemini-api/docs/models/gemini-2.5-pro",
+            "https://ai.google.dev/gemini-api/docs/deprecations"
+          ]
         },
         {
           "id": "gemini-3.1-pro-preview",
-          "context": 1000000,
-          "max_output": 65536
+          "context": 1024000,
+          "max_output": 64000,
+          "sources": ["https://ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview"]
         },
         {
           "id": "gemini-3.5-flash",
-          "context": 1000000,
-          "max_output": 65536
+          "context": 1024000,
+          "max_output": 64000,
+          "sources": ["https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash"]
         }
       ],
       "supports_models_endpoint": true,
       "oauth_provider": "gemini",
       "icon": "gemini",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://github.com/google-gemini/gemini-cli/discussions/27274",
-        "https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/"
+        "https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/",
+        "https://ai.google.dev/gemini-api/docs/deprecations"
       ]
     },
     "antigravity": {
@@ -821,24 +1135,12 @@
       "base_url_openai": "https://cloudcode-pa.googleapis.com",
       "base_url_anthropic": null,
       "models": [
-        {
-          "id": "gemini-3-pro-high"
-        },
-        {
-          "id": "gemini-3-pro-low"
-        },
-        {
-          "id": "gemini-3-flash"
-        },
-        {
-          "id": "claude-sonnet-4-6"
-        },
-        {
-          "id": "claude-opus-4-6-thinking"
-        },
-        {
-          "id": "gpt-oss-120b-medium"
-        }
+        { "id": "gemini-3-pro-high" },
+        { "id": "gemini-3-pro-low" },
+        { "id": "gemini-3-flash" },
+        { "id": "claude-sonnet-4-6" },
+        { "id": "claude-opus-4-6-thinking" },
+        { "id": "gpt-oss-120b-medium" }
       ],
       "supports_models_endpoint": false,
       "oauth_provider": "antigravity",
@@ -856,49 +1158,65 @@
       "website": "https://xai.com",
       "description": "xAI Grok API service",
       "type": "official",
-      "api_doc": "https://docs.x.ai/docs/guides/responses-api",
+      "api_doc": "https://docs.x.ai/developers/model-capabilities/text/comparison",
       "model_doc": "https://docs.x.ai/docs/models",
       "pricing_doc": "https://docs.x.ai/docs/models?cluster=us-east-1#models-and-pricing",
       "base_url_openai": "https://api.x.ai/v1/",
-      "base_url_anthropic": "https://api.x.ai/v1",
       "models": [
         {
           "id": "grok-3",
-          "context": 131072,
-          "legacy": true
+          "context": 128000,
+          "legacy": true,
+          "deprecated": "retired 2026-05-15; requests to this slug are redirected to grok-4.3 (none reasoning effort)",
+          "sources": ["https://docs.x.ai/developers/migration/may-15-retirement"]
         },
         {
           "id": "grok-3-mini",
-          "context": 131072,
+          "context": 128000,
           "legacy": true
         },
         {
           "id": "grok-code-fast-1",
-          "context": 256000
+          "context": 256000,
+          "deprecated": "retired 2026-05-15; requests redirected to grok-build-0.1 (its alias)",
+          "sources": [
+            "https://docs.x.ai/developers/migration/may-15-retirement",
+            "https://docs.x.ai/developers/models/grok-build-0.1"
+          ]
         },
         {
           "id": "grok-4-0709",
-          "context": 256000
+          "context": 256000,
+          "deprecated": "retired 2026-05-15; requests to this slug are redirected to grok-4.3 (low reasoning effort)",
+          "sources": ["https://docs.x.ai/developers/migration/may-15-retirement"]
         },
         {
           "id": "grok-4-fast-reasoning",
           "context": 2000000,
-          "max_output": 30000
+          "max_output": 30000,
+          "deprecated": "retired 2026-05-15; requests to this slug are redirected to grok-4.3 (low reasoning effort)",
+          "sources": ["https://docs.x.ai/developers/migration/may-15-retirement"]
         },
         {
           "id": "grok-4-fast-non-reasoning",
           "context": 2000000,
-          "max_output": 30000
+          "max_output": 30000,
+          "deprecated": "retired 2026-05-15; requests to this slug are redirected to grok-4.3 (none reasoning effort)",
+          "sources": ["https://docs.x.ai/developers/migration/may-15-retirement"]
         },
         {
           "id": "grok-4-1-fast-reasoning",
           "context": 2000000,
-          "max_output": 30000
+          "max_output": 30000,
+          "deprecated": "retired 2026-05-15; requests to this slug are redirected to grok-4.3 (low reasoning effort)",
+          "sources": ["https://docs.x.ai/developers/migration/may-15-retirement"]
         },
         {
           "id": "grok-4-1-fast-non-reasoning",
           "context": 2000000,
-          "max_output": 30000
+          "max_output": 30000,
+          "deprecated": "retired 2026-05-15; requests to this slug are redirected to grok-4.3 (none reasoning effort)",
+          "sources": ["https://docs.x.ai/developers/migration/may-15-retirement"]
         },
         {
           "id": "grok-4.20-0309-reasoning",
@@ -925,21 +1243,46 @@
           "id": "grok-4.5",
           "context": 500000,
           "created": "2026-07",
-          "note": "flagship, Opus-class per xAI, V9 arch"
+          "note": "Opus-class per xAI, V9 arch",
+          "sources": ["https://docs.x.ai/developers/models/grok-4.5"]
+        },
+        {
+          "id": "grok-4.6",
+          "context": 500000,
+          "created": "2026-08",
+          "note": "frontier model for coding/agentic tasks; no text output limit per xAI",
+          "sources": [
+            "https://docs.x.ai/developers/models/grok-4.6",
+            "https://docs.x.ai/developers/release-notes"
+          ]
+        },
+        {
+          "id": "grok-4.7",
+          "context": 500000,
+          "created": "2026-09",
+          "note": "current flagship per xAI; no text output limit",
+          "sources": [
+            "https://docs.x.ai/developers/models/grok-4.7",
+            "https://docs.x.ai/developers/release-notes"
+          ]
         },
         {
           "id": "grok-build-0.1",
           "context": 256000,
-          "note": "coding-agent model behind Grok Build CLI"
+          "note": "coding-agent model behind Grok Build CLI",
+          "sources": ["https://docs.x.ai/developers/models/grok-build-0.1"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "xai",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://docs.x.ai/developers/models",
-        "https://x.ai/news/grok-4-5",
-        "https://techcrunch.com/2026/07/08/spacexai-releases-grok-4-5-which-elon-describes-as-an-opus-class-model/"
+        "https://docs.x.ai/developers/release-notes",
+        "https://docs.x.ai/developers/migration/may-15-retirement",
+        "https://docs.x.ai/developers/models/grok-4.7",
+        "https://docs.x.ai/developers/models/grok-4.6",
+        "https://docs.x.ai/developers/rest-api-reference/inference/legacy"
       ]
     },
     "deepseek-com": {
@@ -963,33 +1306,67 @@
         {
           "id": "deepseek-chat",
           "context": 128000,
-          "max_output": 8192,
-          "deprecated": "shutdown scheduled 2026-07-24 (legacy alias; maps to deepseek-v4-flash non-thinking/thinking mode)"
+          "max_output": 8000,
+          "deprecated": "shutdown scheduled 2026-07-24 (legacy alias; maps to deepseek-v4-flash non-thinking/thinking mode)",
+          "sources": ["https://api-docs.deepseek.com/updates"]
         },
         {
           "id": "deepseek-reasoner",
           "context": 128000,
-          "max_output": 65536,
-          "deprecated": "shutdown scheduled 2026-07-24 (legacy alias; maps to deepseek-v4-flash non-thinking/thinking mode)"
+          "max_output": 64000,
+          "deprecated": "shutdown scheduled 2026-07-24 (legacy alias; maps to deepseek-v4-flash non-thinking/thinking mode)",
+          "sources": ["https://api-docs.deepseek.com/updates"]
+        },
+        {
+          "id": "deepseek-flash",
+          "context": 1000000,
+          "max_output": 384000,
+          "created": "2026-09-10",
+          "openai_endpoints": [
+            "chat",
+            "responses"
+          ],
+          "sources": [
+            "https://api-docs.deepseek.com/quick_start/pricing",
+            "https://api-docs.deepseek.com/updates"
+          ]
         },
         {
           "id": "deepseek-v4-flash",
           "context": 1000000,
           "max_output": 384000,
-          "openai_endpoints": ["chat", "responses"]
+          "openai_endpoints": [
+            "chat",
+            "responses"
+          ],
+          "deprecated": "retired 2026-09-10; name temporarily routed to deepseek-flash (DeepSeek-V4.1-Flash), billed at Flash price",
+          "note": "legacy alias of deepseek-flash",
+          "legacy": true,
+          "sources": [
+            "https://api-docs.deepseek.com/quick_start/pricing",
+            "https://api-docs.deepseek.com/updates"
+          ]
         },
         {
           "id": "deepseek-v4-pro",
           "context": 1000000,
           "max_output": 384000,
-          "openai_endpoints": ["chat", "responses"]
+          "openai_endpoints": [
+            "chat",
+            "responses"
+          ],
+          "sources": [
+            "https://api-docs.deepseek.com/quick_start/pricing",
+            "https://api-docs.deepseek.com/updates"
+          ]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "deepseek",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://api-docs.deepseek.com/quick_start/pricing"
+        "https://api-docs.deepseek.com/quick_start/pricing",
+        "https://api-docs.deepseek.com/updates"
       ]
     },
     "mistral-ai": {
@@ -1014,29 +1391,75 @@
           "id": "mistral-large-2512",
           "context": 256000,
           "created": "2025-12",
-          "note": "Mistral Large 3, 675B MoE"
+          "note": "Mistral Large 3, 675B MoE",
+          "sources": ["https://docs.mistral.ai/models/mistral-large-3-25-12"]
         },
         {
-          "id": "mistral-medium-3-5-26-04",
+          "id": "mistral-medium-3-5",
           "context": 256000,
-          "created": "2026-04"
+          "created": "2026-04",
+          "note": "Mistral Medium 3.5 (v26.04); aliases mistral-medium-3, mistral-medium-latest",
+          "sources": ["https://docs.mistral.ai/models/mistral-medium-3-5-26-04"]
         },
         {
           "id": "mistral-small-2603",
           "context": 256000,
-          "created": "2026-03"
+          "created": "2026-03",
+          "sources": ["https://docs.mistral.ai/models/mistral-small-4-0-26-03"]
         },
         {
-          "id": "codestral",
-          "context": 256000
+          "id": "ministral-14b-2512",
+          "context": 256000,
+          "created": "2025-12",
+          "note": "Ministral 3 14B",
+          "sources": ["https://docs.mistral.ai/models/ministral-3-14b-25-12"]
+        },
+        {
+          "id": "ministral-8b-2512",
+          "context": 256000,
+          "created": "2025-12",
+          "note": "Ministral 3 8B",
+          "sources": ["https://docs.mistral.ai/models/ministral-3-8b-25-12"]
+        },
+        {
+          "id": "ministral-3b-2512",
+          "context": 256000,
+          "created": "2025-12",
+          "note": "Ministral 3 3B",
+          "sources": ["https://docs.mistral.ai/models/ministral-3-3b-25-12"]
+        },
+        {
+          "id": "codestral-2508",
+          "context": 128000,
+          "created": "2025-07",
+          "note": "alias codestral-latest",
+          "sources": ["https://docs.mistral.ai/models/codestral-25-08"]
+        },
+        {
+          "id": "zai-glm-5-2",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "note": "third-party Z.ai GLM 5.2 hosted by Mistral, public preview",
+          "sources": ["https://docs.mistral.ai/models/zai-glm-5-2"]
+        },
+        {
+          "id": "zai-glm-5-3",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-09",
+          "note": "third-party Z.ai GLM 5.3 hosted by Mistral, public preview; aliases zai-glm-5, zai-glm-latest",
+          "sources": ["https://docs.mistral.ai/models/zai-glm-5-3"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "mistral",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://docs.mistral.ai/models/overview",
-        "https://docs.mistral.ai/models/model-cards/mistral-medium-3-5-26-04"
+        "https://docs.mistral.ai/models/mistral-medium-3-5-26-04",
+        "https://docs.mistral.ai/models/codestral-25-08",
+        "https://docs.mistral.ai/models/zai-glm-5-3"
       ]
     },
     "dashscope-cn": {
@@ -1060,18 +1483,28 @@
       "models": [
         {
           "id": "qwen-max",
-          "context": 32768,
-          "max_output": 8192
+          "context": 32000,
+          "max_output": 8000,
+          "legacy": true,
+          "sources": ["https://help.aliyun.com/zh/model-studio/text-generation-model"]
         },
         {
           "id": "qwen-plus",
-          "context": 131072,
-          "max_output": 8192
+          "context": 1000000,
+          "max_output": 8000,
+          "legacy": true,
+          "sources": ["https://help.aliyun.com/zh/model-studio/text-generation-model"]
         },
         {
           "id": "qwen-turbo",
-          "context": 1000000,
-          "max_output": 8192
+          "context": 128000,
+          "max_output": 8000,
+          "deprecated": "shutdown scheduled 2026-10-10",
+          "sources": [
+            "https://help.aliyun.com/zh/model-studio/text-generation-model",
+            "https://help.aliyun.com/zh/model-studio/model-depreciation",
+            "https://www.alibabacloud.com/en/notice/model_studio_notice_on_the_postponed_retirement_of_selected_legacy_models_7d0"
+          ]
         },
         {
           "id": "qwen-long",
@@ -1080,21 +1513,64 @@
         {
           "id": "qwen3.7-max",
           "context": 1000000,
-          "created": "2026-05"
+          "created": "2026-05",
+          "legacy": true,
+          "sources": ["https://help.aliyun.com/zh/model-studio/text-generation-model"]
         },
         {
           "id": "qwen3.7-plus",
           "context": 1000000,
           "created": "2026-05",
           "note": "multimodal, vision+video, GUI-agent grounding"
+        },
+        {
+          "id": "qwen3.7-flash",
+          "context": 1000000,
+          "created": "2026-07",
+          "sources": [
+            "https://help.aliyun.com/zh/model-studio/text-generation-model",
+            "https://help.aliyun.com/zh/model-studio/newly-released-models"
+          ]
+        },
+        {
+          "id": "qwen3.8-max",
+          "context": 1000000,
+          "created": "2026-08",
+          "sources": [
+            "https://help.aliyun.com/zh/model-studio/text-generation-model",
+            "https://help.aliyun.com/zh/model-studio/newly-released-models"
+          ]
+        },
+        {
+          "id": "qwen3.8-flash",
+          "context": 1000000,
+          "created": "2026-08",
+          "sources": [
+            "https://help.aliyun.com/zh/model-studio/text-generation-model",
+            "https://help.aliyun.com/zh/model-studio/newly-released-models"
+          ]
+        },
+        {
+          "id": "qwen3.8-max-0902",
+          "context": 1000000,
+          "created": "2026-09",
+          "note": "snapshot of qwen3.8-max (alias qwen3.8-max-2026-09-02)",
+          "sources": [
+            "https://help.aliyun.com/zh/model-studio/text-generation-model",
+            "https://help.aliyun.com/zh/model-studio/newly-released-models"
+          ]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "qwen",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://www.alibabacloud.com/help/en/model-studio/models",
-        "https://help.aliyun.com/zh/model-studio/models"
+        "https://help.aliyun.com/zh/model-studio/models",
+        "https://help.aliyun.com/zh/model-studio/text-generation-model",
+        "https://help.aliyun.com/zh/model-studio/newly-released-models",
+        "https://help.aliyun.com/zh/model-studio/model-depreciation",
+        "https://www.alibabacloud.com/en/notice/model_studio_notice_on_the_postponed_retirement_of_selected_legacy_models_7d0"
       ]
     },
     "dashscope-intl": {
@@ -1117,18 +1593,28 @@
       "models": [
         {
           "id": "qwen-max",
-          "context": 32768,
-          "max_output": 8192
+          "context": 128000,
+          "max_output": 8000,
+          "legacy": true,
+          "sources": ["https://www.alibabacloud.com/help/en/model-studio/text-generation-model"]
         },
         {
           "id": "qwen-plus",
-          "context": 131072,
-          "max_output": 8192
+          "context": 1000000,
+          "max_output": 8000,
+          "legacy": true,
+          "sources": ["https://www.alibabacloud.com/help/en/model-studio/text-generation-model"]
         },
         {
           "id": "qwen-turbo",
           "context": 1000000,
-          "max_output": 8192
+          "max_output": 8000,
+          "deprecated": "shutdown scheduled 2026-10-10",
+          "sources": [
+            "https://www.alibabacloud.com/help/en/model-studio/text-generation-model",
+            "https://www.alibabacloud.com/help/en/model-studio/model-depreciation",
+            "https://www.alibabacloud.com/en/notice/model_studio_notice_on_the_postponed_retirement_of_selected_legacy_models_7d0"
+          ]
         },
         {
           "id": "qwen-long",
@@ -1137,21 +1623,64 @@
         {
           "id": "qwen3.7-max",
           "context": 1000000,
-          "created": "2026-05"
+          "created": "2026-05",
+          "legacy": true,
+          "sources": ["https://www.alibabacloud.com/help/en/model-studio/text-generation-model"]
         },
         {
           "id": "qwen3.7-plus",
           "context": 1000000,
           "created": "2026-05",
           "note": "multimodal, vision+video, GUI-agent grounding"
+        },
+        {
+          "id": "qwen3.7-flash",
+          "context": 1000000,
+          "created": "2026-07",
+          "sources": [
+            "https://www.alibabacloud.com/help/en/model-studio/text-generation-model",
+            "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
+          ]
+        },
+        {
+          "id": "qwen3.8-max",
+          "context": 1000000,
+          "created": "2026-08",
+          "sources": [
+            "https://www.alibabacloud.com/help/en/model-studio/text-generation-model",
+            "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
+          ]
+        },
+        {
+          "id": "qwen3.8-flash",
+          "context": 1000000,
+          "created": "2026-08",
+          "sources": [
+            "https://www.alibabacloud.com/help/en/model-studio/text-generation-model",
+            "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
+          ]
+        },
+        {
+          "id": "qwen3.8-max-0902",
+          "context": 1000000,
+          "created": "2026-09",
+          "note": "snapshot of qwen3.8-max (alias qwen3.8-max-2026-09-02)",
+          "sources": [
+            "https://www.alibabacloud.com/help/en/model-studio/text-generation-model",
+            "https://www.alibabacloud.com/help/en/model-studio/model-pricing"
+          ]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "qwen",
-      "last_updated": "2026-08-19",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://www.alibabacloud.com/help/en/model-studio/models",
-        "https://www.alibabacloud.com/help/en/model-studio/anthropic-api-messages"
+        "https://www.alibabacloud.com/help/en/model-studio/anthropic-api-messages",
+        "https://www.alibabacloud.com/help/en/model-studio/text-generation-model",
+        "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+        "https://www.alibabacloud.com/help/en/model-studio/model-depreciation",
+        "https://www.alibabacloud.com/en/notice/model_studio_notice_on_the_postponed_retirement_of_selected_legacy_models_7d0"
       ]
     },
     "dashscope-cn-coding": {
@@ -1175,57 +1704,72 @@
       "models": [
         {
           "id": "qwen3-coder-plus",
-          "context": 1048576,
-          "max_output": 65536
+          "context": 1024000,
+          "max_output": 64000
         },
         {
           "id": "qwen3.5-plus",
           "context": 1000000,
-          "max_output": 65536
+          "max_output": 64000
         },
         {
-          "id": "qwen3-max",
-          "context": 262144,
-          "max_output": 65536
+          "id": "qwen3-max-2026-01-23",
+          "context": 256000,
+          "max_output": 64000,
+          "sources": [
+            "https://help.aliyun.com/zh/model-studio/coding-plan",
+            "https://help.aliyun.com/zh/model-studio/text-generation-model"
+          ]
         },
         {
           "id": "qwen3-coder-next",
-          "context": 262144,
-          "max_output": 65536
+          "context": 256000,
+          "max_output": 64000
         },
         {
           "id": "glm-5",
-          "context": 202752,
-          "max_output": 16384
+          "context": 200000,
+          "max_output": 16000
         },
         {
           "id": "glm-4.7",
-          "context": 202752,
-          "max_output": 16384
+          "context": 200000,
+          "max_output": 16000
         },
         {
-          "id": "minimax-m2.5",
-          "context": 1048576,
-          "max_output": 32768
+          "id": "MiniMax-M2.5",
+          "context": 192000,
+          "max_output": 32000,
+          "sources": [
+            "https://help.aliyun.com/zh/model-studio/coding-plan",
+            "https://help.aliyun.com/zh/model-studio/text-generation-model"
+          ]
         },
         {
           "id": "kimi-k2.5",
-          "context": 262144,
-          "max_output": 32768
+          "context": 256000,
+          "max_output": 32000
         },
         {
           "id": "qwen3.7-plus",
           "context": 1000000
         },
         {
-          "id": "qwen3.6-plus"
+          "id": "qwen3.6-plus",
+          "context": 1000000,
+          "sources": [
+            "https://help.aliyun.com/zh/model-studio/coding-plan",
+            "https://help.aliyun.com/zh/model-studio/text-generation-model"
+          ]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "qwen",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://docs.qwencloud.com/coding-plan/overview"
+        "https://docs.qwencloud.com/coding-plan/overview",
+        "https://help.aliyun.com/zh/model-studio/coding-plan",
+        "https://help.aliyun.com/zh/model-studio/text-generation-model"
       ]
     },
     "dashscope-intl-coding": {
@@ -1233,7 +1777,7 @@
       "name": "Qwen Coding Plan",
       "status": "active",
       "valid": true,
-      "canonical_domain": "coding.dashscope.aliyuncs.com",
+      "canonical_domain": "coding-intl.dashscope.aliyuncs.com",
       "vendor_family": "alibaba",
       "region": "intl",
       "plan": "coding",
@@ -1243,62 +1787,77 @@
       "api_doc": "https://www.alibabacloud.com/help/en/model-studio/coding-plan",
       "model_doc": "https://www.alibabacloud.com/help/en/model-studio/coding-plan",
       "pricing_doc": "https://www.alibabacloud.com/help/en/model-studio/coding-plan",
-      "base_url_openai": "https://coding.dashscope.aliyuncs.com/v1",
-      "base_url_anthropic": "https://coding.dashscope.aliyuncs.com/apps/anthropic",
+      "base_url_openai": "https://coding-intl.dashscope.aliyuncs.com/v1",
+      "base_url_anthropic": "https://coding-intl.dashscope.aliyuncs.com/apps/anthropic",
       "models": [
         {
           "id": "qwen3-coder-plus",
-          "context": 1048576,
-          "max_output": 65536
+          "context": 1024000,
+          "max_output": 64000
         },
         {
           "id": "qwen3.5-plus",
           "context": 1000000,
-          "max_output": 65536
+          "max_output": 64000
         },
         {
-          "id": "qwen3-max",
-          "context": 262144,
-          "max_output": 65536
+          "id": "qwen3-max-2026-01-23",
+          "context": 256000,
+          "max_output": 64000,
+          "sources": [
+            "https://www.alibabacloud.com/help/en/model-studio/coding-plan",
+            "https://www.alibabacloud.com/help/en/model-studio/text-generation-model"
+          ]
         },
         {
           "id": "qwen3-coder-next",
-          "context": 262144,
-          "max_output": 65536
+          "context": 256000,
+          "max_output": 64000
         },
         {
           "id": "glm-5",
-          "context": 202752,
-          "max_output": 16384
+          "context": 200000,
+          "max_output": 16000
         },
         {
           "id": "glm-4.7",
-          "context": 202752,
-          "max_output": 16384
+          "context": 200000,
+          "max_output": 16000
         },
         {
-          "id": "minimax-m2.5",
-          "context": 1048576,
-          "max_output": 32768
+          "id": "MiniMax-M2.5",
+          "context": 192000,
+          "max_output": 32000,
+          "sources": [
+            "https://www.alibabacloud.com/help/en/model-studio/coding-plan",
+            "https://www.alibabacloud.com/help/en/model-studio/text-generation-model"
+          ]
         },
         {
           "id": "kimi-k2.5",
-          "context": 262144,
-          "max_output": 32768
+          "context": 256000,
+          "max_output": 32000
         },
         {
           "id": "qwen3.7-plus",
           "context": 1000000
         },
         {
-          "id": "qwen3.6-plus"
+          "id": "qwen3.6-plus",
+          "context": 1000000,
+          "sources": [
+            "https://www.alibabacloud.com/help/en/model-studio/coding-plan",
+            "https://www.alibabacloud.com/help/en/model-studio/text-generation-model"
+          ]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "qwen",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://docs.qwencloud.com/coding-plan/overview"
+        "https://docs.qwencloud.com/coding-plan/overview",
+        "https://www.alibabacloud.com/help/en/model-studio/coding-plan",
+        "https://www.alibabacloud.com/help/en/model-studio/text-generation-model"
       ]
     },
     "qwen-code": {
@@ -1322,19 +1881,18 @@
         {
           "id": "qwen3-coder-plus",
           "context": 1000000,
-          "max_output": 65536
+          "max_output": 64000
         },
-        {
-          "id": "qwen3-coder-flash"
-        }
+        { "id": "qwen3-coder-flash" }
       ],
       "supports_models_endpoint": false,
       "oauth_provider": "qwen_code",
       "icon": "qwen",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://github.com/QwenLM/Qwen3/discussions/1868",
-        "https://inventivehq.com/blog/qwen-code-still-free-2026-shutdown"
+        "https://inventivehq.com/blog/qwen-code-still-free-2026-shutdown",
+        "https://github.com/QwenLM/qwen-code/blob/main/docs/users/configuration/auth.md"
       ]
     },
     "kimi-code": {
@@ -1349,45 +1907,62 @@
       "website": "https://www.kimi.com/code",
       "description": "Kimi Code API via OAuth device-code flow",
       "auth_type": "oauth",
-      "api_doc": "https://www.kimi.com/code",
-      "model_doc": "https://www.kimi.com/code",
-      "pricing_doc": "https://www.kimi.com/code",
+      "api_doc": "https://www.kimi.com/code/docs/en/",
+      "model_doc": "https://www.kimi.com/code/docs/en/kimi-code/models",
+      "pricing_doc": "https://www.kimi.com/code/docs/en/kimi-code/membership",
       "base_url_openai": "https://api.kimi.com/coding/v1",
       "base_url_anthropic": "https://api.kimi.com/coding/",
       "models": [
         {
           "id": "kimi-for-coding",
-          "context": 262144,
-          "max_output": 65536,
-          "note": "alias now backed by Kimi K2.7 Code (upgraded from K2.5/K2.6 lineage)"
+          "context": 1024000,
+          "max_output": 64000,
+          "note": "alias upgraded in place to Kimi K2.8 Preview (2026-09-11); up to 1M context, low/high/max thinking",
+          "sources": [
+            "https://www.kimi.com/code/docs/en/kimi-code/models",
+            "https://www.kimi.com/code/docs/en/kimi-code/whats-new"
+          ]
         },
         {
           "id": "kimi-k2.6",
-          "context": 262144,
-          "max_output": 65536
+          "context": 256000,
+          "max_output": 64000,
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"],
+          "note": "not listed in Kimi Code docs as of 2026-09-29 (docs list only k3, k3-256k, kimi-for-coding, kimi-for-coding-highspeed); no shutdown announcement found"
         },
         {
           "id": "kimi-k2.5",
-          "context": 262144,
-          "max_output": 65536
+          "context": 256000,
+          "max_output": 64000,
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"],
+          "note": "not listed in Kimi Code docs as of 2026-09-29 (docs list only k3, k3-256k, kimi-for-coding, kimi-for-coding-highspeed); no shutdown announcement found"
         },
         {
           "id": "k3",
-          "context": 1048576,
-          "note": "Kimi K3 via Kimi Code"
+          "context": 1024000,
+          "note": "Kimi K3 via Kimi Code; 1M context only on higher-tier plans (Pro/Allegretto+), 256K otherwise",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
+        },
+        {
+          "id": "k3-256k",
+          "context": 256000,
+          "note": "K3 256K-context version; image input only (no video)",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
         },
         {
           "id": "kimi-for-coding-highspeed",
-          "context": 262144,
-          "note": "fast variant, ~3x token cost for ~5-6x speed"
+          "context": 256000,
+          "note": "K2.7 Code HighSpeed; ~5-6x output speed for ~3x quota usage",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
         }
       ],
       "supports_models_endpoint": false,
       "oauth_provider": "kimi_code",
       "icon": "kimi",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://www.kimi.com/code/docs/kimi-code/models"
+        "https://www.kimi.com/code/docs/en/kimi-code/models",
+        "https://www.kimi.com/code/docs/en/kimi-code/whats-new"
       ]
     },
     "modelscope-cn": {
@@ -1433,38 +2008,100 @@
       "models": [
         {
           "id": "MiniMax-M2",
-          "context": 204800,
-          "max_output": 131072
+          "context": 200000,
+          "max_output": 128000,
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.cn/docs/guides/models-intro",
+            "https://platform.minimax.cn/docs/api-reference/text-anthropic-api"
+          ]
         },
         {
           "id": "MiniMax-M2.1",
-          "context": 204800,
-          "max_output": 65536
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.cn/docs/guides/models-intro",
+            "https://platform.minimax.cn/docs/api-reference/text-anthropic-api"
+          ]
         },
         {
           "id": "MiniMax-M2.1-lightning",
-          "context": 204800,
-          "max_output": 65536
+          "context": 200000,
+          "max_output": 64000
         },
         {
           "id": "MiniMax-M2.5",
-          "context": 204800,
-          "max_output": 65536
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.cn/docs/guides/models-intro",
+            "https://platform.minimax.cn/docs/api-reference/text-anthropic-api"
+          ]
         },
         {
           "id": "MiniMax-M3",
           "context": 1000000,
-          "max_output": 131072,
+          "max_output": 128000,
           "created": "2026-06",
-          "note": "428B MoE, MSA architecture, native multimodal"
+          "note": "428B MoE, MSA architecture, native multimodal",
+          "sources": [
+            "https://platform.minimax.cn/docs/api-reference/text-anthropic-api",
+            "https://platform.minimax.cn/docs/release-notes/models"
+          ]
+        },
+        {
+          "id": "MiniMax-M2.1-highspeed",
+          "context": 200000,
+          "created": "2025-12",
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.cn/docs/guides/models-intro",
+            "https://platform.minimax.cn/docs/api-reference/text-anthropic-api"
+          ]
+        },
+        {
+          "id": "MiniMax-M2.5-highspeed",
+          "context": 200000,
+          "created": "2026-02",
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.cn/docs/guides/models-intro",
+            "https://platform.minimax.cn/docs/api-reference/text-anthropic-api"
+          ]
+        },
+        {
+          "id": "MiniMax-M2.7",
+          "context": 200000,
+          "created": "2026-03",
+          "sources": [
+            "https://platform.minimax.cn/docs/guides/models-intro",
+            "https://platform.minimax.cn/docs/api-reference/text-anthropic-api",
+            "https://platform.minimax.cn/docs/release-notes/models"
+          ]
+        },
+        {
+          "id": "MiniMax-M2.7-highspeed",
+          "context": 200000,
+          "created": "2026-03",
+          "sources": [
+            "https://platform.minimax.cn/docs/guides/models-intro",
+            "https://platform.minimax.cn/docs/api-reference/text-anthropic-api",
+            "https://platform.minimax.cn/docs/release-notes/models"
+          ]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "minimax",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://www.minimax.io/blog/minimax-m3",
-        "https://www.minimax.io/models/text/m3"
+        "https://www.minimax.io/models/text/m3",
+        "https://platform.minimax.cn/docs/guides/models-intro",
+        "https://platform.minimax.cn/docs/api-reference/text-anthropic-api",
+        "https://platform.minimax.cn/docs/release-notes/models"
       ]
     },
     "minimax-io": {
@@ -1487,38 +2124,100 @@
       "models": [
         {
           "id": "MiniMax-M2",
-          "context": 204800,
-          "max_output": 131072
+          "context": 200000,
+          "max_output": 128000,
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.io/docs/guides/models-intro",
+            "https://platform.minimax.io/docs/api-reference/text-anthropic-api"
+          ]
         },
         {
           "id": "MiniMax-M2.1",
-          "context": 204800,
-          "max_output": 65536
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.io/docs/guides/models-intro",
+            "https://platform.minimax.io/docs/api-reference/text-anthropic-api"
+          ]
         },
         {
           "id": "MiniMax-M2.1-lightning",
-          "context": 204800,
-          "max_output": 65536
+          "context": 200000,
+          "max_output": 64000
         },
         {
           "id": "MiniMax-M2.5",
-          "context": 204800,
-          "max_output": 65536
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.io/docs/guides/models-intro",
+            "https://platform.minimax.io/docs/api-reference/text-anthropic-api"
+          ]
         },
         {
           "id": "MiniMax-M3",
           "context": 1000000,
-          "max_output": 131072,
+          "max_output": 128000,
           "created": "2026-06",
-          "note": "428B MoE, MSA architecture, native multimodal"
+          "note": "428B MoE, MSA architecture, native multimodal",
+          "sources": [
+            "https://platform.minimax.io/docs/api-reference/text-anthropic-api",
+            "https://platform.minimax.io/docs/release-notes/models"
+          ]
+        },
+        {
+          "id": "MiniMax-M2.1-highspeed",
+          "context": 200000,
+          "created": "2025-12",
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.io/docs/guides/models-intro",
+            "https://platform.minimax.io/docs/api-reference/text-anthropic-api"
+          ]
+        },
+        {
+          "id": "MiniMax-M2.5-highspeed",
+          "context": 200000,
+          "created": "2026-02",
+          "legacy": true,
+          "sources": [
+            "https://platform.minimax.io/docs/guides/models-intro",
+            "https://platform.minimax.io/docs/api-reference/text-anthropic-api"
+          ]
+        },
+        {
+          "id": "MiniMax-M2.7",
+          "context": 200000,
+          "created": "2026-03",
+          "sources": [
+            "https://platform.minimax.io/docs/guides/models-intro",
+            "https://platform.minimax.io/docs/api-reference/text-anthropic-api",
+            "https://platform.minimax.io/docs/release-notes/models"
+          ]
+        },
+        {
+          "id": "MiniMax-M2.7-highspeed",
+          "context": 200000,
+          "created": "2026-03",
+          "sources": [
+            "https://platform.minimax.io/docs/guides/models-intro",
+            "https://platform.minimax.io/docs/api-reference/text-anthropic-api",
+            "https://platform.minimax.io/docs/release-notes/models"
+          ]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "minimax",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://www.minimax.io/blog/minimax-m3",
-        "https://www.minimax.io/models/text/m3"
+        "https://www.minimax.io/models/text/m3",
+        "https://platform.minimax.io/docs/guides/models-intro",
+        "https://platform.minimax.io/docs/api-reference/text-anthropic-api",
+        "https://platform.minimax.io/docs/release-notes/models"
       ]
     },
     "z-ai": {
@@ -1562,17 +2261,48 @@
         {
           "id": "glm-5.2",
           "context": 1000000,
-          "max_output": 131072,
+          "max_output": 128000,
           "created": "2026-06",
           "note": "753B MoE, DSA+IndexShare sparse attention"
+        },
+        {
+          "id": "glm-5.3",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "note": "same base model as GLM-5.2, post-training improvements",
+          "sources": [
+            "https://docs.z.ai/guides/llm/glm-5.3",
+            "https://docs.z.ai/release-notes/new-released"
+          ]
+        },
+        {
+          "id": "glm-5.3-flash",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "note": "native multimodal input (image/video/file), text output",
+          "sources": [
+            "https://docs.z.ai/guides/llm/glm-5.3-flash",
+            "https://docs.z.ai/release-notes/new-released"
+          ]
+        },
+        {
+          "id": "glm-5.3-flashx",
+          "context": 1000000,
+          "max_output": 128000,
+          "sources": ["https://docs.z.ai/guides/llm/glm-5.3-flash"]
         }
       ],
       "supports_models_endpoint": true,
       "web_search_schema": "web_search_glm",
       "icon": "zhipu",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://docs.z.ai/guides/llm/glm-5.2"
+        "https://docs.z.ai/guides/llm/glm-5.3",
+        "https://docs.z.ai/guides/llm/glm-5.3-flash",
+        "https://docs.z.ai/release-notes/new-released",
+        "https://docs.z.ai/guides/overview/pricing"
       ]
     },
     "z-ai-coding": {
@@ -1594,28 +2324,55 @@
       "base_url_anthropic": "https://api.z.ai/api/anthropic",
       "models": [
         {
+          "id": "glm-5.3",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "sources": [
+            "https://docs.z.ai/devpack/overview",
+            "https://docs.z.ai/guides/llm/glm-5.3"
+          ]
+        },
+        {
+          "id": "glm-5.3-flash",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "sources": [
+            "https://docs.z.ai/devpack/overview",
+            "https://docs.z.ai/guides/llm/glm-5.3-flash"
+          ]
+        },
+        {
           "id": "glm-5.2",
           "context": 1000000,
-          "max_output": 131072
+          "max_output": 128000,
+          "note": "Coding Plan auto-routes glm-5.2/glm-5.1 to glm-5.3 (per official supported-models page)",
+          "sources": ["https://docs.z.ai/devpack/overview"]
         },
         {
           "id": "glm-5-turbo",
-          "context": 202752,
-          "max_output": 131072
+          "context": 200000,
+          "max_output": 128000,
+          "note": "Coding Plan auto-routes this model to glm-5.3-flash (per official supported-models page)",
+          "sources": ["https://docs.z.ai/devpack/overview"]
         },
         {
           "id": "glm-4.7",
           "context": 200000,
-          "max_output": 128000
+          "max_output": 128000,
+          "note": "Coding Plan auto-routes this model to glm-5.3-flash (per official supported-models page)",
+          "sources": ["https://docs.z.ai/devpack/overview"]
         }
       ],
       "supports_models_endpoint": true,
       "web_search_schema": "web_search_glm",
       "icon": "zhipu",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://docs.z.ai/guides/llm/glm-5.2",
-        "https://z.ai/subscribe"
+        "https://docs.z.ai/devpack/overview",
+        "https://docs.z.ai/guides/llm/glm-5.3",
+        "https://docs.z.ai/guides/llm/glm-5.3-flash"
       ]
     },
     "bigmodel-cn": {
@@ -1654,24 +2411,49 @@
         },
         {
           "id": "glm-4.7",
-          "description": "hi",
           "context": 200000,
           "max_output": 128000
         },
         {
           "id": "glm-5.2",
           "context": 1000000,
-          "max_output": 131072,
+          "max_output": 128000,
           "created": "2026-06",
           "note": "753B MoE, DSA+IndexShare sparse attention"
+        },
+        {
+          "id": "glm-5.3",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "note": "same base model as GLM-5.2, post-training improvements",
+          "sources": [
+            "https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3",
+            "https://docs.bigmodel.cn/cn/guide/start/model-overview"
+          ]
+        },
+        {
+          "id": "glm-5.3-flash",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "note": "native multimodal input",
+          "sources": ["https://docs.bigmodel.cn/cn/guide/start/model-overview"]
+        },
+        {
+          "id": "glm-5.3-flashx",
+          "context": 1000000,
+          "max_output": 128000,
+          "sources": ["https://docs.bigmodel.cn/cn/guide/start/model-overview"]
         }
       ],
       "supports_models_endpoint": true,
       "web_search_schema": "web_search_glm",
       "icon": "zhipu",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://docs.bigmodel.cn/cn/guide/start/model-overview"
+        "https://docs.bigmodel.cn/cn/guide/start/model-overview",
+        "https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3"
       ]
     },
     "bigmodel-cn-coding": {
@@ -1694,27 +2476,55 @@
       "base_url_anthropic": "https://open.bigmodel.cn/api/anthropic",
       "models": [
         {
+          "id": "glm-5.3",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "sources": [
+            "https://docs.bigmodel.cn/cn/coding-plan/overview",
+            "https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3"
+          ]
+        },
+        {
+          "id": "glm-5.3-flash",
+          "context": 1000000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "sources": [
+            "https://docs.bigmodel.cn/cn/coding-plan/overview",
+            "https://docs.bigmodel.cn/cn/guide/start/model-overview"
+          ]
+        },
+        {
           "id": "glm-5.2",
           "context": 1000000,
-          "max_output": 131072
+          "max_output": 128000,
+          "note": "Coding Plan auto-routes glm-5.2/glm-5.1 to glm-5.3 (per official supported-models page)",
+          "sources": ["https://docs.bigmodel.cn/cn/coding-plan/overview"]
         },
         {
           "id": "glm-5-turbo",
-          "context": 202752,
-          "max_output": 131072
+          "context": 200000,
+          "max_output": 128000,
+          "note": "Coding Plan auto-routes this model to glm-5.3-flash (per official supported-models page)",
+          "sources": ["https://docs.bigmodel.cn/cn/coding-plan/overview"]
         },
         {
           "id": "glm-4.7",
           "context": 200000,
-          "max_output": 128000
+          "max_output": 128000,
+          "note": "Coding Plan auto-routes this model to glm-5.3-flash (per official supported-models page)",
+          "sources": ["https://docs.bigmodel.cn/cn/coding-plan/overview"]
         }
       ],
       "supports_models_endpoint": true,
       "web_search_schema": "web_search_glm",
       "icon": "zhipu",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://docs.bigmodel.cn/cn/coding-plan/overview"
+        "https://docs.bigmodel.cn/cn/coding-plan/overview",
+        "https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3",
+        "https://docs.bigmodel.cn/cn/guide/start/model-overview"
       ]
     },
     "moonshot-ai": {
@@ -1729,46 +2539,83 @@
       "plan": "standard",
       "website": "https://www.moonshot.ai/",
       "type": "official",
-      "api_doc": "https://platform.moonshot.ai/docs/api/chat#single-turn-chat",
-      "model_doc": "https://platform.moonshot.ai/docs/pricing/chat#generation-model-kimi-k2",
-      "pricing_doc": "https://platform.moonshot.ai/docs/pricing/chat#generation-model-kimi-k2",
+      "api_doc": "https://platform.kimi.ai/docs/api/chat",
+      "model_doc": "https://platform.kimi.ai/docs/models",
+      "pricing_doc": "https://platform.kimi.ai/docs/pricing/chat",
       "base_url_openai": "https://api.moonshot.ai/v1",
       "base_url_anthropic": "https://api.moonshot.ai/anthropic",
       "models": [
         {
           "id": "moonshot-v1-8k",
-          "context": 8192,
-          "deprecated": "shutdown scheduled 2026-08-31"
+          "context": 8000,
+          "deprecated": "discontinued 2026-08-31",
+          "sources": [
+            "https://platform.kimi.ai/docs/models",
+            "https://platform.kimi.ai/docs/platform-changelog"
+          ]
         },
         {
           "id": "moonshot-v1-32k",
-          "context": 32768,
-          "deprecated": "shutdown scheduled 2026-08-31"
+          "context": 32000,
+          "deprecated": "discontinued 2026-08-31",
+          "sources": [
+            "https://platform.kimi.ai/docs/models",
+            "https://platform.kimi.ai/docs/platform-changelog"
+          ]
         },
         {
           "id": "moonshot-v1-128k",
-          "context": 131072,
-          "deprecated": "shutdown scheduled 2026-08-31"
+          "context": 128000,
+          "deprecated": "discontinued 2026-08-31",
+          "sources": [
+            "https://platform.kimi.ai/docs/models",
+            "https://platform.kimi.ai/docs/platform-changelog"
+          ]
         },
         {
           "id": "kimi-k2.5",
-          "context": 262144,
-          "max_output": 65535
+          "context": 256000,
+          "max_output": 65535,
+          "deprecated": "discontinued 2026-08-31",
+          "sources": ["https://platform.kimi.ai/docs/models"]
         },
         {
           "id": "kimi-k3",
-          "context": 1048576,
+          "context": 1024000,
           "created": "2026-07",
-          "note": "2.8T param flagship, native vision"
+          "note": "2.8T param flagship, native vision",
+          "sources": ["https://platform.kimi.ai/docs/models"]
+        },
+        {
+          "id": "kimi-k2.6",
+          "context": 256000,
+          "created": "2026-04",
+          "note": "256K context per platform docs; multimodal, thinking and non-thinking",
+          "sources": ["https://platform.kimi.ai/docs/models"]
+        },
+        {
+          "id": "kimi-k2.7-code",
+          "context": 256000,
+          "created": "2026-06",
+          "note": "dedicated coding model; 256K context per platform docs",
+          "sources": ["https://platform.kimi.ai/docs/models"]
+        },
+        {
+          "id": "kimi-k2.7-code-highspeed",
+          "context": 256000,
+          "created": "2026-06",
+          "note": "high-speed K2.7 Code, ~180 tokens/s",
+          "sources": ["https://platform.kimi.ai/docs/models"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "kimi",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
+        "https://platform.kimi.ai/docs/models",
+        "https://platform.kimi.ai/docs/platform-changelog",
         "https://platform.kimi.ai/docs/guide/kimi-k3-quickstart",
-        "https://platform.kimi.ai/docs/pricing",
-        "https://www.bloomberg.com/news/articles/2026-07-17/china-s-powerful-new-moonshot-ai-model-closes-gap-with-us-rivals"
+        "https://platform.kimi.ai/docs/guide/kimi-k2-7-code-quickstart"
       ]
     },
     "moonshot-cn": {
@@ -1783,45 +2630,82 @@
       "plan": "standard",
       "website": "https://www.moonshot.cn/",
       "type": "official",
-      "api_doc": "https://platform.moonshot.cn/docs/api/chat#single-turn-chat",
-      "model_doc": "https://platform.moonshot.cn/docs/pricing/chat#generation-model-kimi-k2",
-      "pricing_doc": "https://platform.moonshot.cn/docs/pricing/chat#generation-model-kimi-k2",
+      "api_doc": "https://platform.kimi.com/docs/api/chat",
+      "model_doc": "https://platform.kimi.com/docs/models",
+      "pricing_doc": "https://platform.kimi.com/docs/pricing/chat",
       "base_url_openai": "https://api.moonshot.cn/v1",
       "base_url_anthropic": "https://api.moonshot.cn/anthropic",
       "models": [
         {
           "id": "moonshot-v1-8k",
-          "context": 8192,
-          "deprecated": "shutdown scheduled 2026-08-31"
+          "context": 8000,
+          "deprecated": "discontinued 2026-08-31",
+          "sources": [
+            "https://platform.kimi.com/docs/models",
+            "https://platform.kimi.com/docs/models"
+          ]
         },
         {
           "id": "moonshot-v1-32k",
-          "context": 32768,
-          "deprecated": "shutdown scheduled 2026-08-31"
+          "context": 32000,
+          "deprecated": "discontinued 2026-08-31",
+          "sources": [
+            "https://platform.kimi.com/docs/models",
+            "https://platform.kimi.com/docs/models"
+          ]
         },
         {
           "id": "moonshot-v1-128k",
-          "context": 131072,
-          "deprecated": "shutdown scheduled 2026-08-31"
+          "context": 128000,
+          "deprecated": "discontinued 2026-08-31",
+          "sources": [
+            "https://platform.kimi.com/docs/models",
+            "https://platform.kimi.com/docs/models"
+          ]
         },
         {
           "id": "kimi-k2.5",
-          "context": 262144,
-          "max_output": 65535
+          "context": 256000,
+          "max_output": 65535,
+          "deprecated": "discontinued 2026-08-31",
+          "sources": ["https://platform.kimi.com/docs/models"]
         },
         {
           "id": "kimi-k3",
-          "context": 1048576,
+          "context": 1024000,
           "created": "2026-07",
-          "note": "2.8T param flagship, native vision"
+          "note": "2.8T param flagship, native vision",
+          "sources": ["https://platform.kimi.com/docs/models"]
+        },
+        {
+          "id": "kimi-k2.6",
+          "context": 256000,
+          "created": "2026-04",
+          "note": "256K context per platform docs; multimodal, thinking and non-thinking",
+          "sources": ["https://platform.kimi.com/docs/models"]
+        },
+        {
+          "id": "kimi-k2.7-code",
+          "context": 256000,
+          "created": "2026-06",
+          "note": "dedicated coding model; 256K context per platform docs",
+          "sources": ["https://platform.kimi.com/docs/models"]
+        },
+        {
+          "id": "kimi-k2.7-code-highspeed",
+          "context": 256000,
+          "created": "2026-06",
+          "note": "high-speed K2.7 Code, ~180 tokens/s",
+          "sources": ["https://platform.kimi.com/docs/models"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "kimi",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://platform.kimi.ai/docs/guide/kimi-k3-quickstart",
-        "https://platform.kimi.ai/docs/pricing"
+        "https://platform.kimi.com/docs/models",
+        "https://platform.kimi.com/docs/pricing/chat",
+        "https://platform.kimi.ai/docs/platform-changelog"
       ]
     },
     "kimi-com-coding": {
@@ -1836,34 +2720,101 @@
       "website": "https://www.kimi.com/code",
       "description": "Kimi Code API service for coding scenarios",
       "type": "official",
-      "api_doc": "https://www.kimi.com/code",
-      "model_doc": "https://www.kimi.com/code",
-      "pricing_doc": "https://www.kimi.com/code",
+      "api_doc": "https://www.kimi.com/code/docs/en/",
+      "model_doc": "https://www.kimi.com/code/docs/en/kimi-code/models",
+      "pricing_doc": "https://www.kimi.com/code/docs/en/kimi-code/membership",
       "base_url_openai": "https://api.kimi.com/coding/v1",
       "base_url_anthropic": "https://api.kimi.com/coding/",
       "models": [
         {
           "id": "kimi-for-coding",
-          "context": 262144,
-          "max_output": 65536,
-          "note": "alias now backed by Kimi K2.7 Code (upgraded from K2.5/K2.6 lineage)"
+          "context": 1024000,
+          "max_output": 64000,
+          "note": "alias upgraded in place to Kimi K2.8 Preview (2026-09-11); up to 1M context, low/high/max thinking",
+          "sources": [
+            "https://www.kimi.com/code/docs/en/kimi-code/models",
+            "https://www.kimi.com/code/docs/en/kimi-code/whats-new"
+          ]
         },
         {
           "id": "k3",
-          "context": 1048576,
-          "note": "Kimi K3 via Kimi Code"
+          "context": 1024000,
+          "note": "Kimi K3 via Kimi Code; 1M context only on higher-tier plans (Pro/Allegretto+), 256K otherwise",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
+        },
+        {
+          "id": "k3-256k",
+          "context": 256000,
+          "note": "K3 256K-context version; image input only (no video)",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
         },
         {
           "id": "kimi-for-coding-highspeed",
-          "context": 262144,
-          "note": "fast variant, ~3x token cost for ~5-6x speed"
+          "context": 256000,
+          "note": "K2.7 Code HighSpeed; ~5-6x output speed for ~3x quota usage",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "kimi",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://www.kimi.com/code/docs/kimi-code/models"
+        "https://www.kimi.com/code/docs/en/kimi-code/models",
+        "https://www.kimi.com/code/docs/en/kimi-code/whats-new"
+      ]
+    },
+    "kimi-ai-coding": {
+      "id": "kimi-ai-coding",
+      "name": "Kimi Code (Global)",
+      "status": "active",
+      "valid": true,
+      "canonical_domain": "api.kimi.ai",
+      "vendor_family": "moonshot",
+      "region": "intl",
+      "plan": "coding",
+      "website": "https://www.kimi.ai/code",
+      "description": "Kimi Code API service for coding scenarios (overseas)",
+      "type": "official",
+      "api_doc": "https://www.kimi.com/code/docs/en/",
+      "model_doc": "https://www.kimi.com/code/docs/en/kimi-code/models",
+      "pricing_doc": "https://www.kimi.com/code/docs/en/kimi-code/membership",
+      "base_url_openai": "https://api.kimi.ai/coding/v1",
+      "base_url_anthropic": "https://api.kimi.ai/coding/",
+      "models": [
+        {
+          "id": "kimi-for-coding",
+          "context": 1024000,
+          "max_output": 64000,
+          "note": "alias upgraded in place to Kimi K2.8 Preview (2026-09-11); up to 1M context, low/high/max thinking",
+          "sources": [
+            "https://www.kimi.com/code/docs/en/kimi-code/models",
+            "https://www.kimi.com/code/docs/en/kimi-code/whats-new"
+          ]
+        },
+        {
+          "id": "k3",
+          "context": 1024000,
+          "note": "Kimi K3 via Kimi Code; 1M context only on higher-tier plans (Pro/Allegretto+), 256K otherwise",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
+        },
+        {
+          "id": "k3-256k",
+          "context": 256000,
+          "note": "K3 256K-context version; image input only (no video)",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
+        },
+        {
+          "id": "kimi-for-coding-highspeed",
+          "context": 256000,
+          "note": "K2.7 Code HighSpeed; ~5-6x output speed for ~3x quota usage",
+          "sources": ["https://www.kimi.com/code/docs/en/kimi-code/models"]
+        }
+      ],
+      "supports_models_endpoint": false,
+      "icon": "kimi",
+      "last_updated": "2026-09-29",
+      "sources": [
+        "https://www.kimi.com/code/docs/en/kimi-code/models"
       ]
     },
     "volces-com": {
@@ -1886,27 +2837,88 @@
       "base_url_anthropic": "https://ark.cn-beijing.volces.com/api/v3",
       "models": [
         {
+          "id": "doubao-seed-evolving",
+          "context": 1024000,
+          "max_output": 256000,
+          "note": "rolling alias, weekly upgrades; official migration target for retired seed/glm/kimi models",
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1330310",
+            "https://www.volcengine.com/docs/82379/1350667"
+          ]
+        },
+        {
+          "id": "doubao-seed-2-1-pro-260915",
+          "context": 1024000,
+          "max_output": 256000,
+          "created": "2026-09",
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
+        },
+        {
+          "id": "doubao-seed-2-1-lite-260915",
+          "context": 1024000,
+          "max_output": 256000,
+          "created": "2026-09",
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
+        },
+        {
           "id": "doubao-seed-2-1-pro-260628",
           "context": 256000,
-          "created": "2026-06"
+          "max_output": 256000,
+          "created": "2026-06",
+          "legacy": true,
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
         },
         {
           "id": "doubao-seed-2-1-turbo-260628",
           "context": 256000,
-          "created": "2026-06"
+          "max_output": 256000,
+          "created": "2026-06",
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
         },
         {
           "id": "doubao-seed-2-0-lite-260428",
           "context": 256000,
-          "created": "2026-04"
+          "max_output": 128000,
+          "created": "2026-04",
+          "legacy": true,
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
+        },
+        {
+          "id": "doubao-seed-2-0-mini-260428",
+          "context": 256000,
+          "max_output": 128000,
+          "created": "2026-04",
+          "legacy": true,
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
+        },
+        {
+          "id": "glm-5-3-flash-260828",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-08",
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
+        },
+        {
+          "id": "deepseek-v4-1-flash-260910",
+          "context": 1024000,
+          "max_output": 384000,
+          "created": "2026-09",
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
+        },
+        {
+          "id": "deepseek-v4-pro-ga-260813",
+          "context": 1024000,
+          "max_output": 384000,
+          "created": "2026-08",
+          "sources": ["https://www.volcengine.com/docs/82379/1330310"]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "doubao",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://wcode.net/model/doubao-seed-2.1-pro",
-        "https://ai-bot.cn/doubao-seed-2-1/"
+        "https://www.volcengine.com/docs/82379/1330310",
+        "https://www.volcengine.com/docs/82379/1350667"
       ]
     },
     "volces-com-coding": {
@@ -1928,57 +2940,219 @@
       "base_url_openai": "https://ark.cn-beijing.volces.com/api/coding/v3",
       "base_url_anthropic": "https://ark.cn-beijing.volces.com/api/coding",
       "models": [
+        { "id": "ark-code-latest" },
         {
-          "id": "ark-code-latest"
+          "id": "doubao-seed-evolving",
+          "context": 1024000,
+          "max_output": 256000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
         },
         {
-          "id": "doubao-seed-code"
+          "id": "doubao-seed-2.1-pro",
+          "context": 1024000,
+          "max_output": 256000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
         },
         {
-          "id": "doubao-seed-2.0-code"
+          "id": "doubao-seed-2.1-lite",
+          "context": 1024000,
+          "max_output": 256000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "doubao-seed-2.0-mini",
+          "context": 256000,
+          "max_output": 128000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "minimax-m3",
+          "context": 1024000,
+          "max_output": 128000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "glm-5.3",
+          "context": 1024000,
+          "max_output": 128000,
+          "note": "glm-latest is an alias; thinking always on",
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "glm-5.3-flash",
+          "context": 1024000,
+          "max_output": 128000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "deepseek-v4.1-flash",
+          "context": 1024000,
+          "max_output": 384000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "context": 1024000,
+          "max_output": 384000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "deepseek-v4-pro",
+          "context": 1024000,
+          "max_output": 384000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "kimi-k2.7-code",
+          "context": 256000,
+          "max_output": 32000,
+          "note": "max output includes chain of thought",
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "kimi-k2.8-preview",
+          "context": 1024000,
+          "max_output": 1024000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "kimi-k3",
+          "context": 1024000,
+          "max_output": 128000,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261"
+          ]
+        },
+        {
+          "id": "doubao-seed-code",
+          "legacy": true,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1928261",
+            "https://www.volcengine.com/docs/82379/1350667"
+          ],
+          "note": "not in Coding Plan supported model-name list as of 2026-09-29 (Coding Plan doc); base-model EOS dates on the pay-go side are on the model-deprecation notice, mapping to this Coding Plan name not confirmed"
+        },
+        {
+          "id": "doubao-seed-2.0-code",
+          "legacy": true,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1928261",
+            "https://www.volcengine.com/docs/82379/1350667"
+          ],
+          "note": "not in Coding Plan supported model-name list as of 2026-09-29 (Coding Plan doc); base-model EOS dates on the pay-go side are on the model-deprecation notice, mapping to this Coding Plan name not confirmed"
         },
         {
           "id": "doubao-seed-2.0-pro",
-          "context": 262144
+          "context": 256000,
+          "legacy": true,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1928261",
+            "https://www.volcengine.com/docs/82379/1350667"
+          ],
+          "note": "not in Coding Plan supported model-name list as of 2026-09-29 (Coding Plan doc); base-model EOS dates on the pay-go side are on the model-deprecation notice, mapping to this Coding Plan name not confirmed"
         },
         {
-          "id": "doubao-seed-2.0-lite"
+          "id": "doubao-seed-2.0-lite",
+          "legacy": true,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1925114",
+            "https://www.volcengine.com/docs/82379/1928261",
+            "https://www.volcengine.com/docs/82379/1350667"
+          ],
+          "note": "not in Coding Plan supported model-name list as of 2026-09-29; overview page marks it 即将下线 (Coding Plan doc); base-model EOS dates on the pay-go side are on the model-deprecation notice, mapping to this Coding Plan name not confirmed"
         },
         {
           "id": "glm-4.7",
           "context": 200000,
-          "max_output": 128000
+          "max_output": 128000,
+          "legacy": true,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1928261",
+            "https://www.volcengine.com/docs/82379/1350667"
+          ],
+          "note": "not in Coding Plan supported model-name list as of 2026-09-29 (Coding Plan doc); base-model EOS dates on the pay-go side are on the model-deprecation notice, mapping to this Coding Plan name not confirmed"
         },
         {
-          "id": "deepseek-v3.2"
-        },
-        {
-          "id": "deepseek-v4-pro"
-        },
-        {
-          "id": "deepseek-v4-flash"
+          "id": "deepseek-v3.2",
+          "legacy": true,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1928261",
+            "https://www.volcengine.com/docs/82379/1350667"
+          ],
+          "note": "not in Coding Plan supported model-name list as of 2026-09-29 (Coding Plan doc); base-model EOS dates on the pay-go side are on the model-deprecation notice, mapping to this Coding Plan name not confirmed"
         },
         {
           "id": "kimi-k2.5",
-          "context": 262144,
-          "max_output": 65535
+          "context": 256000,
+          "max_output": 65535,
+          "legacy": true,
+          "sources": [
+            "https://www.volcengine.com/docs/82379/1928261",
+            "https://www.volcengine.com/docs/82379/1350667"
+          ],
+          "note": "not in Coding Plan supported model-name list as of 2026-09-29 (Coding Plan doc); base-model EOS dates on the pay-go side are on the model-deprecation notice, mapping to this Coding Plan name not confirmed"
         },
         {
           "id": "minimax-m2.5",
-          "context": 204800,
-          "max_output": 65536
+          "context": 200000,
+          "max_output": 64000,
+          "legacy": true,
+          "note": "not in current Coding Plan model-name list (superseded by minimax-m3 / glm-5.3); no EOS notice found",
+          "sources": ["https://www.volcengine.com/docs/82379/1928261"]
         },
         {
           "id": "glm-5.2",
           "context": 1000000,
-          "max_output": 131072
+          "max_output": 128000,
+          "legacy": true,
+          "note": "not in current Coding Plan model-name list (superseded by minimax-m3 / glm-5.3); no EOS notice found",
+          "sources": ["https://www.volcengine.com/docs/82379/1928261"]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "doubao",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://www.163.com/tech/article/L2A9LPUD00097U7T.html"
+        "https://www.volcengine.com/docs/82379/1925114",
+        "https://www.volcengine.com/docs/82379/1928261",
+        "https://www.volcengine.com/docs/82379/1350667"
       ]
     },
     "baidubce-com": {
@@ -2003,7 +3177,7 @@
         {
           "id": "ernie-5.0-thinking-latest",
           "context": 128000,
-          "max_output": 8192,
+          "max_output": 8000,
           "note": "native reasoning model"
         }
       ],
@@ -2033,42 +3207,36 @@
       "base_url_openai": "https://qianfan.baidubce.com/v2/coding",
       "base_url_anthropic": "https://qianfan.baidubce.com/anthropic/coding",
       "models": [
+        { "id": "qianfan-code-latest" },
+        { "id": "ernie-4.5-turbo-20260402" },
+        { "id": "deepseek-v3.2" },
+        { "id": "deepseek-v4-flash" },
         {
-          "id": "qianfan-code-latest"
+          "id": "deepseek-v4-pro",
+          "sources": ["https://cloud.baidu.com/doc/qianfan/s/imlg0beiu"]
         },
-        {
-          "id": "ernie-4.5-turbo-20260402"
-        },
-        {
-          "id": "deepseek-v3.2"
-        },
-        {
-          "id": "deepseek-v4-flash"
-        },
-        {
-          "id": "glm-5"
-        },
-        {
-          "id": "glm-5.1"
-        },
+        { "id": "glm-5" },
+        { "id": "glm-5.1" },
         {
           "id": "kimi-k2.5",
-          "context": 262144
+          "context": 256000
         },
         {
-          "id": "minimax-m2.5"
+          "id": "minimax-m2.5",
+          "note": "being phased out per Coding Plan doc (no date given)",
+          "sources": ["https://cloud.baidu.com/doc/qianfan/s/imlg0beiu"]
         },
         {
           "id": "glm-5.2",
           "context": 1000000,
-          "max_output": 131072
+          "max_output": 128000
         }
       ],
       "supports_models_endpoint": false,
       "icon": "baidu",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://mofcloud.cn/llm-price/llm/ernie-5-0-thinking-preview/"
+        "https://cloud.baidu.com/doc/qianfan/s/imlg0beiu"
       ]
     },
     "tencent-com": {
@@ -2136,14 +3304,16 @@
       "models": [
         {
           "id": "spark-x",
-          "max_output": 131072,
+          "context": 64000,
+          "max_output": 128000,
           "created": "2026-02",
-          "note": "Spark X2, 293B MoE, replaces 4.0Ultra"
+          "note": "Spark X2, 293B MoE, replaces 4.0Ultra",
+          "sources": ["https://www.xfyun.cn/doc/spark/X1http.html"]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "iflytek",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://www.xfyun.cn/doc/spark/X1http.html"
       ]
@@ -2205,12 +3375,18 @@
       "website": "https://platform.stepfun.com",
       "description": "Stepfun Step series LLMs (China site)",
       "type": "official",
-      "api_doc": "https://platform.stepfun.com/docs/overview/quickstart",
-      "model_doc": "https://platform.stepfun.com/docs/llm/text",
-      "pricing_doc": "https://platform.stepfun.com/docs/pricing/modelprice",
+      "api_doc": "https://platform.stepfun.com/docs/zh/quickstart/overview",
+      "model_doc": "https://platform.stepfun.com/docs/zh/welcome",
+      "pricing_doc": "https://platform.stepfun.com/docs/zh/guides/pricing/details",
       "base_url_openai": "https://api.stepfun.com/v1",
-      "base_url_anthropic": "https://api.stepfun.com/v1/anthropic",
+      "base_url_anthropic": "https://api.stepfun.com",
       "models": [
+        {
+          "id": "step-5-preview",
+          "context": 1000000,
+          "max_output": 64000,
+          "sources": ["https://platform.stepfun.com/docs/zh/guides/models/step-5-preview"]
+        },
         {
           "id": "step-3.7-flash",
           "context": 256000,
@@ -2222,15 +3398,22 @@
           "context": 256000,
           "max_output": 256000,
           "created": "2026-01"
+        },
+        {
+          "id": "step-3.5-flash-2603",
+          "sources": ["https://platform.stepfun.com/docs/zh/guides/pricing/details"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "stepfun",
-      "last_updated": "2026-08-19",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://models.dev/labs/stepfun/",
         "https://cloud.tencent.com/developer/news/3993306",
-        "https://platform.stepfun.com/docs/zh/step-plan/integrations/claude-code"
+        "https://platform.stepfun.com/docs/zh/step-plan/integrations/claude-code",
+        "https://platform.stepfun.com/docs/zh/guides/models/step-5-preview",
+        "https://platform.stepfun.com/docs/zh/guides/pricing/details",
+        "https://platform.stepfun.com/docs/zh/api-reference/chat/messages-create"
       ]
     },
     "stepfun-com-coding": {
@@ -2246,12 +3429,21 @@
       "website": "https://platform.stepfun.com",
       "description": "Stepfun Step Plan dedicated endpoints for coding agents (China site)",
       "type": "official",
-      "api_doc": "https://platform.stepfun.com/docs/zh/step-plan/",
-      "model_doc": "https://platform.stepfun.com/docs/zh/step-plan/",
-      "pricing_doc": "https://platform.stepfun.com/docs/zh/step-plan/",
-      "base_url_openai": "https://api.stepfun.com/step-plan/v1",
-      "base_url_anthropic": "https://api.stepfun.com/step-plan/anthropic",
+      "api_doc": "https://platform.stepfun.com/docs/zh/step-plan/overview",
+      "model_doc": "https://platform.stepfun.com/docs/zh/step-plan/overview",
+      "pricing_doc": "https://platform.stepfun.com/docs/zh/step-plan/overview",
+      "base_url_openai": "https://api.stepfun.com/step_plan/v1",
+      "base_url_anthropic": "https://api.stepfun.com/step_plan",
       "models": [
+        {
+          "id": "step-5-preview",
+          "context": 1000000,
+          "max_output": 64000,
+          "sources": [
+            "https://platform.stepfun.com/docs/zh/guides/models/step-5-preview",
+            "https://platform.stepfun.com/docs/zh/step-plan/overview"
+          ]
+        },
         {
           "id": "step-3.7-flash",
           "context": 256000,
@@ -2261,13 +3453,27 @@
           "id": "step-3.5-flash",
           "context": 256000,
           "max_output": 256000
+        },
+        {
+          "id": "step-3.5-flash-2603",
+          "sources": ["https://platform.stepfun.com/docs/zh/step-plan/overview"]
+        },
+        {
+          "id": "step-router-v1",
+          "max_output": 250000,
+          "sources": [
+            "https://platform.stepfun.com/docs/zh/guides/models/step-router",
+            "https://platform.stepfun.com/docs/zh/api-reference/chat/messages-create"
+          ]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "stepfun",
-      "last_updated": "2026-09-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://platform.stepfun.com/docs/zh/step-plan/integrations/claude-code"
+        "https://platform.stepfun.com/docs/zh/step-plan/overview",
+        "https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api",
+        "https://platform.stepfun.com/docs/zh/api-reference/chat/messages-create"
       ]
     },
     "stepfun-ai": {
@@ -2282,12 +3488,18 @@
       "website": "https://platform.stepfun.ai",
       "description": "Stepfun Step series LLMs (International)",
       "type": "official",
-      "api_doc": "https://platform.stepfun.ai/docs/overview/quickstart",
-      "model_doc": "https://platform.stepfun.ai/docs/llm/text",
-      "pricing_doc": "https://platform.stepfun.ai/docs/pricing/modelprice",
+      "api_doc": "https://platform.stepfun.ai/docs/en/quickstart/overview",
+      "model_doc": "https://platform.stepfun.ai/docs/en/welcome",
+      "pricing_doc": "https://platform.stepfun.ai/docs/en/guides/pricing/details",
       "base_url_openai": "https://api.stepfun.ai/v1",
-      "base_url_anthropic": "https://api.stepfun.ai/v1/anthropic",
+      "base_url_anthropic": "https://api.stepfun.ai",
       "models": [
+        {
+          "id": "step-5-preview",
+          "context": 1000000,
+          "max_output": 64000,
+          "sources": ["https://platform.stepfun.ai/docs/en/guides/models/step-5-preview"]
+        },
         {
           "id": "step-3.7-flash",
           "context": 256000,
@@ -2299,14 +3511,21 @@
           "context": 256000,
           "max_output": 256000,
           "created": "2026-01"
+        },
+        {
+          "id": "step-3.5-flash-2603",
+          "sources": ["https://platform.stepfun.ai/docs/en/guides/pricing/details"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "stepfun",
-      "last_updated": "2026-08-19",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://models.dev/labs/stepfun/",
-        "https://platform.stepfun.ai/docs/en/step-plan/integrations/claude-code"
+        "https://platform.stepfun.ai/docs/en/step-plan/integrations/claude-code",
+        "https://platform.stepfun.ai/docs/en/guides/models/step-5-preview",
+        "https://platform.stepfun.ai/docs/en/guides/pricing/details",
+        "https://platform.stepfun.ai/docs/en/api-reference/chat/messages-create"
       ]
     },
     "stepfun-ai-coding": {
@@ -2321,12 +3540,21 @@
       "website": "https://platform.stepfun.ai",
       "description": "Stepfun Step Plan dedicated endpoints for coding agents (International)",
       "type": "official",
-      "api_doc": "https://platform.stepfun.ai/docs/en/step-plan/",
-      "model_doc": "https://platform.stepfun.ai/docs/en/step-plan/",
-      "pricing_doc": "https://platform.stepfun.ai/docs/en/step-plan/",
-      "base_url_openai": "https://api.stepfun.ai/step-plan/v1",
-      "base_url_anthropic": "https://api.stepfun.ai/step-plan/anthropic",
+      "api_doc": "https://platform.stepfun.ai/docs/en/step-plan/overview",
+      "model_doc": "https://platform.stepfun.ai/docs/en/step-plan/overview",
+      "pricing_doc": "https://platform.stepfun.ai/docs/en/step-plan/overview",
+      "base_url_openai": "https://api.stepfun.ai/step_plan/v1",
+      "base_url_anthropic": "https://api.stepfun.ai/step_plan",
       "models": [
+        {
+          "id": "step-5-preview",
+          "context": 1000000,
+          "max_output": 64000,
+          "sources": [
+            "https://platform.stepfun.ai/docs/en/guides/models/step-5-preview",
+            "https://platform.stepfun.ai/docs/en/step-plan/overview"
+          ]
+        },
         {
           "id": "step-3.7-flash",
           "context": 256000,
@@ -2336,13 +3564,27 @@
           "id": "step-3.5-flash",
           "context": 256000,
           "max_output": 256000
+        },
+        {
+          "id": "step-3.5-flash-2603",
+          "sources": ["https://platform.stepfun.ai/docs/en/step-plan/overview"]
+        },
+        {
+          "id": "step-router-v1",
+          "max_output": 250000,
+          "sources": [
+            "https://platform.stepfun.com/docs/zh/guides/models/step-router",
+            "https://platform.stepfun.com/docs/zh/api-reference/chat/messages-create"
+          ]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "stepfun",
-      "last_updated": "2026-09-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://platform.stepfun.ai/docs/en/step-plan/integrations/claude-code"
+        "https://platform.stepfun.ai/docs/en/step-plan/overview",
+        "https://platform.stepfun.ai/docs/en/step-plan/integrations/reasoning-api",
+        "https://platform.stepfun.ai/docs/en/api-reference/chat/messages-create"
       ]
     },
     "siliconflow-cn": {
@@ -2408,58 +3650,303 @@
       "models": [
         {
           "id": "mimo-v2.5",
-          "context": 1048576,
-          "max_output": 131072
+          "context": 1024000,
+          "max_output": 128000,
+          "deprecated": "shutdown scheduled 2026-10-21",
+          "note": "no replacement model; requests error after shutdown (10:00 Beijing time)",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/deprecate.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md"
+          ]
         },
         {
           "id": "mimo-v2.5-pro",
-          "context": 1048576,
-          "max_output": 16384
+          "context": 1024000,
+          "max_output": 128000,
+          "deprecated": "shutdown scheduled 2026-10-21",
+          "note": "no replacement model; requests error after shutdown (10:00 Beijing time)",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/deprecate.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-pro",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-flash",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-pro-ultraspeed",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "note": "flagship V2.6-Pro performance, up to 20x faster; customized service via contact, no default RPM/TPM quota",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md"
+          ]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "xiaomi",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://mimo.mi.com/docs/zh-CN/updates/model"
+        "https://mimo.mi.com/docs/zh-CN/updates/model",
+        "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+        "https://mimo.mi.com/static/docs/updates/model.md",
+        "https://mimo.mi.com/static/docs/updates/deprecate.md"
       ]
     },
     "xiaomimimo-com-coding": {
       "id": "xiaomimimo-com-coding",
-      "name": "Mimo Coding Plan",
-      "alias": "Mimo Coding Plan | 小米 Mimo Coding Plan",
+      "name": "Mimo Coding Plan (CN)",
+      "alias": "Mimo Coding Plan | 小米 Mimo Coding Plan (中国)",
       "status": "active",
       "valid": true,
-      "canonical_domain": "api.xiaomimimo.com",
+      "canonical_domain": "token-plan-cn.xiaomimimo.com",
       "vendor_family": "xiaomi",
-      "region": "global",
+      "region": "cn",
       "plan": "coding",
       "website": "https://platform.xiaomimimo.com",
-      "description": "Xiaomi Mimo Coding Plan dedicated endpoints for coding agents (OpenAI + Anthropic compatible)",
+      "description": "Xiaomi Mimo Token Plan (Coding Plan) endpoint for coding agents, OpenAI + Anthropic compatible. Plan keys (tp-/ttp-) are separate from pay-as-you-go sk- keys, and the Base URL + key returned for an account depend on its region and are not interoperable across clusters; this is the China cluster",
       "type": "official",
-      "api_doc": "https://platform.xiaomimimo.com/#/docs/api/text-generation/openai-api",
+      "api_doc": "https://mimo.mi.com/docs/en-US/tokenplan/Token%20Plan/quick-access",
       "model_doc": "https://platform.xiaomimimo.com/#/docs/pricing",
       "pricing_doc": "https://platform.xiaomimimo.com/#/docs/pricing",
-      "base_url_openai": "https://api.xiaomimimo.com/coding/v1",
-      "base_url_anthropic": "https://api.xiaomimimo.com/coding/anthropic",
+      "base_url_openai": "https://token-plan-cn.xiaomimimo.com/v1",
+      "base_url_anthropic": "https://token-plan-cn.xiaomimimo.com/anthropic",
       "models": [
         {
           "id": "mimo-v2.5",
-          "context": 1048576,
-          "max_output": 131072
+          "context": 1024000,
+          "max_output": 128000,
+          "deprecated": "shutdown scheduled 2026-10-21",
+          "note": "no replacement model; requests error after shutdown (10:00 Beijing time)",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/deprecate.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
         },
         {
           "id": "mimo-v2.5-pro",
-          "context": 1048576,
-          "max_output": 16384
+          "context": 1024000,
+          "max_output": 128000,
+          "deprecated": "shutdown scheduled 2026-10-21",
+          "note": "no replacement model; requests error after shutdown (10:00 Beijing time)",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/deprecate.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-pro",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-flash",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
         }
       ],
       "supports_models_endpoint": false,
       "icon": "xiaomi",
-      "last_updated": "2026-09-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://platform.xiaomimimo.com/#/docs/api/text-generation/openai-api",
-        "https://mimo.mi.com/docs/zh-CN/updates/model"
+        "https://mimo.mi.com/docs/en-US/tokenplan/Token%20Plan/quick-access",
+        "https://mimo.mi.com/static/docs/quick-start/faq/account.md"
+      ]
+    },
+    "xiaomimimo-sgp-coding": {
+      "id": "xiaomimimo-sgp-coding",
+      "name": "Mimo Coding Plan (Singapore)",
+      "status": "active",
+      "valid": true,
+      "canonical_domain": "token-plan-sgp.xiaomimimo.com",
+      "vendor_family": "xiaomi",
+      "region": "intl",
+      "plan": "coding",
+      "website": "https://platform.xiaomimimo.com",
+      "description": "Xiaomi Mimo Token Plan (Coding Plan) endpoint for coding agents, OpenAI + Anthropic compatible. Plan keys (tp-/ttp-) are separate from pay-as-you-go sk- keys, and the Base URL + key returned for an account depend on its region and are not interoperable across clusters; this is the Singapore cluster",
+      "type": "official",
+      "api_doc": "https://mimo.mi.com/docs/en-US/tokenplan/Token%20Plan/quick-access",
+      "model_doc": "https://platform.xiaomimimo.com/#/docs/pricing",
+      "pricing_doc": "https://platform.xiaomimimo.com/#/docs/pricing",
+      "base_url_openai": "https://token-plan-sgp.xiaomimimo.com/v1",
+      "base_url_anthropic": "https://token-plan-sgp.xiaomimimo.com/anthropic",
+      "models": [
+        {
+          "id": "mimo-v2.5",
+          "context": 1024000,
+          "max_output": 128000,
+          "deprecated": "shutdown scheduled 2026-10-21",
+          "note": "no replacement model; requests error after shutdown (10:00 Beijing time)",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/deprecate.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.5-pro",
+          "context": 1024000,
+          "max_output": 128000,
+          "deprecated": "shutdown scheduled 2026-10-21",
+          "note": "no replacement model; requests error after shutdown (10:00 Beijing time)",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/deprecate.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-pro",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-flash",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        }
+      ],
+      "supports_models_endpoint": false,
+      "icon": "xiaomi",
+      "last_updated": "2026-09-29",
+      "sources": [
+        "https://mimo.mi.com/docs/en-US/tokenplan/Token%20Plan/quick-access",
+        "https://mimo.mi.com/static/docs/quick-start/faq/account.md"
+      ]
+    },
+    "xiaomimimo-ams-coding": {
+      "id": "xiaomimimo-ams-coding",
+      "name": "Mimo Coding Plan (Europe)",
+      "status": "active",
+      "valid": true,
+      "canonical_domain": "token-plan-ams.xiaomimimo.com",
+      "vendor_family": "xiaomi",
+      "region": "intl",
+      "plan": "coding",
+      "website": "https://platform.xiaomimimo.com",
+      "description": "Xiaomi Mimo Token Plan (Coding Plan) endpoint for coding agents, OpenAI + Anthropic compatible. Plan keys (tp-/ttp-) are separate from pay-as-you-go sk- keys, and the Base URL + key returned for an account depend on its region and are not interoperable across clusters; this is the European cluster",
+      "type": "official",
+      "api_doc": "https://mimo.mi.com/docs/en-US/tokenplan/Token%20Plan/quick-access",
+      "model_doc": "https://platform.xiaomimimo.com/#/docs/pricing",
+      "pricing_doc": "https://platform.xiaomimimo.com/#/docs/pricing",
+      "base_url_openai": "https://token-plan-ams.xiaomimimo.com/v1",
+      "base_url_anthropic": "https://token-plan-ams.xiaomimimo.com/anthropic",
+      "models": [
+        {
+          "id": "mimo-v2.5",
+          "context": 1024000,
+          "max_output": 128000,
+          "deprecated": "shutdown scheduled 2026-10-21",
+          "note": "no replacement model; requests error after shutdown (10:00 Beijing time)",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/deprecate.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.5-pro",
+          "context": 1024000,
+          "max_output": 128000,
+          "deprecated": "shutdown scheduled 2026-10-21",
+          "note": "no replacement model; requests error after shutdown (10:00 Beijing time)",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/deprecate.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-pro",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        },
+        {
+          "id": "mimo-v2.6-flash",
+          "context": 1024000,
+          "max_output": 128000,
+          "created": "2026-09-22",
+          "sources": [
+            "https://mimo.mi.com/static/docs/quick-start/summary/model.md",
+            "https://mimo.mi.com/static/docs/updates/model.md",
+            "https://mimo.mi.com/static/docs/api/chat/openai-api.md",
+            "https://mimo.mi.com/static/docs/price/token-plan.md"
+          ]
+        }
+      ],
+      "supports_models_endpoint": false,
+      "icon": "xiaomi",
+      "last_updated": "2026-09-29",
+      "sources": [
+        "https://mimo.mi.com/docs/en-US/tokenplan/Token%20Plan/quick-access",
+        "https://mimo.mi.com/static/docs/quick-start/faq/account.md"
       ]
     },
     "groq-com": {
@@ -2483,26 +3970,53 @@
         {
           "id": "claude-haiku-4-5-20251001",
           "context": 200000,
-          "max_output": 8192
+          "max_output": 8000
         },
         {
           "id": "llama-3.3-70b-versatile",
-          "context": 131072
+          "context": 128000,
+          "max_output": 32000,
+          "sources": [
+            "https://console.groq.com/docs/deprecations",
+            "https://console.groq.com/docs/models",
+            "https://console.groq.com/docs/model/llama-3.3-70b-versatile"
+          ],
+          "note": "Groq deprecations page lists 2026-08-16 shutdown with enterprise-only retention; applicability to free/developer tiers not stated explicitly, replacement openai/gpt-oss-120b"
         },
         {
           "id": "openai/gpt-oss-120b",
-          "context": 131072
+          "context": 128000,
+          "max_output": 64000,
+          "sources": [
+            "https://console.groq.com/docs/models",
+            "https://console.groq.com/docs/model/openai/gpt-oss-120b"
+          ]
         },
         {
           "id": "openai/gpt-oss-20b",
-          "context": 131072
+          "context": 128000,
+          "max_output": 64000,
+          "sources": [
+            "https://console.groq.com/docs/models",
+            "https://console.groq.com/docs/model/openai/gpt-oss-20b"
+          ]
+        },
+        {
+          "id": "qwen/qwen3.8-27b",
+          "context": 128000,
+          "max_output": 16000,
+          "sources": [
+            "https://console.groq.com/docs/model/qwen/qwen3.8-27b",
+            "https://console.groq.com/docs/deprecations"
+          ]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "groq",
-      "last_updated": "2026-09-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://console.groq.com/docs/models",
+        "https://console.groq.com/docs/deprecations",
         "https://console.groq.com/docs/anthropic"
       ]
     },
@@ -2526,11 +4040,14 @@
       "models": [
         {
           "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-          "context": 131072
+          "context": 128000
         },
         {
           "id": "deepseek-ai/DeepSeek-V4-Pro",
-          "context": 512000
+          "context": 512000,
+          "deprecated": "removed from serverless 2026-08-27",
+          "note": "replaced by DeepSeek-V4-Pro-0813",
+          "sources": ["https://docs.together.ai/docs/deprecations"]
         },
         {
           "id": "Qwen/Qwen3.6-Plus",
@@ -2538,18 +4055,48 @@
         },
         {
           "id": "zai-org/GLM-5.2",
-          "context": 262144
+          "context": 1000000,
+          "sources": ["https://docs.together.ai/docs/serverless/models"]
         },
         {
           "id": "moonshotai/Kimi-K2.6",
-          "context": 262144
+          "context": 256000,
+          "deprecated": "removed from serverless 2026-08-19",
+          "note": "replaced by Kimi-K3",
+          "sources": ["https://docs.together.ai/docs/deprecations"]
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-V4-Pro-0813",
+          "context": 1024000,
+          "sources": ["https://docs.together.ai/docs/serverless/models"]
+        },
+        {
+          "id": "deepseek-ai/DeepSeek-V4.1-Flash",
+          "context": 1000000,
+          "sources": ["https://docs.together.ai/docs/serverless/models"]
+        },
+        {
+          "id": "moonshotai/Kimi-K3",
+          "context": 1024000,
+          "sources": ["https://docs.together.ai/docs/serverless/models"]
+        },
+        {
+          "id": "zai-org/GLM-5.3",
+          "context": 1000000,
+          "sources": ["https://docs.together.ai/docs/serverless/models"]
+        },
+        {
+          "id": "openai/gpt-oss-120b",
+          "context": 128000,
+          "sources": ["https://docs.together.ai/docs/serverless/models"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "together",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://docs.together.ai/docs/serverless/models"
+        "https://docs.together.ai/docs/serverless/models",
+        "https://docs.together.ai/docs/deprecations"
       ]
     },
     "fireworks-ai": {
@@ -2572,33 +4119,58 @@
       "models": [
         {
           "id": "deepseek-v4-pro",
-          "context": 1048576
+          "context": 1024000,
+          "deprecated": "removed from serverless 2026-08-27",
+          "note": "replaced by deepseek-v4-pro-0813 (itself removed from serverless 2026-09-25); use deepseek-v4p1-flash",
+          "sources": ["https://docs.fireworks.ai/updates/changelog"]
         },
         {
           "id": "deepseek-v4-flash",
-          "context": 1048576
+          "context": 1024000
         },
         {
           "id": "glm-5p2",
-          "context": 1048576,
-          "note": "GLM-5.2"
+          "context": 1024000,
+          "note": "GLM-5.2; replaced by glm-5p3",
+          "deprecated": "removed from serverless 2026-09-25",
+          "sources": ["https://docs.fireworks.ai/updates/changelog"]
         },
         {
           "id": "kimi-k2p7-code",
-          "context": 262144,
-          "note": "Kimi K2.7 Code"
+          "context": 256000,
+          "note": "Kimi K2.7 Code; replaced by glm-5p3 or kimi-k3",
+          "deprecated": "removed from serverless 2026-09-25",
+          "sources": ["https://docs.fireworks.ai/updates/changelog"]
         },
         {
           "id": "gpt-oss-120b",
-          "context": 131072
+          "context": 128000
+        },
+        {
+          "id": "kimi-k3",
+          "context": 1024000,
+          "note": "Kimi K3",
+          "sources": ["https://fireworks.ai/models/fireworks/kimi-k3"]
+        },
+        {
+          "id": "glm-5p3",
+          "note": "GLM-5.3",
+          "sources": ["https://fireworks.ai/models/fireworks/glm-5p3"]
+        },
+        {
+          "id": "deepseek-v4p1-flash",
+          "max_output": 128000,
+          "note": "DeepSeek V4.1 Flash",
+          "sources": ["https://app.fireworks.ai/models/fireworks/deepseek-v4p1-flash"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "fireworks",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://fireworks.ai/models",
-        "https://fireworks.ai/kimi"
+        "https://docs.fireworks.ai/updates/changelog",
+        "https://docs.fireworks.ai/guides/recommended-models"
       ]
     },
     "cerebras-ai": {
@@ -2621,14 +4193,28 @@
       "models": [
         {
           "id": "gpt-oss-120b",
-          "note": "public rate-card tier; Llama/Qwen3 moved to dedicated-endpoint-only"
+          "note": "public rate-card tier; Llama/Qwen3 moved to dedicated-endpoint-only",
+          "sources": [
+            "https://inference-docs.cerebras.ai/models/overview",
+            "https://inference-docs.cerebras.ai/models/openai-oss"
+          ]
+        },
+        {
+          "id": "qwen-3.8-27b",
+          "note": "public shared inference; replaces gemma-4-31b (removed 2026-09-03)",
+          "sources": [
+            "https://inference-docs.cerebras.ai/models/overview",
+            "https://inference-docs.cerebras.ai/models/qwen-3.8-27b",
+            "https://inference-docs.cerebras.ai/support/deprecation"
+          ]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "cerebras",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://inference-docs.cerebras.ai/models/overview",
+        "https://inference-docs.cerebras.ai/support/deprecation",
         "https://www.cerebras.ai/pricing"
       ]
     },
@@ -2652,26 +4238,42 @@
       "models": [
         {
           "id": "sonar",
-          "context": 127072
+          "context": 127072,
+          "deprecated": "Sonar Chat Completions support ended 2026-09-27; requests still served but reformulated as Agent API requests (rolling out by model); migrate to the Agent API",
+          "sources": ["https://docs.perplexity.ai/docs/agent-api/migrate-from-sonar/overview"]
         },
         {
           "id": "sonar-pro",
-          "context": 200000
+          "context": 200000,
+          "deprecated": "Sonar Chat Completions support ended 2026-09-27; requests still served but reformulated as Agent API requests (rolling out by model); migrate to the Agent API",
+          "sources": ["https://docs.perplexity.ai/docs/agent-api/migrate-from-sonar/overview"]
         },
         {
           "id": "sonar-reasoning",
-          "context": 127072
+          "context": 127072,
+          "deprecated": "removed from the API 2025-12-15; migrate to sonar-reasoning-pro",
+          "sources": ["https://docs.perplexity.ai/docs/resources/changelog"]
         },
         {
           "id": "sonar-reasoning-pro",
-          "context": 128000
+          "context": 128000,
+          "deprecated": "Sonar Chat Completions support ended 2026-09-27; requests still served but reformulated as Agent API requests (rolling out by model); migrate to the Agent API",
+          "sources": ["https://docs.perplexity.ai/docs/agent-api/migrate-from-sonar/overview"]
         },
         {
-          "id": "sonar-deep-research"
+          "id": "sonar-deep-research",
+          "deprecated": "Sonar Chat Completions support ended 2026-09-27; requests still served but reformulated as Agent API requests (rolling out by model); migrate to the Agent API",
+          "sources": ["https://docs.perplexity.ai/docs/agent-api/migrate-from-sonar/overview"]
         }
       ],
       "supports_models_endpoint": false,
-      "icon": "perplexity"
+      "icon": "perplexity",
+      "last_updated": "2026-09-29",
+      "sources": [
+        "https://docs.perplexity.ai/docs/agent-api/migrate-from-sonar/overview",
+        "https://docs.perplexity.ai/docs/resources/changelog",
+        "https://docs.perplexity.ai/models/model-cards"
+      ]
     },
     "cohere-com": {
       "id": "cohere-com",
@@ -2717,6 +4319,34 @@
           "created": "2025-07"
         },
         {
+          "id": "command-a-translate-08-2025",
+          "context": 8000,
+          "max_output": 8000,
+          "created": "2025-08",
+          "note": "machine translation, 23 languages",
+          "sources": ["https://docs.cohere.com/docs/models"]
+        },
+        {
+          "id": "north-mini-code-1-0",
+          "context": 256000,
+          "max_output": 64000,
+          "note": "30B/3B-active MoE agentic coding model (Apache 2.0)",
+          "sources": [
+            "https://docs.cohere.com/docs/models",
+            "https://docs.cohere.com/docs/north-mini-code-1.0"
+          ]
+        },
+        {
+          "id": "north-small-translate-1-0",
+          "context": 16000,
+          "max_output": 16000,
+          "note": "218B/25B-active MoE translation model, free tier, non-commercial open weights",
+          "sources": [
+            "https://docs.cohere.com/docs/models",
+            "https://docs.cohere.com/docs/north-small-translate-1.0"
+          ]
+        },
+        {
           "id": "command-r7b-12-2024",
           "context": 128000,
           "max_output": 4000,
@@ -2740,11 +4370,12 @@
       ],
       "supports_models_endpoint": true,
       "icon": "cohere",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
-        "https://docs.cohere.com/docs/command-a",
-        "https://docs.cohere.com/docs/command-a-plus",
         "https://docs.cohere.com/docs/models",
+        "https://docs.cohere.com/docs/deprecations",
+        "https://docs.cohere.com/changelog",
+        "https://docs.cohere.com/docs/command-a-plus",
         "https://docs.cohere.com/docs/compatibility-api"
       ]
     },
@@ -2768,20 +4399,48 @@
       "models": [
         {
           "id": "deepseek-ai/deepseek-v4-pro",
-          "context": 1048576,
-          "max_output": 393216
+          "context": 1024000,
+          "max_output": 384000,
+          "deprecated": "free endpoint deprecated; no longer listed in /v1/models as of 2026-09-29",
+          "note": "superseded by DeepSeek-V4-Pro-0813 modelcard (context shown as 262K); replaced in catalog by deepseek-v4.1-flash",
+          "sources": [
+            "https://build.nvidia.com/deepseek-ai/deepseek-v4-pro/modelcard",
+            "https://integrate.api.nvidia.com/v1/models"
+          ]
         },
         {
           "id": "deepseek-ai/deepseek-v4-flash",
-          "context": 1048576
+          "context": 1024000,
+          "sources": ["https://integrate.api.nvidia.com/v1/models"],
+          "note": "absent from NVIDIA /v1/models as of 2026-09-29; no shutdown announcement found"
+        },
+        {
+          "id": "deepseek-ai/deepseek-v4.1-flash",
+          "context": 1024000,
+          "sources": [
+            "https://build.nvidia.com/deepseek-ai/deepseek-v4.1-flash/modelcard",
+            "https://integrate.api.nvidia.com/v1/models"
+          ]
+        },
+        {
+          "id": "moonshotai/kimi-k3",
+          "context": 1024000,
+          "sources": [
+            "https://build.nvidia.com/moonshotai/kimi-k3/modelcard",
+            "https://integrate.api.nvidia.com/v1/models"
+          ]
+        },
+        {
+          "id": "z-ai/glm-5.3",
+          "sources": ["https://integrate.api.nvidia.com/v1/models"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "nvidia",
-      "last_updated": "2026-07-20",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://build.nvidia.com/models",
-        "https://build.nvidia.com/deepseek-ai/deepseek-v4-pro/modelcard"
+        "https://integrate.api.nvidia.com/v1/models"
       ]
     },
     "novita-ai": {
@@ -2938,54 +4597,78 @@
       "base_url_anthropic": "https://opencode.ai/zen",
       "models": [
         {
-          "id": "qwen3.7-max"
+          "id": "qwen3.8-max",
+          "sources": ["https://opencode.ai/docs/zen/"]
         },
         {
-          "id": "qwen3.7-plus"
+          "id": "qwen3.8-flash",
+          "sources": ["https://opencode.ai/docs/zen/"]
+        },
+        { "id": "qwen3.7-max" },
+        { "id": "qwen3.7-plus" },
+        { "id": "qwen3.6-plus" },
+        { "id": "qwen3.5-plus" },
+        {
+          "id": "deepseek-v4.1-flash",
+          "sources": ["https://opencode.ai/docs/zen/"]
+        },
+        { "id": "deepseek-v4-pro" },
+        { "id": "deepseek-v4-flash" },
+        {
+          "id": "glm-5.3",
+          "sources": ["https://opencode.ai/docs/zen/"]
         },
         {
-          "id": "qwen3.6-plus"
+          "id": "glm-5.3-flash",
+          "sources": ["https://opencode.ai/docs/zen/"]
+        },
+        { "id": "glm-5.2" },
+        { "id": "glm-5.1" },
+        {
+          "id": "glm-5",
+          "deprecated": "retired 2026-05-14",
+          "note": "listed in the Zen deprecation table; still returned by /zen/v1/models as of 2026-09-29",
+          "sources": [
+            "https://opencode.ai/docs/zen/",
+            "https://opencode.ai/zen/v1/models"
+          ]
         },
         {
-          "id": "qwen3.5-plus"
+          "id": "kimi-k3",
+          "sources": ["https://opencode.ai/docs/zen/"]
+        },
+        { "id": "kimi-k2.7-code" },
+        { "id": "kimi-k2.6" },
+        {
+          "id": "kimi-k2.5",
+          "deprecated": "retired 2026-08-05",
+          "note": "listed in the Zen deprecation table; still returned by /zen/v1/models as of 2026-09-29",
+          "sources": [
+            "https://opencode.ai/docs/zen/",
+            "https://opencode.ai/zen/v1/models"
+          ]
+        },
+        { "id": "minimax-m3" },
+        {
+          "id": "minimax-m2.7",
+          "sources": ["https://opencode.ai/docs/zen/"]
         },
         {
-          "id": "deepseek-v4-pro"
-        },
-        {
-          "id": "deepseek-v4-flash"
-        },
-        {
-          "id": "glm-5.2"
-        },
-        {
-          "id": "glm-5.1"
-        },
-        {
-          "id": "glm-5"
-        },
-        {
-          "id": "kimi-k2.7-code"
-        },
-        {
-          "id": "kimi-k2.6"
-        },
-        {
-          "id": "kimi-k2.5"
-        },
-        {
-          "id": "minimax-m3"
-        },
-        {
-          "id": "minimax-m2.5"
+          "id": "minimax-m2.5",
+          "deprecated": "retired 2026-08-05",
+          "note": "listed in the Zen deprecation table; still returned by /zen/v1/models as of 2026-09-29",
+          "sources": [
+            "https://opencode.ai/docs/zen/",
+            "https://opencode.ai/zen/v1/models"
+          ]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "opencode",
-      "last_updated": "2026-08-19",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://opencode.ai/docs/zen/",
-        "https://github.com/mudrii/opencode-docs/blob/main/docs/official/zen.md"
+        "https://opencode.ai/zen/v1/models"
       ]
     },
     "opencode-go": {
@@ -3006,44 +4689,55 @@
       "base_url_openai": "https://opencode.ai/zen/go/v1",
       "base_url_anthropic": "https://opencode.ai/zen/go",
       "models": [
+        { "id": "kimi-k3" },
+        { "id": "kimi-k2.7-code" },
+        { "id": "kimi-k2.6" },
         {
-          "id": "kimi-k3"
+          "id": "glm-5.3",
+          "sources": ["https://opencode.ai/docs/go/"]
         },
         {
-          "id": "kimi-k2.7-code"
+          "id": "glm-5.3-flash",
+          "sources": ["https://opencode.ai/docs/go/"]
+        },
+        { "id": "glm-5.2" },
+        { "id": "glm-5.1" },
+        {
+          "id": "deepseek-v4.1-flash",
+          "sources": ["https://opencode.ai/docs/go/"]
+        },
+        { "id": "deepseek-v4-pro" },
+        { "id": "deepseek-v4-flash" },
+        {
+          "id": "qwen3.8-max",
+          "sources": ["https://opencode.ai/docs/go/"]
         },
         {
-          "id": "kimi-k2.6"
+          "id": "qwen3.8-flash",
+          "sources": ["https://opencode.ai/docs/go/"]
+        },
+        { "id": "qwen3.7-max" },
+        { "id": "qwen3.7-plus" },
+        { "id": "qwen3.6-plus" },
+        { "id": "minimax-m3" },
+        {
+          "id": "minimax-m2.7",
+          "sources": ["https://opencode.ai/docs/go/"]
         },
         {
-          "id": "glm-5.2"
+          "id": "mimo-v2.6-pro",
+          "sources": ["https://opencode.ai/docs/go/"]
         },
         {
-          "id": "glm-5.1"
+          "id": "mimo-v2.6-flash",
+          "sources": ["https://opencode.ai/docs/go/"]
         },
+        { "id": "mimo-v2.5" },
+        { "id": "mimo-v2.5-pro" },
         {
-          "id": "deepseek-v4-pro"
-        },
-        {
-          "id": "deepseek-v4-flash"
-        },
-        {
-          "id": "qwen3.7-max"
-        },
-        {
-          "id": "qwen3.7-plus"
-        },
-        {
-          "id": "qwen3.6-plus"
-        },
-        {
-          "id": "minimax-m3"
-        },
-        {
-          "id": "mimo-v2.5"
-        },
-        {
-          "id": "mimo-v2.5-pro"
+          "id": "grok-4.7",
+          "openai_endpoints": ["responses"],
+          "sources": ["https://opencode.ai/docs/go/"]
         },
         {
           "id": "grok-4.5",
@@ -3054,16 +4748,33 @@
           "openai_endpoints": ["responses"]
         },
         {
+          "id": "gpt-6-luna",
+          "openai_endpoints": ["responses"],
+          "sources": ["https://opencode.ai/docs/go/"]
+        },
+        {
           "id": "gpt-5.6-luna",
           "openai_endpoints": ["responses"]
+        },
+        {
+          "id": "longcat-2.0",
+          "sources": ["https://opencode.ai/docs/go/"]
+        },
+        {
+          "id": "hy4-preview",
+          "sources": ["https://opencode.ai/docs/go/"]
+        },
+        {
+          "id": "hy3",
+          "sources": ["https://opencode.ai/docs/go/"]
         }
       ],
       "supports_models_endpoint": true,
       "icon": "opencode",
-      "last_updated": "2026-08-19",
+      "last_updated": "2026-09-29",
       "sources": [
         "https://opencode.ai/docs/go/",
-        "https://titancode.pl/en/blog/opencode-go-claude-code-permanent-config"
+        "https://opencode.ai/zen/go/v1/models"
       ]
     },
     "ollama": {
@@ -3086,7 +4797,8 @@
       "sources": [
         "https://docs.ollama.com/api/anthropic-compatibility",
         "https://ollama.com/blog/claude"
-      ]
+      ],
+      "models": []
     },
     "lm-studio": {
       "id": "lm-studio",
@@ -3107,7 +4819,8 @@
       "last_updated": "2026-08-19",
       "sources": [
         "https://lmstudio.ai/docs/developer/anthropic-compat"
-      ]
+      ],
+      "models": []
     },
     "localai": {
       "id": "localai",
@@ -3128,7 +4841,8 @@
       "last_updated": "2026-08-19",
       "sources": [
         "https://github.com/mudler/LocalAI/releases/tag/v3.10.0"
-      ]
+      ],
+      "models": []
     },
     "jan": {
       "id": "jan",
@@ -3150,7 +4864,8 @@
       "sources": [
         "https://github.com/janhq/jan/issues/7575",
         "https://www.jan.ai/docs/desktop/cli"
-      ]
+      ],
+      "models": []
     },
     "vllm": {
       "id": "vllm",
@@ -3172,7 +4887,8 @@
       "sources": [
         "https://github.com/vllm-project/vllm/pull/22627",
         "https://docs.vllm.ai/en/latest/serving/integrations/claude_code/"
-      ]
+      ],
+      "models": []
     },
     "sglang": {
       "id": "sglang",
@@ -3193,7 +4909,8 @@
       "last_updated": "2026-08-19",
       "sources": [
         "https://github.com/sgl-project/sglang/pull/18630"
-      ]
+      ],
+      "models": []
     },
     "lemonade": {
       "id": "lemonade",
@@ -3217,7 +4934,8 @@
         "https://lemonade-server.ai/docs/api/openai/",
         "https://lemonade-server.ai/docs/api/anthropic/",
         "https://lemonade-server.ai/docs/integrations/claude-code/"
-      ]
+      ],
+      "models": []
     }
   }
 }

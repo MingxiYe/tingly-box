@@ -185,12 +185,16 @@ func TestLatestOpenAIAndCodexModels(t *testing.T) {
 		t.Fatalf("Initialize: %v", err)
 	}
 
+	// openai-com carries the API figure; codex carries the Codex default window
+	// from openai/codex models.json (context_window 272000). Users can widen it
+	// with Codex's 1M switch (max_context_window 872000), so it is not the catalog value.
 	tests := []struct {
 		providerID string
 		modelIDs   []string
+		context    int
 	}{
-		{providerID: "openai-com", modelIDs: []string{"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}},
-		{providerID: "codex", modelIDs: []string{"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}},
+		{providerID: "openai-com", modelIDs: []string{"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}, context: 1050000},
+		{providerID: "codex", modelIDs: []string{"gpt-6-astra", "gpt-6-sol", "gpt-6-luna"}, context: 272000},
 	}
 
 	for _, tt := range tests {
@@ -210,9 +214,9 @@ func TestLatestOpenAIAndCodexModels(t *testing.T) {
 					t.Errorf("provider %q is missing %q", tt.providerID, modelID)
 					continue
 				}
-				if model.Context != 1050000 || model.MaxOutput != 128000 {
-					t.Errorf("provider %q model %q limits = (%d, %d), want (1050000, 128000)",
-						tt.providerID, modelID, model.Context, model.MaxOutput)
+				if model.Context != tt.context || model.MaxOutput != 128000 {
+					t.Errorf("provider %q model %q limits = (%d, %d), want (%d, 128000)",
+						tt.providerID, modelID, model.Context, model.MaxOutput, tt.context)
 				}
 			}
 		})
@@ -635,6 +639,33 @@ func TestEmbeddedTemplatesLastUpdatedSourcesPaired(t *testing.T) {
 			url, ok := s.(string)
 			if !ok || url == "" {
 				t.Errorf("provider %q: sources[%d] must be a non-empty string", id, i)
+			}
+		}
+	}
+}
+
+// TestEmbeddedTokenLimitsAreDecimal enforces the unit convention in
+// providers.json _naming_rules.token_limit_units: context / max_output use
+// decimal K/M (1M = 1000000, 256K = 256000), never powers of two.
+func TestEmbeddedTokenLimitsAreDecimal(t *testing.T) {
+	var raw struct {
+		Providers map[string]struct {
+			Models []struct {
+				ID        string `json:"id"`
+				Context   int    `json:"context"`
+				MaxOutput int    `json:"max_output"`
+			} `json:"models"`
+		} `json:"providers"`
+	}
+	if err := json.Unmarshal(embeddedTemplatesJSON, &raw); err != nil {
+		t.Fatalf("failed to parse embedded templates as raw JSON: %v", err)
+	}
+	for id, p := range raw.Providers {
+		for _, m := range p.Models {
+			for field, v := range map[string]int{"context": m.Context, "max_output": m.MaxOutput} {
+				if v != 0 && v%1024 == 0 && v%1000 != 0 {
+					t.Errorf("provider %q model %q %s=%d looks binary; write it as decimal K/M (e.g. %d)", id, m.ID, field, v, v/1024*1000)
+				}
 			}
 		}
 	}
