@@ -1,33 +1,24 @@
-import { useTranslation } from 'react-i18next';
 import XcodeConfigModal from './components/XcodeConfigModal';
-import { ScenarioConfigButton, ScenarioPage } from './ScenarioPage';
-import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { AgentPage, type AgentPageDescriptor } from './AgentPage';
 
-const UseXcodePage: React.FC = () => {
-    const { t } = useTranslation();
-    return (
-        <ScenarioPageModalProvider>
-            <ScenarioPage
-                scenario="xcode"
-                title="Xcode"
-                tooltipKey="scenarioPage.tooltip.xcode"
-                providerCard={{ compact: true, showApiKeyRow: true, showBaseUrlRow: true }}
-                renderRightAction={(slot) => (
-                    <ScenarioConfigButton
-                        onClick={slot.openConfigModal}
-                        label={t('scenarioPage.setupGuide')}
-                    />
-                )}
-                renderConfigModal={(slot) => (
-                    <XcodeConfigModal
-                        open={slot.configModalOpen}
-                        onClose={slot.closeConfigModal}
-                        baseUrl={slot.baseUrl}
-                        copyToClipboard={slot.copyToClipboard}
-                    />
-                )}
+const xcode: AgentPageDescriptor = {
+    scenario: 'xcode',
+    title: 'Xcode',
+    tooltipKey: 'scenarioPage.tooltip.xcode',
+    connection: { compact: true, apiKeyRow: true, baseUrlRow: true },
+    setup: {
+        kind: 'guide',
+        renderDialog: (slot) => (
+            <XcodeConfigModal
+                open={slot.configModalOpen}
+                onClose={slot.closeDialog}
+                baseUrl={slot.baseUrl}
+                copyToClipboard={slot.copyToClipboard}
             />
-        </ScenarioPageModalProvider>
-    );
+        ),
+    },
 };
+
+const UseXcodePage: React.FC = () => <AgentPage agent={xcode} />;
+
 export default UseXcodePage;

@@ -1,10 +1,12 @@
-import { ScenarioPage } from './ScenarioPage';
-import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { AgentPage, type AgentPageDescriptor } from './AgentPage';
 
-const UseCustomPage: React.FC = () => (
-    <ScenarioPageModalProvider>
-        <ScenarioPage scenario="custom" title="Custom" providerCard={{ compact: true }} />
-    </ScenarioPageModalProvider>
-);
+const custom: AgentPageDescriptor = {
+    scenario: 'custom',
+    title: 'Custom',
+    connection: { compact: true },
+    setup: { kind: 'none' },
+};
+
+const UseCustomPage: React.FC = () => <AgentPage agent={custom} />;
 
 export default UseCustomPage;
