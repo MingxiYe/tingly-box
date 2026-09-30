@@ -249,6 +249,12 @@ return w != nil && !w.Unknown && !w.Unlimited && w.Limit > 0
 - **前端**：`isCountable` 同款门闩；无比例的窗口显示数值不画条；排序同后端
   （`kind` 在旧版 `api.ts` 中仍缺失，前端用 `QuotaWindow` 局部类型收窄，见下文遗留）；
   mock（`frontend/src/mocks/handlers.ts`）按 taskfile 真实样本重写，覆盖全部渲染态。
+- **凭据页表格**（`ApiKeyTable` / `OAuthTable` → `credential/QuotaCell.tsx`）：quota 是一**列**，
+  不是每行下面挂的明细行——有的 provider 有 quota 有的没有，明细行会让表格行高参差不齐。
+  单元格与规则图 service node 同一个圆环（`credential/QuotaRing.tsx`，取 `tightestWindow`）
+  + `N% left`；只有余额的显示数值不画环；无读数显示 `—`（§3.6，不造占位文案）。
+  其余窗口、重置时间、cost、更新时间放 tooltip；点击单元格即刷新（取代原 Actions 里的 Quota 按钮）；
+  原始响应入口移到行的 ⋮ 菜单（仅在有 `raw_response` 时出现）。
 
 ---
 

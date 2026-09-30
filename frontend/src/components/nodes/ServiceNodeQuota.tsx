@@ -3,6 +3,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProviderQuotaOf } from '@/contexts/ProviderQuotaContext';
 import { QUOTA_COLORS, formatNumber } from '../dashboard/chartStyles';
+import { QuotaRing, formatQuotaDuration as formatDuration, quotaRingColor, quotaRingSpinSx } from '../credential/QuotaRing';
 import {
     formatQuotaAvailable,
     formatQuotaRemaining,
@@ -16,14 +17,6 @@ import NodeTooltip from './NodeTooltip.tsx';
 // Older than this, the figure is dimmed: the cache is refreshed in the
 // background, so a stale snapshot means the refresher could not reach upstream.
 const STALE_AFTER_MS = 60 * 60 * 1000;
-
-function formatDuration(ms: number): string {
-    const mins = Math.max(0, Math.floor(ms / 60000));
-    if (mins < 60) return `${mins}m`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ${mins % 60}m`;
-    return `${Math.floor(hrs / 24)}d ${hrs % 24}h`;
-}
 
 /**
  * The provider's binding quota on a service node: a ring showing the remaining
@@ -40,7 +33,7 @@ export const ServiceNodeQuota: React.FC<{ providerUuid: string }> = ({ providerU
     if (!quota || !tightest) return null;
 
     const remaining = quotaRemainingPercent(tightest);
-    const color = remaining <= 20 ? QUOTA_COLORS.error : remaining <= 50 ? QUOTA_COLORS.warning : QUOTA_COLORS.success;
+    const color = quotaRingColor(remaining);
     const now = Date.now();
     const fetchedAt = quota.fetched_at ? new Date(quota.fetched_at).getTime() : NaN;
     const stale = Number.isFinite(fetchedAt) && now - fetchedAt > STALE_AFTER_MS;
@@ -99,13 +92,7 @@ export const ServiceNodeQuota: React.FC<{ providerUuid: string }> = ({ providerU
                     borderRadius: '50%',
                     opacity: stale && !refreshing ? 0.5 : 1,
                     cursor: refreshing ? 'progress' : 'pointer',
-                    ...(refreshing && {
-                        '@keyframes quota-ring-spin': {
-                            '0%': { transform: 'rotate(0deg)' },
-                            '100%': { transform: 'rotate(360deg)' },
-                        },
-                        animation: 'quota-ring-spin 1s linear infinite',
-                    }),
+                    ...(refreshing && quotaRingSpinSx),
                 }}
             >
                 {/* While refreshing, a fixed quarter arc spins like a loader — the
@@ -113,35 +100,6 @@ export const ServiceNodeQuota: React.FC<{ providerUuid: string }> = ({ providerU
                 <QuotaRing remaining={refreshing ? 25 : remaining} color={color} />
             </Box>
         </NodeTooltip>
-    );
-};
-
-// Sized to match the 20px ApiStyleBadge circles on the other side of the row.
-const RING_SIZE = 20;
-const RING_STROKE = 2.5;
-
-/** Remaining share as an arc running clockwise from 12 o'clock over a faint track. */
-const QuotaRing: React.FC<{ remaining: number; color: string }> = ({ remaining, color }) => {
-    const r = (RING_SIZE - RING_STROKE) / 2;
-    const circumference = 2 * Math.PI * r;
-    const c = RING_SIZE / 2;
-    return (
-        <svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}>
-            <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeOpacity={0.25} strokeWidth={RING_STROKE} />
-            {/* No arc at all when used up — a round cap on a zero-length arc
-                still paints a dot that reads as "a little left". */}
-            {remaining > 0 && <circle
-                cx={c}
-                cy={c}
-                r={r}
-                fill="none"
-                stroke={color}
-                strokeWidth={RING_STROKE}
-                strokeLinecap="round"
-                strokeDasharray={`${circumference * remaining / 100} ${circumference}`}
-                transform={`rotate(-90 ${c} ${c})`}
-            />}
-        </svg>
     );
 };
 

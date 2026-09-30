@@ -4,12 +4,13 @@ import {
     exportProviderAsBase64ToClipboard,
     exportProviderAsJsonlToClipboard,
 } from "@/components/rule-card/utils";
-import {ProviderQuotaDetailRow} from "@/components/credential/ProviderQuotaDetailRow";
+import {QuotaCell} from "@/components/credential/QuotaCell";
+import {QuotaRawResponseDialog} from "@/components/credential/QuotaRawResponseDialog";
 import {
     Check,
     Cancel,
+    Code,
     ContentCopy,
-    DataUsage,
     Delete,
     Edit,
     ListAlt,
@@ -21,7 +22,6 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import {
     Box,
     Button,
-    CircularProgress,
     Divider,
     IconButton,
     Menu,
@@ -41,6 +41,7 @@ import {
 } from "@mui/material";
 import type {ProviderQuota} from "@/types/quota";
 import React, {useCallback, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useCopyFeedback} from "@/hooks/useCopyFeedback";
 import {useDeleteConfirm} from "@/hooks/useDeleteConfirm";
 import {useRowOverflowMenu} from "@/hooks/useRowOverflowMenu";
@@ -76,13 +77,15 @@ interface ModelListDialogState {
 const COLUMNS: { label: string; width: number; align?: "center"; sx?: object }[] = [
     {label: "Status", width: 72},
     {label: "Name", width: 140},
+    {label: "Quota", width: 128},
     {label: "API Style", width: 88, align: "center", sx: {px: 1, whiteSpace: "nowrap"}},
     {label: "API Base URL", width: 150},
     {label: "API Key", width: 140},
     {label: "Proxy", width: 60},
-    {label: "Actions", width: 190},
+    {label: "Actions", width: 160},
 ];
-const TABLE_MIN_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
+const QUOTA_COLUMN = "Quota";
+const columnsFor = (showQuota: boolean) => showQuota ? COLUMNS : COLUMNS.filter((c) => c.label !== QUOTA_COLUMN);
 
 const ApiKeyTable = ({
                          providers,
@@ -110,6 +113,14 @@ const ApiKeyTable = ({
         provider: null,
     });
     const {menu: moreMenu, openMenu: handleMoreOpen, closeMenu: handleMoreClose} = useRowOverflowMenu();
+    const {t} = useTranslation();
+    // The quota column needs a refresh handler to be worth a column at all.
+    const showQuota = Boolean(onQuotaRefresh);
+    const columns = columnsFor(showQuota);
+    // Raw upstream quota payload, reached from the row's overflow menu — often
+    // the only explanation for a missing or odd-looking figure.
+    const [rawQuotaUuid, setRawQuotaUuid] = useState<string | null>(null);
+    const rawQuota = rawQuotaUuid ? providerQuotas?.[rawQuotaUuid] : undefined;
     const {copied: tokenCopied, copy: copyToken} = useCopyFeedback();
 
     const fetchFullToken = async (providerUuid: string): Promise<string> => {
@@ -210,10 +221,10 @@ const ApiKeyTable = ({
         >
             {/* Fixed column widths (see COLUMNS above); the table itself
                 scrolls horizontally below minWidth instead of columns resizing. */}
-            <Table sx={{tableLayout: "fixed", width: '100%', minWidth: TABLE_MIN_WIDTH}}>
+            <Table sx={{tableLayout: "fixed", width: '100%', minWidth: columns.reduce((sum, c) => sum + c.width, 0)}}>
                 <TableHead>
                     <TableRow sx={{bgcolor: "action.hover"}}>
-                        {COLUMNS.map((col) => (
+                        {columns.map((col) => (
                             <TableCell
                                 key={col.label}
                                 align={col.align}
@@ -279,6 +290,16 @@ const ApiKeyTable = ({
                                         </Typography>
                                     </Tooltip>
                                 </TableCell>
+                                {/* Quota — the binding window as a ring; hover for the rest, click to refresh */}
+                                {showQuota && (
+                                    <TableCell>
+                                        <QuotaCell
+                                            quota={providerQuotas?.[provider.uuid]}
+                                            refreshing={refreshingQuotas?.has(provider.uuid) ?? false}
+                                            onRefresh={() => onQuotaRefresh?.(provider.uuid)}
+                                        />
+                                    </TableCell>
+                                )}
                                 {/* API Style */}
                                 <TableCell align="center" sx={{px: 1}}>
                                     <Box sx={{display: 'flex', justifyContent: 'center'}}>
@@ -392,30 +413,6 @@ const ApiKeyTable = ({
                                             </Tooltip>
                                         )}
                                         <Divider orientation="vertical" flexItem/>
-                                        {/* Quota text button */}
-                                        {onQuotaRefresh && (
-                                            <Button
-                                                variant="text"
-                                                size="small"
-                                                startIcon={
-                                                    refreshingQuotas?.has(provider.uuid) ? (
-                                                        <CircularProgress size={12}/>
-                                                    ) : (
-                                                        <DataUsage fontSize="small"/>
-                                                    )
-                                                }
-                                                onClick={() => onQuotaRefresh(provider.uuid)}
-                                                disabled={refreshingQuotas?.has(provider.uuid)}
-                                                color="primary"
-                                                sx={{
-                                                    minWidth: "auto",
-                                                    px: {xs: 0.75, xl: 1},
-                                                    '& .MuiButton-startIcon': {display: {xs: 'none', xl: 'inherit'}},
-                                                }}
-                                            >
-                                                Quota
-                                            </Button>
-                                        )}
                                         {/* Models text button */}
                                         <Button
                                             variant="text"
@@ -444,15 +441,6 @@ const ApiKeyTable = ({
                                 </TableCell>
                             </TableRow>
 
-                            {/* Quota detail row */}
-                            {providerQuotas && onQuotaRefresh && (
-                                <ProviderQuotaDetailRow
-                                    provider={provider}
-                                    quota={providerQuotas[provider.uuid]}
-                                    isRefreshing={refreshingQuotas?.has(provider.uuid) || false}
-                                    onRefresh={onQuotaRefresh}
-                                />
-                            )}
                         </React.Fragment>
                     ))}
                 </TableBody>
@@ -479,6 +467,17 @@ const ApiKeyTable = ({
                                 }}
                             >
                                 <Visibility fontSize="small" sx={{mr: 1}}/> View Token
+                            </MenuItem>
+                        ),
+                        providerQuotas?.[p.uuid]?.raw_response != null && (
+                            <MenuItem
+                                key="quota-raw"
+                                onClick={() => {
+                                    handleMoreClose();
+                                    setRawQuotaUuid(p.uuid);
+                                }}
+                            >
+                                <Code fontSize="small" sx={{mr: 1}}/> {t("providerTable.quota.rawResponse")}
                             </MenuItem>
                         ),
                         <MenuItem
@@ -599,6 +598,12 @@ const ApiKeyTable = ({
                 open={modelListDialog.open}
                 onClose={handleCloseModelListDialog}
                 provider={modelListDialog.provider}
+            />
+            <QuotaRawResponseDialog
+                open={rawQuotaUuid !== null}
+                onClose={() => setRawQuotaUuid(null)}
+                providerName={rawQuota?.provider_name}
+                response={rawQuota?.raw_response}
             />
         </TableContainer>
     );

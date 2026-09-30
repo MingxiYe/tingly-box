@@ -389,6 +389,14 @@ export default {
     }
   },
   "providerTable": {
+    "quota": {
+      "cost": "Cost",
+      "readFailed": "Couldn't read quota — see Quota Details in the ⋮ menu",
+      "noLimits": "No quota limits reported",
+      "none": "No quota reading yet",
+      "refresh": "Refresh quota",
+      "rawResponse": "Quota Details"
+    },
     "columns": {
       "name": "Name",
       "apiKey": "API Key",
