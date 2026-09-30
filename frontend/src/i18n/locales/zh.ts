@@ -1,4 +1,34 @@
 export default {
+  "statusOverview": {
+    "title": "概览",
+    "subtitle": "网关是否在运行、有什么需要你处理、各个 Agent 最近做了什么。",
+    "gateway": {
+      "running": "网关运行中",
+      "unreachable": "无法连接网关",
+      "version": "版本 {{version}}",
+      "today_other": "今日：{{count}} 次请求 · 错误率 {{errorRate}}%"
+    },
+    "attention": {
+      "title": "需要你处理",
+      "titleCount": "需要你处理（{{count}}）",
+      "none": "没有需要处理的事项。",
+      "checking": "检查中…",
+      "disconnected": "界面连不上网关，Agent 的请求可能正在失败。",
+      "oauthExpired": "{{provider}}：OAuth 登录已过期。",
+      "quotaLow": "{{provider}} · {{window}}：剩余 {{percent}}%。",
+      "update": "Tingly Box 有新版本可用。",
+      "openCredentials": "打开凭证",
+      "viewQuota": "查看额度",
+      "viewUpdate": "查看更新"
+    },
+    "agents": {
+      "title": "你的 Agent",
+      "subtitle": "最近 {{days}} 天",
+      "noRequests": "还没有请求",
+      "viewUsage": "查看用量",
+      "requests_other": "{{count}} 次请求"
+    }
+  },
   "common": {
     "back": "返回",
     "add": "添加",

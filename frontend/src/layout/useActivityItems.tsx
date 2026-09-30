@@ -35,6 +35,7 @@ import {
     Extension as IconExtension,
     Code as IconCode,
     TestPipe as IconTestPipe,
+    Home as IconHome,
 } from '@/components/icons';
 import { useFeatureFlags } from '../contexts/FeatureFlagsContext';
 import { useProfileContext } from '@/contexts/ProfileContext';
@@ -193,6 +194,7 @@ export function useActivityItems(): ActivityItem[] {
                 path: '/dashboard/today',
                 defaultPath: '/dashboard/today',
                 children: [
+                    { path: '/dashboard/overview', label: t('layout.overview', { defaultValue: 'Overview' }), icon: <IconHome sx={{ fontSize: 20 }} /> },
                     { path: '/dashboard/users', label: t('layout.userUsage', { defaultValue: 'Team usage' }), icon: <IconUsers sx={{ fontSize: 20 }} /> },
                     { path: '/dashboard/quota-history', label: t('layout.quotaHistory', { defaultValue: 'Quota history' }), icon: <IconHistory sx={{ fontSize: 20 }} /> },
                     { type: 'divider' },
