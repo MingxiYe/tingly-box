@@ -96,7 +96,10 @@ export default function ModelCard({
         <Card sx={getCardStyles()} onClick={loading ? undefined : onClick}>
             <CardContent sx={{
                 py: 1,
-                px: 1,
+                // When a corner mark is shown (NEW top-left, selected check
+                // top-right, test status bottom-left), keep room for it on both
+                // sides so a long centred name wraps before reaching it.
+                px: (isSelected || showNewBadge || probe.result) ? '22px' : 1,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
