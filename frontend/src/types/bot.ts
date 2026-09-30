@@ -151,8 +151,6 @@ export const REMOTE_AGENT_SCENARIO = 'remote_agent';
 // PairingCodePanel (decides whether to render at all) so the two stay in sync.
 const PLATFORM_DEFAULT_REQUIRE_PAIRING: Record<string, boolean> = {
     telegram: true,
-    discord: true,
-    slack: true,
 };
 
 // isPairingRequired reports whether a bot enforces TOFU pairing — either via an
@@ -164,6 +162,45 @@ export function isPairingRequired(bot?: {require_pairing?: boolean; platform?: s
         return bot.require_pairing;
     }
     return Boolean(PLATFORM_DEFAULT_REQUIRE_PAIRING[bot?.platform || '']);
+}
+
+// chatPermissionAllowed reports whether a Direct Chat has an explicit allow
+// row for one capability action.
+export function chatPermissionAllowed(chat: DirectChatDetail, capability: CapabilityName, action: string): boolean {
+    return chat.permissions.some((permission) =>
+        permission.capability === capability && permission.action === action && permission.effect === 'allow');
+}
+
+// remoteChatState is the ONE reading of a Direct Chat's Remote Control rows,
+// shared by the Remote card's summary and both access dialogs so they can't
+// disagree. Remote control needs both start (launch runs) and approve
+// (answer permission/question prompts); one without the other silently
+// breaks prompt replies, so it is its own state rather than "on".
+export type RemoteChatState = 'on' | 'off' | 'startDenied' | 'approveDenied';
+export function remoteChatState(chat: DirectChatDetail): RemoteChatState {
+    const start = chatPermissionAllowed(chat, 'remote_control', 'remote_control.start');
+    const approve = chatPermissionAllowed(chat, 'remote_control', 'remote_control.approve');
+    if (start && approve) return 'on';
+    if (!start && !approve) return 'off';
+    return start ? 'approveDenied' : 'startDenied';
+}
+
+// chatCanControl: this Direct Chat can drive the bot right now.
+export function chatCanControl(chat: DirectChatDetail): boolean {
+    return !chat.chat.blocked
+        && chatPermissionAllowed(chat, 'remote_control', 'access')
+        && remoteChatState(chat) === 'on';
+}
+
+// groupCanControl: someone in this Group can drive the bot right now — Remote
+// Control allowed on the group AND at least one actor granted both start and
+// approve. Remote allowed on a group with no such actor still lets nobody in.
+export function groupCanControl(detail: BotGroupDetail): boolean {
+    const allowed = (actor: GroupActor, action: string) => actor.permissions.some((permission) =>
+        permission.capability === 'remote_control' && permission.action === action && permission.effect === 'allow');
+    return !detail.group.blocked
+        && detail.capabilities.remote_control === 'allow'
+        && detail.actors.some((actor) => allowed(actor, 'remote_control.start') && allowed(actor, 'remote_control.approve'));
 }
 
 // isRemoteAgentMounted reports whether the remote_agent purpose is mounted on a
