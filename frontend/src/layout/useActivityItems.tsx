@@ -35,7 +35,6 @@ import {
     Extension as IconExtension,
     Code as IconCode,
     TestPipe as IconTestPipe,
-    Home as IconHome,
 } from '@/components/icons';
 import { useFeatureFlags } from '../contexts/FeatureFlagsContext';
 import { useProfileContext } from '@/contexts/ProfileContext';
@@ -191,9 +190,9 @@ export function useActivityItems(): ActivityItem[] {
         pushGroup(codingTools);
         pushGroup(sdkTools);
 
-        // Rail order, top to bottom: overview → use → power-ups → verify →
-        // configuration. Dashboard leads as the "what's happening" glance,
-        // but it is not the landing page — OnboardingGate still opens /agent,
+        // Rail order, top to bottom: usage → use → power-ups → verify →
+        // configuration. Dashboard leads, but it is not the landing page —
+        // OnboardingGate opens the agent home at /agent,
         // and Layout falls back to the 'scenario' activity, independent of
         // this order.
         const items: ActivityItem[] = [
@@ -201,11 +200,10 @@ export function useActivityItems(): ActivityItem[] {
                 key: 'dashboard',
                 icon: <IconChartBar sx={{ fontSize: 22 }} />,
                 label: t('layout.dashboard', { defaultValue: 'Dashboard' }),
-                // Opens on Overview ("is it working, what needs me"); the
-                // usage charts are one row below it.
-                defaultPath: '/dashboard/overview',
+                // Usage only: the "is it working, what needs me" overview
+                // lives on the agent home (/agent).
+                defaultPath: '/dashboard/today',
                 children: [
-                    { path: '/dashboard/overview', label: t('layout.overview', { defaultValue: 'Overview' }), icon: <IconHome sx={{ fontSize: 20 }} /> },
                     // One row for the usage charts; the time range is a filter
                     // on that page (every /dashboard/<range> URL still works).
                     { path: '/dashboard/today', label: t('layout.usage', { defaultValue: 'Usage' }), icon: <IconChartBar sx={{ fontSize: 20 }} />, match: (p) => DASHBOARD_RANGE_PATH.test(p) },

@@ -3617,7 +3617,12 @@ export const handlers = [
     }),
 
     // Client config status (Agent page chip). Mock mode reports an outdated
-    // settings.json so the chip's warning state is visible in previews.
+    // settings.json so the chip's warning state is visible in previews; a
+    // fresh install (newcomer) has written no client config yet.
+    http.get('/api/v1/config/:tool/status', ({ params }) => {
+        if (!isNewcomer) return;
+        return HttpResponse.json({ success: true, state: 'not_applied', path: `~/.${params.tool}`, differences: [] });
+    }),
     http.get('/api/v1/config/claude/status', () => HttpResponse.json({
         success: true,
         state: 'outdated',

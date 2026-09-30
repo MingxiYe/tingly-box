@@ -9,21 +9,16 @@ export default {
     "reapply": "重新应用",
     "apply": "Auto Config"
   },
-  "statusOverview": {
-    "title": "概览",
-    "subtitle": "网关是否在运行、有什么需要你处理、各个 Agent 最近做了什么。",
-    "gateway": {
-      "running": "网关运行中",
-      "unreachable": "无法连接网关",
-      "version": "版本 {{version}}",
-      "today_other": "今日：{{count}} 次请求 · 错误率 {{errorRate}}%"
-    },
+  "agentHome": {
+    "subtitle": "有没有需要你处理的事，以及你在用的每个 Agent 状况如何。",
     "attention": {
-      "title": "需要你处理",
-      "titleCount": "需要你处理（{{count}}）",
-      "none": "没有需要处理的事项。",
-      "checking": "检查中…",
+      "titleCount": "需要你处理（{{n}}）",
       "disconnected": "界面连不上网关，Agent 的请求可能正在失败。",
+      "noProvider": "还没有连接任何 AI，请求无处可去。",
+      "connectAI": "Connect AI",
+      "noService": "{{agent}} 在用，但它的规则里没有可路由的模型。",
+      "openRules": "打开规则",
+      "configOutdated": "{{agent}}：客户端配置已过期（{{diffs}} 处不同）。",
       "oauthExpired": "{{provider}}：OAuth 登录已过期。",
       "quotaLow": "{{provider}} · {{window}}：剩余 {{percent}}%。",
       "update": "Tingly Box 有新版本可用。",
@@ -33,10 +28,17 @@ export default {
     },
     "agents": {
       "title": "你的 Agent",
-      "subtitle": "最近 {{days}} 天",
-      "noRequests": "还没有请求",
+      "subtitle": "最近 {{days}} 天在用",
+      "noRecentRequests": "最近 {{days}} 天没有请求",
+      "empty": "还没有 Agent 发出过请求。在下面选你的工具，按 Quick Start 接入。",
       "viewUsage": "查看用量",
       "requests_other": "{{count}} 次请求"
+    },
+    "more": {
+      "title": "更多 Agent（{{n}}）",
+      "subtitle": "还没在这里用过的工具。永远不用的可以隐藏，让侧边栏更整洁。",
+      "ready": "可以接入",
+      "noService": "规则里还没有模型"
     }
   },
   "common": {

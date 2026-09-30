@@ -21,11 +21,10 @@ const isSnoozed = (): boolean => {
     }
 };
 
-// Asks the user to star the repo. Two placements:
-// - Dashboard › Overview: always shown (`persistent`), no close button.
-// - Agent pages (rendered by Layout on /agent/*): closable; closing hides it
-//   on every agent page for three days, then it returns.
-// Other pages don't show it.
+// Asks the user to star the repo. Rendered by Layout on /agent and every
+// agent page: closable; closing hides it on all of them for three days, then
+// it returns. Other pages don't show it. `persistent` (no close button) is
+// kept for a placement that must always show; none uses it today.
 //
 // Styled as a plain surface card (paper bg + divider border) rather than a
 // MUI Alert, so it reads as part of the app chrome instead of a status/info

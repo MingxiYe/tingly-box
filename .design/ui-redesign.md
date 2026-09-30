@@ -14,8 +14,8 @@
 |---|---|---|
 | P0 词汇 | ✅ | Team Keys 统一；Guardrails 的密钥页改名 Secrets；Credential 侧栏行改为 Credentials（见 §3.6） |
 | P1 路由契约 + Host Bridge | ✅ | `routes/appRoutes.tsx` + `routes.contract.test.tsx`（托盘路径、所有 redirect）；修复托盘 `/agent/claude-code`；`host/` bridge（浏览器 / Wails 两个实现）；UI 偏好存服务端 `/api/v1/ui-prefs`（隐藏的 Agent、Quick Start 进度）。主题 / 语言仍在本机：它们登录前就要生效 |
-| P2 Dashboard 概览 | ✅ | `/dashboard/overview`：网关状态、需要处理的事项、各 Agent 最近请求 |
-| P3 导航减负 | ✅ | 底部 4 个按钮合并为偏好菜单；单页 activity 不弹 sidebar；时间范围改为页内筛选；profile / Team 行以名字为主标签；折叠时 rail 浮层；900–1200px 自动折叠；断线指示收进 rail；Dashboard 默认进入 Overview。⌘K 未做（增量，后续再议）；GitHub star 横幅：Overview 常驻，Agent 页可关闭（关闭后 3 天内不再显示，跨浏览器 / 桌面同步），其他页面不显示 |
+| P2 Dashboard 概览 | ✅ → 已并入 `/agent`（试行） | 原 `/dashboard/overview` 与 `/agent` 卡片网格列的是同一批 Agent、各展示一半状态，合并为 Agent 首页（`AgentOverviewPage` + `homeModel.ts`）：顶部"需要你处理"（无事时不显示；新增"未连接任何 AI""在用的 Agent 规则里没有模型""客户端配置已过期"）→"你的 Agent"（近 7 天有请求或已写过客户端配置：最近请求与路由结果、配置状态、请求数）→ 折叠的"更多 Agent"（原卡片 + 显示/隐藏，规则数改为"规则里有没有模型"；没有在用的 Agent 时默认展开）→ Power-ups。网关状态行删除（断线看 rail）。Dashboard 只剩用量，`/dashboard/overview` 重定向到 `/agent` |
+| P3 导航减负 | ✅ | 底部 4 个按钮合并为偏好菜单；单页 activity 不弹 sidebar；时间范围改为页内筛选；profile / Team 行以名字为主标签；折叠时 rail 浮层；900–1200px 自动折叠；断线指示收进 rail；Dashboard 默认进入 Usage（Overview 已并入 `/agent`）。⌘K 未做（增量，后续再议）；GitHub star 横幅：`/agent` 与各 Agent 页可关闭（关闭后 3 天内不再显示，跨浏览器 / 桌面同步），其他页面不显示 |
 | P4 Agent 页 | ✅（Profile 合并暂缓） | A–D 已落地：descriptor 模板、配置状态；E 中插件与模式切换的挪位、Quick Start 3 步重排，评审后撤回。见 `agent-page-redesign.md` 顶部进度表 |
 
 ---
