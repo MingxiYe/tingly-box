@@ -1504,6 +1504,7 @@ export default {
       "mainAccount": "主账号",
       "unnamedSharingKey": "未命名共享密钥",
       "sharingKeysForTeam": "共享密钥 · {{team}}",
+      "timeRange": "时间范围",
       "range": {
         "today": "今天",
         "yesterday": "昨天",

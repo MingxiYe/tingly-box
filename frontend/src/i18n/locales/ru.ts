@@ -1536,6 +1536,7 @@ export default {
       "mainAccount": "Основной аккаунт",
       "unnamedSharingKey": "Ключ доступа без названия",
       "sharingKeysForTeam": "Ключи доступа · {{team}}",
+      "timeRange": "Период",
       "range": {
         "today": "Сегодня",
         "yesterday": "Вчера",

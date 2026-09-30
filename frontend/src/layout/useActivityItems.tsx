@@ -45,6 +45,9 @@ import { isFullEdition } from '@/utils/edition';
 import type { ActivityItem, NavItem, NavItemBase } from './types';
 import { useBotPlatformSummary } from './useBotPlatformSummary';
 
+// The usage charts' URLs, one per time range (/dashboard/today, /dashboard/7d, …).
+const DASHBOARD_RANGE_PATH = /^\/dashboard\/(today|yesterday|3d|7d|30d|90d)$/;
+
 export function useActivityItems(): ActivityItem[] {
     const { t } = useTranslation();
     const { skillUser, skillIde, enableGuardrails, enableMCP, enableBench, enableDesk } = useFeatureFlags();
@@ -195,15 +198,11 @@ export function useActivityItems(): ActivityItem[] {
                 defaultPath: '/dashboard/today',
                 children: [
                     { path: '/dashboard/overview', label: t('layout.overview', { defaultValue: 'Overview' }), icon: <IconHome sx={{ fontSize: 20 }} /> },
+                    // One row for the usage charts; the time range is a filter
+                    // on that page (every /dashboard/<range> URL still works).
+                    { path: '/dashboard/today', label: t('layout.usage', { defaultValue: 'Usage' }), icon: <IconChartBar sx={{ fontSize: 20 }} />, match: (p) => DASHBOARD_RANGE_PATH.test(p) },
                     { path: '/dashboard/users', label: t('layout.userUsage', { defaultValue: 'Team usage' }), icon: <IconUsers sx={{ fontSize: 20 }} /> },
                     { path: '/dashboard/quota-history', label: t('layout.quotaHistory', { defaultValue: 'Quota history' }), icon: <IconHistory sx={{ fontSize: 20 }} /> },
-                    { type: 'divider' },
-                    { path: '/dashboard/today', label: t('layout.today'), icon: <IconCalendarClock sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/yesterday', label: t('layout.yesterday'), icon: <IconCalendar sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/3d', label: `3 ${t('layout.days')}`, icon: <IconCalendarEvent sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/7d', label: `7 ${t('layout.days')}`, icon: <IconCalendarEvent sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/30d', label: `30 ${t('layout.days')}`, icon: <IconCalendarEvent sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/90d', label: `90 ${t('layout.days')}`, icon: <IconCalendarEvent sx={{ fontSize: 20 }} /> },
                 ],
             },
             // ── Use: agent ⇄ model, team, image ──

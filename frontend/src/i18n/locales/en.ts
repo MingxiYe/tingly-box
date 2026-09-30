@@ -1510,6 +1510,7 @@ export default {
       "mainAccount": "Main account",
       "unnamedSharingKey": "Unnamed sharing key",
       "sharingKeysForTeam": "Sharing Keys · {{team}}",
+      "timeRange": "Time range",
       "range": {
         "today": "Today",
         "yesterday": "Yesterday",
