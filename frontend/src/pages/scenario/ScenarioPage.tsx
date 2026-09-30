@@ -23,6 +23,8 @@ import TemplatePage from './components/TemplatePage.tsx';
  */
 export const SCENARIO_HEADER_CONTENT_MAX_WIDTH = 960;
 
+const NO_DEPS: unknown[] = [];
+
 /**
  * UnifiedCard header title block shared by every scenario page: the card
  * title plus an optional i18n-keyed info tooltip. Pages that keep their own
@@ -73,6 +75,8 @@ export interface ScenarioPageSlot {
     closeConfigModal: () => void;
     /** Set by the context-1M toggle; cleared via clearPendingContext1MChange when the modal closes. */
     pendingContext1MChange: boolean | null;
+    /** The rule whose 1M toggle set pendingContext1MChange. */
+    pendingContext1MRuleUuid?: string;
     clearPendingContext1MChange: () => void;
     connectAI: ReturnType<typeof useProviderDialog>;
 }
@@ -110,6 +114,15 @@ export interface ScenarioPageProps {
     children?: React.ReactNode | ((slot: ScenarioPageSlot) => React.ReactNode);
     /** Config modal rendered after TemplatePage; owns nothing — read open state from the slot. */
     renderConfigModal?: (slot: ScenarioPageSlot) => React.ReactNode;
+    /**
+     * Rules owned by the caller instead of loaded for the scenario (Claude
+     * Code shows a different set per slot mode).
+     */
+    rulesSource?: { rules: any[]; setRules: (rules: any[]) => void; loading: boolean };
+    /** What the rule list lets the user do; rules can be deleted by default. */
+    ruleActions?: { add?: boolean; toggle?: boolean; delete?: boolean };
+    /** More values that should trigger a client-config status re-read. */
+    clientConfigStatusDeps?: unknown[];
 }
 
 /**
@@ -134,22 +147,17 @@ export const ScenarioPage: React.FC<ScenarioPageProps> = ({
     withConnectAI = false,
     children,
     renderConfigModal,
+    rulesSource,
+    ruleActions,
+    clientConfigStatusDeps = NO_DEPS,
 }) => {
-    const {
-        isLoading,
-        notification,
-        showNotification,
-        copyToClipboard,
-        baseUrl,
-        rules,
-        loadRules,
-        handleRulesChange,
-        handleRuleDelete,
-        newlyCreatedRuleUuids,
-    } = useScenarioPageInternal(scenario);
+    const internal = useScenarioPageInternal(scenario, { skipRules: rulesSource !== undefined });
+    const { notification, showNotification, copyToClipboard, baseUrl, loadRules } = internal;
+    const isLoading = internal.isLoading || (rulesSource?.loading ?? false);
+    const rules = rulesSource ? rulesSource.rules : internal.rules;
 
     const [configModalOpen, setConfigModalOpen] = useState(false);
-    const { status: clientConfigStatus } = useClientConfigStatus(clientConfigTool ?? null, [rules, configModalOpen]);
+    const { status: clientConfigStatus } = useClientConfigStatus(clientConfigTool ?? null, [rules, configModalOpen, ...clientConfigStatusDeps]);
     // Context-1M toggle plumbing for pages whose TemplatePage wires it up.
     const context1MState = useContext1MToggle(() => setConfigModalOpen(true));
     // Unified Connect AI add flow (picker + form/OAuth/paste/import dialogs).
@@ -169,6 +177,7 @@ export const ScenarioPage: React.FC<ScenarioPageProps> = ({
         openConfigModal: () => setConfigModalOpen(true),
         closeConfigModal: () => setConfigModalOpen(false),
         pendingContext1MChange: context1MState.pendingContext1MChange,
+        pendingContext1MRuleUuid: context1MState.pendingContext1MRuleUuid,
         clearPendingContext1MChange: context1MState.clearPendingContext1MChange,
         connectAI,
     };
@@ -206,13 +215,19 @@ export const ScenarioPage: React.FC<ScenarioPageProps> = ({
                     // One copy of the rules for the whole page: the rule list
                     // and the config dialogs (slot.rules) read and reload the same state.
                     rules={rules}
-                    loadRules={loadRules}
-                    onRulesChange={handleRulesChange}
-                    onRuleDelete={handleRuleDelete}
-                    newlyCreatedRuleUuids={newlyCreatedRuleUuids}
+                    {...(rulesSource
+                        ? { onRulesChange: rulesSource.setRules }
+                        : {
+                            loadRules,
+                            onRulesChange: internal.handleRulesChange,
+                            onRuleDelete: internal.handleRuleDelete,
+                            newlyCreatedRuleUuids: internal.newlyCreatedRuleUuids,
+                        })}
                     {...(templateTitle !== undefined ? { title: templateTitle } : {})}
                     collapsible={true}
-                    allowDeleteRule={true}
+                    allowDeleteRule={ruleActions?.delete ?? true}
+                    {...(ruleActions?.add !== undefined ? { allowAddRule: ruleActions.add } : {})}
+                    {...(ruleActions?.toggle !== undefined ? { allowToggleRule: ruleActions.toggle } : {})}
                     {...(context1M ? { onContext1MToggle: context1MState.handleContext1MToggle } : {})}
                 />
                 {renderConfigModal?.(slot)}

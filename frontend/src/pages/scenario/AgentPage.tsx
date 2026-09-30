@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { ClientConfigTool } from '@/hooks/useClientConfigStatus';
 import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { type SlotMode, useSlotRouting } from '@/pages/scenario/hooks/useSlotRouting';
 import AgentSetupCard, {
     type AgentApplyResult,
     type AgentInstallAction,
@@ -26,9 +27,18 @@ export type AgentSetup =
     | {
         kind: 'auto';
         /** One-click apply with default settings (Quick Start, and dialogs that reuse it). */
-        apply: (t: TFunction) => Promise<AgentApplyResult>;
+        apply: (t: TFunction, ctx: AgentApplyContext) => Promise<AgentApplyResult>;
+        /** Quick Start's second apply button, which also installs the status line (Claude Code). */
+        applyWithStatusLine?: (t: TFunction, ctx: AgentApplyContext) => Promise<AgentApplyResult>;
         renderDialog: (slot: AgentPageSlot) => React.ReactNode;
     };
+
+/** What a one-click apply derives its settings from. */
+export interface AgentApplyContext {
+    rules: any[];
+    /** Set for agents with slot routing. */
+    slotMode?: SlotMode;
+}
 
 /** The Quick Start card: install → configure → pick a model. */
 export interface AgentQuickStart {
@@ -75,12 +85,21 @@ export interface AgentPageDescriptor {
     headerLinks?: AgentHeaderLink[];
     /** Title of the routing rules card when it is not the default. */
     rulesTitleKey?: string;
+    /**
+     * Fixed model slots (Claude Code): a Unified / Separate switch in the
+     * header decides which rules are shown; rules can't be added, removed or
+     * switched off, since each one backs a slot.
+     */
+    slotRouting?: { unifiedRuleUuid: string };
 }
 
 export interface AgentPageSlot extends ScenarioPageSlot {
     /** `setup.apply` with its loading state tracked. */
     apply: () => Promise<AgentApplyResult>;
+    /** Run another apply (e.g. a dialog's, with its own settings) under the same loading state. */
+    runApply: (apply: () => Promise<AgentApplyResult>) => Promise<AgentApplyResult>;
     isApplyLoading: boolean;
+    slotMode?: SlotMode;
     /** Close the setup dialog and drop a pending 1M-context change. */
     closeDialog: () => void;
 }
@@ -89,19 +108,26 @@ const AgentPageContent: React.FC<{ agent: AgentPageDescriptor }> = ({ agent }) =
     const { t } = useTranslation();
     const [isApplyLoading, setIsApplyLoading] = useState(false);
     const { setup, quickStart, headerLinks } = agent;
+    const slots = useSlotRouting(agent.scenario, agent.slotRouting?.unifiedRuleUuid ?? '', !!agent.slotRouting);
+    const slotMode = agent.slotRouting ? slots.mode : undefined;
+
+    const runApply = async (apply: () => Promise<AgentApplyResult>) => {
+        setIsApplyLoading(true);
+        try {
+            return await apply();
+        } finally {
+            setIsApplyLoading(false);
+        }
+    };
 
     const toAgentSlot = (slot: ScenarioPageSlot): AgentPageSlot => ({
         ...slot,
         isApplyLoading,
-        apply: async () => {
-            if (setup.kind !== 'auto') return { success: false };
-            setIsApplyLoading(true);
-            try {
-                return await setup.apply(t);
-            } finally {
-                setIsApplyLoading(false);
-            }
-        },
+        slotMode,
+        runApply,
+        apply: () => (setup.kind === 'auto'
+            ? runApply(() => setup.apply(t, { rules: slot.rules, slotMode }))
+            : Promise.resolve({ success: false })),
         closeDialog: () => {
             slot.closeConfigModal();
             slot.clearPendingContext1MChange();
@@ -132,7 +158,15 @@ const AgentPageContent: React.FC<{ agent: AgentPageDescriptor }> = ({ agent }) =
             templateTitle={agent.rulesTitleKey ? t(agent.rulesTitleKey) : undefined}
             context1M={agent.context1M}
             withConnectAI={!!quickStart}
-            renderRightAction={(slot) => (headerLinks?.length ? (
+            rulesSource={agent.slotRouting ? slots : undefined}
+            ruleActions={agent.slotRouting ? { add: false, toggle: false, delete: false } : undefined}
+            clientConfigStatusDeps={[slotMode]}
+            renderRightAction={(slot) => (agent.slotRouting ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {slots.modeSwitch}
+                    {configButton(slot)}
+                </Box>
+            ) : headerLinks?.length ? (
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     {headerLinks.map(link => (
                         <Tooltip key={link.href} title={link.href}>
@@ -144,7 +178,12 @@ const AgentPageContent: React.FC<{ agent: AgentPageDescriptor }> = ({ agent }) =
                     {configButton(slot)}
                 </Box>
             ) : configButton(slot))}
-            renderConfigModal={setup.kind === 'none' ? undefined : (slot) => setup.renderDialog(toAgentSlot(slot))}
+            renderConfigModal={setup.kind === 'none' ? undefined : (slot) => (
+                <>
+                    {agent.slotRouting && slots.modeDialog}
+                    {setup.renderDialog(toAgentSlot(slot))}
+                </>
+            )}
         >
             {quickStart && ((slot) => {
                 const agentSlot = toAgentSlot(slot);
@@ -157,6 +196,9 @@ const AgentPageContent: React.FC<{ agent: AgentPageDescriptor }> = ({ agent }) =
                         installStepDescription={quickStart.installDescriptionKey && t(quickStart.installDescriptionKey)}
                         installActions={quickStart.installActions?.(t)}
                         onApply={setup.kind === 'auto' ? agentSlot.apply : undefined}
+                        onApplyWithStatusLine={setup.kind === 'auto' && setup.applyWithStatusLine
+                            ? () => runApply(() => setup.applyWithStatusLine!(t, { rules: slot.rules, slotMode }))
+                            : undefined}
                         isApplyLoading={isApplyLoading}
                         onViewConfig={slot.openConfigModal}
                         applyStepLabel={quickStart.applyStepLabelKey && t(quickStart.applyStepLabelKey)}

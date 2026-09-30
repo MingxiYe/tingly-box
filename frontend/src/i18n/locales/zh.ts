@@ -1174,10 +1174,6 @@ export default {
       "separate": {
         "label": "分离模型",
         "description": "为 Claude Code 的不同场景（如子代理、摘要、默认等）分别配置模型"
-      },
-      "smart": {
-        "label": "智能",
-        "description": "（开发中）根据请求字段/内容/模型特性/用户意图等智能路由"
       }
     },
     "modeChange": {
@@ -1201,7 +1197,6 @@ export default {
     "separateConfig": "分离配置",
     "switchToSeparate": "切换到分离",
     "switchToUnified": "切换到统一",
-    "configButton": "自动配置",
     "quickApply": "自动配置",
     "quickApplyWithStatusLine": "自动配置和状态行",
     "statusLine": {

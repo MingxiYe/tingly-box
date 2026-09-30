@@ -1176,10 +1176,6 @@ export default {
       "separate": {
         "label": "Separate Model",
         "description": "Config different models for claude code scenario, like subagent, summary, default, ..."
-      },
-      "smart": {
-        "label": "Smart",
-        "description": "(WIP) Smart routing according to request field / content / model feature / user intent / ..."
       }
     },
     "modeChange": {
@@ -1203,7 +1199,6 @@ export default {
     "separateConfig": "Separate Configuration",
     "switchToSeparate": "Switch to Separate",
     "switchToUnified": "Switch to Unified",
-    "configButton": "Auto Config",
     "quickApply": "Auto Config",
     "quickApplyWithStatusLine": "Auto Config & Status Line",
     "statusLine": {
