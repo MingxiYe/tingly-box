@@ -1017,6 +1017,54 @@ const mockQuotas: Record<string, any> = {
     },
 
     // Free key: monthly spend has no cap, so there is no percentage to report.
+    // Balance only, one window per currency — the shape ai/quota/fetcher/
+    // deepseek.go builds from the real response (sample from its test). No
+    // cap to measure against, so the figure is the balance itself.
+    'mock-provider-deepseek': {
+        provider_uuid: 'mock-provider-deepseek',
+        provider_name: 'DeepSeek',
+        provider_type: 'deepseek',
+        fetched_at: now.toISOString(),
+        expires_at: inOneHour,
+        windows: [
+            {
+                key: 'cny',
+                type: 'balance',
+                kind: 'resource',
+                available: 81.41,
+                unknown: true,
+                used: 0,
+                limit: 0,
+                used_percent: 0,
+                unit: 'currency',
+                currency_code: 'CNY',
+                label: 'CNY Balance',
+                description: 'Granted: 0.00 CNY · Topped up: 81.41 CNY',
+            },
+            {
+                key: 'usd',
+                type: 'balance',
+                kind: 'resource',
+                available: 2.5,
+                unknown: true,
+                used: 0,
+                limit: 0,
+                used_percent: 0,
+                unit: 'currency',
+                currency_code: 'USD',
+                label: 'USD Balance',
+                description: 'Granted: 1.00 USD · Topped up: 1.50 USD',
+            },
+        ],
+        raw_response: {
+            is_available: true,
+            balance_infos: [
+                { currency: 'CNY', total_balance: '81.41', granted_balance: '0.00', topped_up_balance: '81.41' },
+                { currency: 'USD', total_balance: '2.50', granted_balance: '1.00', topped_up_balance: '1.50' },
+            ],
+        },
+    },
+
     // The key limit caps lifetime usage, not the month.
     'mock-provider-openrouter': {
         provider_uuid: 'mock-provider-openrouter',
