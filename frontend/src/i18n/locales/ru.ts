@@ -2224,6 +2224,7 @@ export default {
     }
   },
   "scenarioPage": {
+    "setupGuide": "Инструкция",
     "config": "Конфиг",
     "autoConfig": "Автонастройка",
     "quickStart": "Быстрый старт",

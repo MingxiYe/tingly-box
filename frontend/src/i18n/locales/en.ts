@@ -2195,6 +2195,7 @@ export default {
     }
   },
   "scenarioPage": {
+    "setupGuide": "Setup Guide",
     "config": "Config",
     "autoConfig": "Auto Config",
     "quickStart": "Quick Start",

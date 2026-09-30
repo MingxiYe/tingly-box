@@ -2189,6 +2189,7 @@ export default {
     },
   },
   "scenarioPage": {
+    "setupGuide": "配置指南",
     "config": "配置",
     "autoConfig": "自动配置",
     "quickStart": "快速开始",
