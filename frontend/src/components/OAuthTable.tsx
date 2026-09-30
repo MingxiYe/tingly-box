@@ -76,7 +76,7 @@ interface ModelListDialogState {
 const COLUMNS: { label: string; width: number; align?: "center"; sx?: object }[] = [
     {label: "Status", width: 72},
     {label: "Name", width: 140},
-    {label: "Quota", width: 128},
+    {label: "Quota", width: 150},
     {label: "API Style", width: 96, align: "center", sx: {px: 1, whiteSpace: "nowrap"}},
     {label: "Provider", width: 150},
     {label: "Expires At", width: 140},

@@ -395,7 +395,8 @@ export default {
       "noLimits": "No quota limits reported",
       "none": "No quota reading yet",
       "refresh": "Refresh quota",
-      "rawResponse": "Quota Details"
+      "rawResponse": "Quota Details",
+      "detailsHint": "Raw response: ⋮ → Quota Details"
     },
     "columns": {
       "name": "Name",

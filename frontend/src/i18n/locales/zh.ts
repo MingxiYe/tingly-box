@@ -396,7 +396,8 @@ export default {
       "noLimits": "上游未报告额度限制",
       "none": "暂无额度数据",
       "refresh": "刷新额度",
-      "rawResponse": "额度详情"
+      "rawResponse": "额度详情",
+      "detailsHint": "原始响应：⋮ → 额度详情"
     },
     "columns": {
       "name": "名称",

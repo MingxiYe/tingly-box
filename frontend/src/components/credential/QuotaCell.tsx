@@ -1,7 +1,7 @@
 import { Box, Tooltip, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ProviderQuota } from '@/types/quota';
+import type { ProviderQuota, QuotaWindowDisplayItem } from '@/types/quota';
 import {
     formatQuotaAvailable,
     formatQuotaRemaining,
@@ -18,39 +18,59 @@ import { useQuotaBars } from './useQuotaBars';
 // background, so a stale snapshot means the refresher could not reach upstream.
 const STALE_AFTER_MS = 60 * 60 * 1000;
 
+// Lines shown in the cell. Two fit the row height the Actions group already
+// sets, so a provider with quota is no taller than one without.
+const MAX_LINES = 2;
+
 interface QuotaCellProps {
     quota: ProviderQuota | undefined;
     refreshing: boolean;
     onRefresh: () => void;
 }
 
+/** "5h" / "7d" / "30m" from a window's period; undefined when it has none. */
+function periodLabel(minutes?: number): string | undefined {
+    if (!minutes || minutes <= 0) return undefined;
+    if (minutes % 1440 === 0) return `${minutes / 1440}d`;
+    if (minutes % 60 === 0) return `${minutes / 60}h`;
+    return `${minutes}m`;
+}
+
 /**
- * The Quota column of the credential tables: the same ring the rule graph
- * shows on a service node (remaining share of the binding window), plus that
- * share as "N% left" so a column of rows can be scanned without hovering —
- * "left" matters, a bare percent reads as either used or remaining. Which
- * window binds (bold), every other window, reset times, cost and freshness
- * live in the tooltip; clicking asks upstream for a fresh reading.
+ * The Quota column of the credential tables. One line per window worth a
+ * figure — the same ring the rule graph shows on a service node, the window's
+ * name, and the share left ("left", not a bare percent, which reads as either
+ * used or remaining). Balance-only windows show their value with no ring.
  *
- * A provider without a quota reading keeps an empty cell ("—") instead of a
- * placeholder — nothing actionable to say (.design/quota-semantics.md §3.6) —
- * but the cell stays clickable so a reading can still be requested.
+ * Windows keep quotaToWindows' order (self-healing limits first, shorter
+ * periods first), so a 5h + weekly plan reads "5h" then "7d". Beyond
+ * MAX_LINES a "+N" marks the rest; every window, reset time, cost and
+ * freshness is in the tooltip, and clicking asks upstream for a fresh reading.
+ *
+ * No reading → "—", nothing more (.design/quota-semantics.md §3.6), but the
+ * cell stays clickable so a reading can still be requested.
  */
 export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
     const { t } = useTranslation();
     const { resourceItems } = useQuotaBars(quota);
     const windows = quotaToWindows(quota);
     const tightest = tightestWindow(quota);
-    // No countable window: a balance-only reading (e.g. Codex credits) still
-    // has a figure of its own — shown as text, never as a ring or a percent.
-    const balance = tightest ? undefined : windows.find(({ window }) => window.available != null);
+    const shown = windows.filter(({ window }) => isCountable(window) || window.available != null);
+    const lines = shown.slice(0, MAX_LINES);
+    const hidden = shown.length - lines.length;
+
+    // Name by period ("5h", "7d") when that tells the lines apart — short and
+    // scannable down a column. Two windows of the same period (e.g. per-model
+    // daily limits) need their own labels instead.
+    const periods = lines.map(({ window }) => periodLabel(window.window_minutes));
+    const periodsDistinct = periods.every(p => p) && new Set(periods).size === periods.length;
+    const nameOf = (item: QuotaWindowDisplayItem, i: number) => (periodsDistinct ? periods[i] : item.label);
 
     const now = Date.now();
     const fetchedAt = quota?.fetched_at ? new Date(quota.fetched_at).getTime() : NaN;
     const stale = Number.isFinite(fetchedAt) && now - fetchedAt > STALE_AFTER_MS;
     const lastError = quota?.last_error;
-
-    const remaining = tightest ? quotaRemainingPercent(tightest) : 0;
+    const hasRaw = quota?.raw_response != null;
 
     const tooltip = (
         <Box sx={{ minWidth: 160 }}>
@@ -79,7 +99,7 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
                         : `${quota.cost.currency_code || '$'}${quota.cost.used.toFixed(2)}`}
                 </Box>
             )}
-            {!tightest && !balance && (
+            {shown.length === 0 && (
                 <Box sx={{ mb: 0.25, color: lastError ? QUOTA_COLORS.error : undefined }}>
                     {lastError
                         ? t('providerTable.quota.readFailed')
@@ -94,49 +114,83 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
                         t('rule.service.quota.clickToRefresh'),
                     ].filter(Boolean).join(' · ')}
             </Box>
+            {hasRaw && !lastError && (
+                <Box sx={{ opacity: 0.7 }}>{t('providerTable.quota.detailsHint')}</Box>
+            )}
         </Box>
     );
 
     let figure: ReactNode;
-    if (tightest) {
+    if (lines.length > 0) {
         figure = (
-            <>
-                <Box component="span" sx={{ display: 'inline-flex', ...(refreshing && quotaRingSpinSx) }}>
-                    {/* While refreshing, a fixed quarter arc spins like a loader — the
-                        real arc can be empty (used up), and an empty ring shows no motion. */}
-                    <QuotaRing remaining={refreshing ? 25 : remaining} color={quotaRingColor(remaining)} size={18} />
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                    {t('rule.service.quota.left', { value: `${Math.round(remaining)}%` })}
-                </Typography>
-            </>
-        );
-    } else if (balance) {
-        figure = (
-            <>
-                <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'nowrap', opacity: refreshing ? 0.5 : 1 }}>
-                    {formatQuotaAvailable(balance.window, formatNumber)}
-                </Typography>
-            </>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0, opacity: refreshing ? 0.6 : 1 }}>
+                {lines.map((item, i) => {
+                    const { window } = item;
+                    const countable = isCountable(window);
+                    const remaining = countable ? quotaRemainingPercent(window) : 0;
+                    return (
+                        <Box key={item.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                            {countable ? (
+                                <Box component="span" sx={{ display: 'inline-flex', ...(refreshing && quotaRingSpinSx) }}>
+                                    {/* While refreshing, a fixed quarter arc spins like a loader — the
+                                        real arc can be empty (used up), and an empty ring shows no motion. */}
+                                    <QuotaRing remaining={refreshing ? 25 : remaining} color={quotaRingColor(remaining)} size={14} />
+                                </Box>
+                            ) : (
+                                // Keeps balance lines aligned with the ringed ones above/below.
+                                <Box component="span" sx={{ width: 14, flexShrink: 0 }} />
+                            )}
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: 'text.secondary',
+                                    flexShrink: 1,
+                                    minWidth: periodsDistinct ? 22 : 0,
+                                    maxWidth: periodsDistinct ? undefined : 64,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {nameOf(item, i)}
+                            </Typography>
+                            <Typography
+                                variant="caption"
+                                sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: 'text.primary' }}
+                            >
+                                {countable
+                                    ? t('rule.service.quota.left', { value: `${Math.round(remaining)}%` })
+                                    : formatQuotaAvailable(window, formatNumber)}
+                            </Typography>
+                            {hidden > 0 && i === lines.length - 1 && (
+                                <Typography variant="caption" sx={{ color: 'text.disabled', whiteSpace: 'nowrap' }}>
+                                    +{hidden}
+                                </Typography>
+                            )}
+                        </Box>
+                    );
+                })}
+            </Box>
         );
     } else if (refreshing) {
         figure = (
             <Box component="span" sx={{ display: 'inline-flex', ...quotaRingSpinSx }}>
-                <QuotaRing remaining={25} color={QUOTA_COLORS.secondary} size={18} />
+                <QuotaRing remaining={25} color={QUOTA_COLORS.secondary} size={14} />
             </Box>
         );
     } else {
         figure = <Typography variant="body2" sx={{ color: 'text.disabled' }}>—</Typography>;
     }
 
+    const tightestRemaining = tightest ? Math.round(quotaRemainingPercent(tightest)) : undefined;
     return (
         <Tooltip title={tooltip} arrow placement="top">
             <Box
                 component="span"
                 role="button"
                 tabIndex={0}
-                aria-label={tightest
-                    ? t('rule.service.quota.left', { value: `${Math.round(remaining)}%` })
+                aria-label={tightestRemaining != null
+                    ? t('rule.service.quota.left', { value: `${tightestRemaining}%` })
                     : t('providerTable.quota.refresh')}
                 aria-busy={refreshing}
                 onClick={() => !refreshing && onRefresh()}
@@ -148,7 +202,6 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
                 sx={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: 0.75,
                     maxWidth: '100%',
                     minWidth: 0,
                     px: 0.75,
@@ -166,4 +219,3 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
         </Tooltip>
     );
 }
-
