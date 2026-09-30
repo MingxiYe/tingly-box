@@ -9,7 +9,7 @@ import Surface from '@/components/Surface';
 import { useProviderQuota } from '@/hooks/useProviderQuota';
 import { useProviderEditDialog } from '@/hooks/useProviderEditDialog';
 import { useProviderDialog } from '@/hooks/useProviderDialog';
-import { Add, ListAlt, VpnKey } from '@/components/icons';
+import { Add, VpnKey } from '@/components/icons';
 import {
     Alert,
     Box,
@@ -24,7 +24,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useNotify } from '@/hooks/useNotify';
 
@@ -161,22 +161,9 @@ const CredentialPage = () => {
                         ? 'No credentials yet'
                         : `Managing ${credentialCounts.total} credential${credentialCounts.total !== 1 ? 's' : ''}`}
                     // Empty: the landing below carries Connect AI — one CTA, not two.
+                    // The provider catalog is reached from inside Connect AI.
                     actions={credentialCounts.total === 0 ? undefined : (
-                        <Stack
-                            direction="row"
-                            spacing={1}
-                            useFlexGap
-                            sx={{
-                                flexWrap: "wrap",
-                                justifyContent: { xs: 'flex-start', sm: 'flex-end' }
-                            }}>
-                            {/* The provider catalog (browse + connect in one place) now lives
-                                on the Help page's ProvidersCard, not a standalone page — the
-                                old read-only ProviderListPage was redundant with it and has
-                                been removed. */}
-                            <Button component={Link} to="/help" variant="outlined" startIcon={<ListAlt />} size="small" sx={{ minWidth: 130 }}>Providers</Button>
-                            <Button variant="contained" startIcon={<Add />} onClick={handleConnectAIClick} size="small" sx={{ minWidth: 150 }}>Connect AI</Button>
-                        </Stack>
+                        <Button variant="contained" startIcon={<Add />} onClick={handleConnectAIClick} size="small" sx={{ minWidth: 150 }}>Connect AI</Button>
                     )}
                 />
 
