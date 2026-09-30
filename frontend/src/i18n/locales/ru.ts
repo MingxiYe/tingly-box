@@ -139,7 +139,7 @@ export default {
     "mcp": "MCP",
     "sources": "Источники",
     "localMode": "Локальный режим",
-    "modelKey": "Ключ модели",
+    "credentials": "Ключи",
     "virtualModels": "Виртуальные модели",
     "virtualModelsNavLabel": "VModel",
     "virtualModelsTooltip": "Встроенные синтетические провайдеры моделей для знакомства, демонстраций и пробных запусков. Они отвечают локально и не обращаются к внешним сервисам.",

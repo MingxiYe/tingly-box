@@ -301,7 +301,7 @@ export function useActivityItems(): ActivityItem[] {
                 label: t('layout.nav.credential', { defaultValue: 'Credentials' }),
                 defaultPath: '/credentials',
                 children: [
-                    { path: '/credentials', label: t('layout.modelKey'), icon: <IconLock sx={{ fontSize: 20 }} /> },
+                    { path: '/credentials', label: t('layout.credentials', { defaultValue: 'Credentials' }), icon: <IconLock sx={{ fontSize: 20 }} /> },
                     {
                         path: '/credentials/virtual-models',
                         // Abbreviated here only — the sidebar is the tight spot;

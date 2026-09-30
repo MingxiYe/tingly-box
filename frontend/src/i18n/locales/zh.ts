@@ -142,7 +142,7 @@ export default {
     "mcp": "MCP",
     "sources": "来源",
     "localMode": "本地模式",
-    "modelKey": "模型密钥",
+    "credentials": "凭证",
     "virtualModels": "虚拟模型",
     "virtualModelsNavLabel": "VModel",
     "virtualModelsTooltip": "内置的合成模型 Provider，用于上手演示与本地试跑——无需联网即在进程内返回响应。",

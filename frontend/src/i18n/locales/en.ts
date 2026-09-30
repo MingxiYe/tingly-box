@@ -141,7 +141,7 @@ export default {
     "mcp": "MCP",
     "sources": "Sources",
     "localMode": "Local Mode",
-    "modelKey": "Model Key",
+    "credentials": "Credentials",
     "virtualModels": "Virtual Models",
     "virtualModelsNavLabel": "VModel",
     "virtualModelsTooltip": "Built-in synthetic model providers for onboarding, demos, and dry-runs. They respond locally without contacting any upstream.",
