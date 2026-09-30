@@ -1,6 +1,7 @@
 import CodeBlock from '@/components/CodeBlock';
-import {getDisplayOrigin} from '@/utils/protocol';
+import {getApiBaseUrl} from '@/utils/protocol';
 import {Box, Stack, Typography} from '@mui/material';
+import {useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
 // NotifyGuide is the body of the IM Notify usage guide — it teaches an operator
@@ -19,7 +20,14 @@ import {useTranslation} from 'react-i18next';
 // artifact for the next action).
 const NotifyGuide: React.FC = () => {
     const {t} = useTranslation();
-    const origin = getDisplayOrigin();
+    // The gateway's own URL — in the desktop window the page origin is
+    // wails://, which curl can't reach.
+    const [origin, setOrigin] = useState(window.location.origin);
+    useEffect(() => {
+        let cancelled = false;
+        getApiBaseUrl().then(url => { if (!cancelled) setOrigin(url); });
+        return () => { cancelled = true; };
+    }, []);
 
     // Concrete, copy-pasteable curl. <BOT_UUID> and <TARGET_UUID> are left as
     // placeholders the operator fills from Delivery targets + the per-bot chats

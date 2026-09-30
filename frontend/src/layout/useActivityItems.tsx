@@ -35,6 +35,7 @@ import {
     Extension as IconExtension,
     Code as IconCode,
     TestPipe as IconTestPipe,
+    Home as IconHome,
 } from '@/components/icons';
 import { useFeatureFlags } from '../contexts/FeatureFlagsContext';
 import { useProfileContext } from '@/contexts/ProfileContext';
@@ -43,6 +44,9 @@ import { orderTeams, teamPath } from '@/utils/team';
 import { isFullEdition } from '@/utils/edition';
 import type { ActivityItem, NavItem, NavItemBase } from './types';
 import { useBotPlatformSummary } from './useBotPlatformSummary';
+
+// The usage charts' URLs, one per time range (/dashboard/today, /dashboard/7d, …).
+const DASHBOARD_RANGE_PATH = /^\/dashboard\/(today|yesterday|3d|7d|30d|90d)$/;
 
 export function useActivityItems(): ActivityItem[] {
     const { t } = useTranslation();
@@ -95,8 +99,11 @@ export function useActivityItems(): ActivityItem[] {
         const claudeCodeProfiles = profiles['claude_code'] || [];
         const profileNavItems: NavItem[] = claudeCodeProfiles.map(p => ({
             path: `/agent/claude_code/profile/${p.id}`,
-            label: t('layout.nav.useClaudeCode', { defaultValue: 'Claude Code' }),
-            subtitle: `${p.id} - ${p.name}`,
+            // The profile is the subject of its row (ux-principles #9): its
+            // own name leads; "Claude Code" + id is the caption. Rows used to
+            // all read "Claude Code" with the name in grey underneath.
+            label: p.name || p.id,
+            subtitle: `${t('layout.nav.useClaudeCode', { defaultValue: 'Claude Code' })} · ${p.id}`,
             icon: <Claude size={20} />,
         }));
         const orderedTeams = orderTeams(teams);
@@ -110,8 +117,8 @@ export function useActivityItems(): ActivityItem[] {
             }]),
             ...orderedTeams.map(team => ({
                 path: teamPath(team),
-                label: t('layout.nav.useTeam', {defaultValue: 'Team'}),
-                subtitle: `${team.slug} - ${team.name}`,
+                label: team.name || team.slug,
+                subtitle: team.slug,
                 icon: <IconUsers sx={{fontSize: 20}} />,
             })),
             {path: '#add-team', label: t('layout.addTeam'), icon: <IconPlus sx={{fontSize: 20}} />},
@@ -190,18 +197,16 @@ export function useActivityItems(): ActivityItem[] {
                 key: 'dashboard',
                 icon: <IconChartBar sx={{ fontSize: 22 }} />,
                 label: t('layout.dashboard', { defaultValue: 'Dashboard' }),
-                path: '/dashboard/today',
-                defaultPath: '/dashboard/today',
+                // Opens on Overview ("is it working, what needs me"); the
+                // usage charts are one row below it.
+                defaultPath: '/dashboard/overview',
                 children: [
+                    { path: '/dashboard/overview', label: t('layout.overview', { defaultValue: 'Overview' }), icon: <IconHome sx={{ fontSize: 20 }} /> },
+                    // One row for the usage charts; the time range is a filter
+                    // on that page (every /dashboard/<range> URL still works).
+                    { path: '/dashboard/today', label: t('layout.usage', { defaultValue: 'Usage' }), icon: <IconChartBar sx={{ fontSize: 20 }} />, match: (p) => DASHBOARD_RANGE_PATH.test(p) },
                     { path: '/dashboard/users', label: t('layout.userUsage', { defaultValue: 'Team usage' }), icon: <IconUsers sx={{ fontSize: 20 }} /> },
                     { path: '/dashboard/quota-history', label: t('layout.quotaHistory', { defaultValue: 'Quota history' }), icon: <IconHistory sx={{ fontSize: 20 }} /> },
-                    { type: 'divider' },
-                    { path: '/dashboard/today', label: t('layout.today'), icon: <IconCalendarClock sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/yesterday', label: t('layout.yesterday'), icon: <IconCalendar sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/3d', label: `3 ${t('layout.days')}`, icon: <IconCalendarEvent sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/7d', label: `7 ${t('layout.days')}`, icon: <IconCalendarEvent sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/30d', label: `30 ${t('layout.days')}`, icon: <IconCalendarEvent sx={{ fontSize: 20 }} /> },
-                    { path: '/dashboard/90d', label: `90 ${t('layout.days')}`, icon: <IconCalendarEvent sx={{ fontSize: 20 }} /> },
                 ],
             },
             // ── Use: agent ⇄ model, team, image ──
@@ -277,7 +282,7 @@ export function useActivityItems(): ActivityItem[] {
                     { path: '/guardrails', label: t('layout.overview'), icon: <IconShield sx={{ fontSize: 20 }} /> },
                     { path: '/guardrails/groups', label: t('layout.policyGroups'), icon: <IconLicense sx={{ fontSize: 20 }} /> },
                     { path: '/guardrails/rules', label: t('layout.policies'), icon: <IconLicense sx={{ fontSize: 20 }} /> },
-                    { path: '/guardrails/credentials', label: t('layout.nav.credential', { defaultValue: 'Credential' }), icon: <IconKey sx={{ fontSize: 20 }} /> },
+                    { path: '/guardrails/credentials', label: t('layout.protectedCredentials', { defaultValue: 'Secrets' }), icon: <IconKey sx={{ fontSize: 20 }} /> },
                     { path: '/guardrails/history', label: t('layout.guardrailsHistory'), icon: <IconHistory sx={{ fontSize: 20 }} /> },
                 ] as NavItem[],
             }] as ActivityItem[] : []),
@@ -301,7 +306,7 @@ export function useActivityItems(): ActivityItem[] {
                 label: t('layout.nav.credential', { defaultValue: 'Credentials' }),
                 defaultPath: '/credentials',
                 children: [
-                    { path: '/credentials', label: t('layout.modelKey'), icon: <IconLock sx={{ fontSize: 20 }} /> },
+                    { path: '/credentials', label: t('layout.credentials', { defaultValue: 'Credentials' }), icon: <IconLock sx={{ fontSize: 20 }} /> },
                     {
                         path: '/credentials/virtual-models',
                         // Abbreviated here only — the sidebar is the tight spot;

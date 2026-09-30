@@ -159,20 +159,41 @@ const ProviderCard: React.FC<{
                     {icon}
                 </Box>
                 <Box sx={{minWidth: 0, flex: 1}}>
-                    <Typography
-                        variant="body2"
-                        title={name}
-                        sx={{
-                            fontWeight: 600,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            lineHeight: 1.3
-                        }}>
-                        {name}
-                    </Typography>
+                    {/* The badge sits in the title row's own flow, so a long
+                        name wraps/truncates before it instead of running
+                        underneath a translucent badge. */}
+                    <Stack direction="row" spacing={0.75} sx={{alignItems: 'flex-start'}}>
+                        <Typography
+                            variant="body2"
+                            title={name}
+                            sx={{
+                                flex: 1,
+                                minWidth: 0,
+                                fontWeight: 600,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                lineHeight: 1.3
+                            }}>
+                            {name}
+                        </Typography>
+                        <Typography
+                            component="span"
+                            sx={(theme) => ({
+                                flexShrink: 0,
+                                mt: '1px',
+                                fontSize: '0.6rem', fontWeight: 600, lineHeight: 1,
+                                color: theme.palette[badge.tone].main,
+                                px: 0.5, py: 0.25,
+                                borderRadius: 0.5,
+                                bgcolor: alpha(theme.palette[badge.tone].main, 0.1),
+                            })}
+                        >
+                            {badge.label}
+                        </Typography>
+                    </Stack>
                     <Typography
                         variant="caption"
                         noWrap
@@ -223,20 +244,6 @@ const ProviderCard: React.FC<{
                     )}
                 </Stack>
             )}
-            <Typography
-                component="span"
-                sx={(theme) => ({
-                    position: 'absolute', top: 6, right: 6,
-                    fontSize: '0.6rem', fontWeight: 600, lineHeight: 1,
-                    color: theme.palette[badge.tone].main,
-                    px: 0.5, py: 0.25,
-                    borderRadius: 0.5,
-                    bgcolor: alpha(theme.palette[badge.tone].main, 0.1),
-                    pointerEvents: 'none',
-                })}
-            >
-                {badge.label}
-            </Typography>
         </Card>
     );
 };

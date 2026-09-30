@@ -1718,6 +1718,8 @@ const newcomerHandlers = isNewcomer ? [
     http.get('/api/v1/requests', () => HttpResponse.json({ total: 0, requests: [] })),
 ] : []
 
+const mockUiPrefs: Record<string, unknown> = {};
+
 export const handlers = [
     ...newcomerHandlers,
     // Remote Agents / Remote Graphs API endpoints
@@ -3109,6 +3111,7 @@ export const handlers = [
         const limit = parseInt(url.searchParams.get('limit') || '500')
         const offset = parseInt(url.searchParams.get('offset') || '0')
         const statusFilter = url.searchParams.get('status') || ''
+        const scenarioFilter = url.searchParams.get('scenario') || ''
 
         const models = [
             { provider_name: 'Anthropic', model: 'claude-sonnet-5', scenario: 'claude_code', streamed: true, cacheHitRatio: 0.97 },
@@ -3169,7 +3172,8 @@ export const handlers = [
             }
         }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-        const filtered = statusFilter ? all.filter(r => r.status === statusFilter) : all
+        const byStatus = statusFilter ? all.filter(r => r.status === statusFilter) : all
+        const filtered = scenarioFilter ? byStatus.filter(r => r.scenario === scenarioFilter) : byStatus
         const page = filtered.slice(offset, offset + limit)
 
         return HttpResponse.json({
@@ -3587,6 +3591,41 @@ export const handlers = [
     // ============================================
     // Claude Code Profiles API (v1)
     // ============================================
+    // UI prefs (services/uiPrefs.ts): an in-memory store, so mock-mode runs
+    // exercise the same sync path as a real server.
+    http.get('/api/v1/ui-prefs', () => HttpResponse.json({ success: true, prefs: mockUiPrefs })),
+    http.patch('/api/v1/ui-prefs', async ({ request }) => {
+        const { prefs } = await request.json() as { prefs: Record<string, unknown> };
+        for (const [key, value] of Object.entries(prefs ?? {})) {
+            if (value === null) delete mockUiPrefs[key];
+            else mockUiPrefs[key] = value;
+        }
+        return HttpResponse.json({ success: true, prefs: mockUiPrefs });
+    }),
+
+    // Client config status (Agent page chip). Mock mode reports an outdated
+    // settings.json so the chip's warning state is visible in previews.
+    http.get('/api/v1/config/claude/status', () => HttpResponse.json({
+        success: true,
+        state: 'outdated',
+        path: '~/.claude/settings.json',
+        differences: [
+            { key: 'ANTHROPIC_MODEL', applied: 'claude-sonnet-5', expected: 'claude-sonnet-5[1m]' },
+        ],
+    })),
+
+    http.get('/api/v1/config/codex/status', () => HttpResponse.json({
+        success: true,
+        state: 'outdated',
+        path: '~/.codex/config.toml',
+        differences: [
+            { key: 'models', applied: 'gpt-5.6-luna', expected: 'gpt-5.6-luna, gpt-5.6-terra' },
+        ],
+    })),
+    http.get('/api/v1/config/dsh/status', () => HttpResponse.json({
+        success: true, state: 'applied', path: '~/.dsh/settings.yaml', differences: [],
+    })),
+
     http.get('/api/v1/config/claude', () => {
         return HttpResponse.json({
             success: true,

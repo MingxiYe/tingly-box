@@ -35,7 +35,7 @@ func useSystray(app *application.App) {
 	SystrayMenuDashboard = SystrayMenu.
 		Add("Dashboard").
 		OnClick(func(ctx *application.Context) {
-			navigateToPath("/dashboard")
+			navigateToPath(RouteDashboard)
 		})
 
 	SystrayMenu.AddSeparator()
@@ -44,21 +44,21 @@ func useSystray(app *application.App) {
 	SystrayMenuOpenAI = SystrayMenu.
 		Add("OpenAI").
 		OnClick(func(ctx *application.Context) {
-			navigateToPath("/agent/openai")
+			navigateToPath(RouteOpenAI)
 		})
 
 	// Anthropic menu item - navigate to Anthropic page
 	SystrayMenuAnthropic = SystrayMenu.
 		Add("Anthropic").
 		OnClick(func(ctx *application.Context) {
-			navigateToPath("/agent/anthropic")
+			navigateToPath(RouteAnthropic)
 		})
 
 	// Claude Code menu item - navigate to Claude Code page
 	SystrayMenuClaudeCode = SystrayMenu.
 		Add("Claude Code").
 		OnClick(func(ctx *application.Context) {
-			navigateToPath("/agent/claude-code")
+			navigateToPath(RouteClaudeCode)
 		})
 
 	SystrayMenu.AddSeparator()
@@ -75,7 +75,7 @@ func useSystray(app *application.App) {
 		SetMenu(SystrayMenu).
 		// Left-click: navigate to dashboard
 		OnClick(func() {
-			navigateToPath("/")
+			navigateToPath(RouteLanding)
 		}).
 		// Right-click: show menu
 		OnRightClick(func() {

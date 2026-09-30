@@ -1,4 +1,4 @@
-import TinglyService from '@/bindings';
+import { host } from '@/host';
 import type { paths } from '@/client';
 import { getApiBaseUrl } from '@/utils/protocol';
 import createClient from 'openapi-fetch';
@@ -24,15 +24,13 @@ export const getControlApiHeaders = async (): Promise<Record<string, string>> =>
         return { Authorization: `Bearer ${token}` };
     }
 
-    if (import.meta.env.VITE_PKG_MODE === 'gui' && TinglyService) {
-        try {
-            const guiToken = await TinglyService.GetUserAuthToken();
-            if (guiToken) {
-                return { Authorization: `Bearer ${guiToken}` };
-            }
-        } catch (error) {
-            console.error('Failed to get GUI token:', error);
+    try {
+        const shellToken = await host.shellAuthToken();
+        if (shellToken) {
+            return { Authorization: `Bearer ${shellToken}` };
         }
+    } catch (error) {
+        console.error('Failed to get GUI token:', error);
     }
 
     return {};

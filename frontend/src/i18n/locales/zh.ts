@@ -1,4 +1,44 @@
 export default {
+  "clientConfigStatus": {
+    "applied": "已应用",
+    "appliedTooltip": "{{path}} 已通过 Tingly Box 路由，使用的就是本页显示的模型。",
+    "outdated_other": "配置已过期（{{count}} 处不同）",
+    "outdatedTooltip": "{{path}} 里还是上次 Auto Config 写入的值：",
+    "notApplied": "未应用",
+    "notAppliedTooltip": "本机的 {{path}} 还没有通过 Tingly Box 路由。",
+    "reapply": "重新应用",
+    "apply": "Auto Config"
+  },
+  "statusOverview": {
+    "title": "概览",
+    "subtitle": "网关是否在运行、有什么需要你处理、各个 Agent 最近做了什么。",
+    "gateway": {
+      "running": "网关运行中",
+      "unreachable": "无法连接网关",
+      "version": "版本 {{version}}",
+      "today_other": "今日：{{count}} 次请求 · 错误率 {{errorRate}}%"
+    },
+    "attention": {
+      "title": "需要你处理",
+      "titleCount": "需要你处理（{{count}}）",
+      "none": "没有需要处理的事项。",
+      "checking": "检查中…",
+      "disconnected": "界面连不上网关，Agent 的请求可能正在失败。",
+      "oauthExpired": "{{provider}}：OAuth 登录已过期。",
+      "quotaLow": "{{provider}} · {{window}}：剩余 {{percent}}%。",
+      "update": "Tingly Box 有新版本可用。",
+      "openCredentials": "打开凭证",
+      "viewQuota": "查看额度",
+      "viewUpdate": "查看更新"
+    },
+    "agents": {
+      "title": "你的 Agent",
+      "subtitle": "最近 {{days}} 天",
+      "noRequests": "还没有请求",
+      "viewUsage": "查看用量",
+      "requests_other": "{{count}} 次请求"
+    }
+  },
   "common": {
     "back": "返回",
     "add": "添加",
@@ -85,6 +125,7 @@ export default {
     "activityBar": {
       "disconnected": "已断开",
       "disconnectedDebug": "已断开（调试）",
+      "offline": "离线",
       "devMode": "开发",
       "newVersionAvailable": "更新",
       "error": "错误",
@@ -97,7 +138,9 @@ export default {
       "ds": "DeepSeek",
       "click": "点击",
       "feedback": "反馈",
-      "feedbackTooltip": "发送反馈（跳转到 GitHub Issues）"
+      "feedbackTooltip": "发送反馈（跳转到 GitHub Issues）",
+      "preferences": "偏好设置",
+      "allSettings": "全部设置"
     },
     "themeMenu": {
       "switchTo": "切换到：",
@@ -139,10 +182,11 @@ export default {
     "policyGroups": "策略组",
     "policies": "策略",
     "guardrailsHistory": "历史",
+    "protectedCredentials": "密钥保护",
     "mcp": "MCP",
     "sources": "来源",
     "localMode": "本地模式",
-    "modelKey": "模型密钥",
+    "credentials": "凭证",
     "virtualModels": "虚拟模型",
     "virtualModelsNavLabel": "VModel",
     "virtualModelsTooltip": "内置的合成模型 Provider，用于上手演示与本地试跑——无需联网即在进程内返回响应。",
@@ -158,7 +202,7 @@ export default {
     "addProfile": "添加配置文件",
     "addTeam": "添加 Team",
     "teamKeys": "Team 密钥",
-    "teamKeysTooltip": "在一个页面查看所有 Team 的共享密钥，按 Team 分组。",
+    "teamKeysTooltip": "在一个页面查看所有 Team 的密钥，按 Team 分组。",
     "default": "默认",
     "help": "帮助与技巧",
     "helpShort": "帮助",
@@ -1028,7 +1072,7 @@ export default {
     },
     "team": {
       "title": "Team 使用说明",
-      "description": "Team 是做什么的、怎么隔离、怎么配置共享密钥——和 Team 页面里的那份说明是同一份。",
+      "description": "Team 是做什么的、怎么隔离、怎么配置 Team 密钥——和 Team 页面里的那份说明是同一份。",
       "action": "Team 使用说明"
     }
   },
@@ -1175,6 +1219,7 @@ export default {
       "renameProfile": "重命名配置文件",
       "deleteProfile": "删除配置文件",
       "quickStart": "启动",
+      "commandGlobal": "全局",
       "settingsFile": "设置",
       "settingsFileWarning": "这是生成的运行配置；手动修改会被 Profile 覆盖和模型规则重新生成。",
       "resolvingSettingsFile": "正在计算生成文件位置…",
@@ -1464,14 +1509,15 @@ export default {
       "allProviders": "全部",
       "allModels": "全部",
       "allIdentities": "全部",
-      "sharingKeys": "共享密钥",
+      "sharingKeys": "Team 密钥",
       "disabledSuffix": "（已停用）",
       "clearFilters": "清除全部筛选",
       "auto": "自动",
       "refreshData": "刷新数据",
       "mainAccount": "主账号",
-      "unnamedSharingKey": "未命名共享密钥",
-      "sharingKeysForTeam": "共享密钥 · {{team}}",
+      "unnamedSharingKey": "未命名 Team 密钥",
+      "sharingKeysForTeam": "Team 密钥 · {{team}}",
+      "timeRange": "时间范围",
       "range": {
         "today": "今天",
         "yesterday": "昨天",
@@ -1697,13 +1743,13 @@ export default {
     "copiedToClipboard": "{{label}} 已复制到剪贴板！"
   },
   "sharingKeys": {
-    "title": "共享密钥",
-    "titleForTeam": "共享密钥 · {{team}}",
+    "title": "Team 密钥",
+    "titleForTeam": "Team 密钥 · {{team}}",
     "createToken": "创建令牌",
-    "createDialogTitle": "创建共享密钥",
+    "createDialogTitle": "创建 Team 密钥",
     "displayName": "显示名称",
     "displayNamePlaceholder": "例如：Team Alpha Key",
-    "displayNameHelper": "为此共享密钥起一个便于识别的名称",
+    "displayNameHelper": "为此 Team 密钥起一个便于识别的名称",
     "deleteToken": "删除令牌",
     "deleteConfirm": "确定要删除令牌 \"{{name}}\" 吗？此操作无法撤销。",
     "nameRequired": "显示名称为必填项",
@@ -1723,11 +1769,11 @@ export default {
     "moveSuccess": "密钥已移动到新的 Team",
     "moveFailed": "移动密钥失败",
     "teamKeysTitle": "Team 密钥",
-    "allSubtitle": "所有 Team 的共享密钥，按 Team 分组 — 共 {{teams}} 个 Team，{{keys}} 个密钥。",
+    "allSubtitle": "所有 Team 的密钥，按 Team 分组 — 共 {{teams}} 个 Team，{{keys}} 个密钥。",
     "openTeam": "打开 Team",
-    "emptyTeam": "该 Team 还没有共享密钥。",
-    "loadFailed": "加载共享密钥失败",
-    "createDisabledTeam": "该 Team 已停用，请先启用再创建共享密钥。",
+    "emptyTeam": "该 Team 还没有 Team 密钥。",
+    "loadFailed": "加载 Team 密钥失败",
+    "createDisabledTeam": "该 Team 已停用，请先启用再创建 Team 密钥。",
     "table": {
       "name": "名称",
       "user": "用户",
@@ -1736,7 +1782,7 @@ export default {
       "created": "创建时间",
       "lastUsed": "最近使用",
       "actions": "操作",
-      "empty": "还没有共享密钥。创建一个即可向团队分享模型访问。",
+      "empty": "还没有 Team 密钥。创建一个即可向团队分享模型访问。",
       "hide": "隐藏",
       "show": "显示",
       "copy": "复制",
@@ -1748,23 +1794,23 @@ export default {
   },
   "teams": {
     "accessTitle": "Team 访问",
-    "keyScopeSummary": "{{team}}（{{slug}}）的共享密钥仅可访问 /tingly/team 与 /tingly/team/v1，不能访问其他 Team、场景端点或管理 API。",
-    "allKeysScopeSummary": "每个共享密钥只对其所属 Team 生效，通过 /tingly/team 与 /tingly/team/v1 访问。移动到其他 Team 会立即生效，密钥本身不变。",
-    "keyScopeInfoLabel": "共享密钥访问范围",
+    "keyScopeSummary": "{{team}}（{{slug}}）的 Team 密钥仅可访问 /tingly/team 与 /tingly/team/v1，不能访问其他 Team、场景端点或管理 API。",
+    "allKeysScopeSummary": "每个 Team 密钥只对其所属 Team 生效，通过 /tingly/team 与 /tingly/team/v1 访问。移动到其他 Team 会立即生效，密钥本身不变。",
+    "keyScopeInfoLabel": "Team 密钥访问范围",
     "editTeam": "Team 设置",
     "name": "Team 名称",
     "inactive": "已停用",
-    "disabledHint": "此 Team 已停用；重新启用前，其共享密钥无法访问模型接口。",
+    "disabledHint": "此 Team 已停用；重新启用前，其 Team 密钥无法访问模型接口。",
     "enableTeam": "启用 Team",
     "disableTeam": "停用 Team",
     "deleteTeam": "删除 Team",
-    "deleteConfirm": "删除 {{team}}？请先移动或删除它的全部共享密钥。",
+    "deleteConfirm": "删除 {{team}}？请先移动或删除它的全部 Team 密钥。",
     "loadFailed": "加载 Team 失败",
     "saveFailed": "保存 Team 失败",
     "createSuccess": "Team 已创建",
     "updateSuccess": "Team 已更新",
     "deleteSuccess": "Team 已删除",
-    "deleteFailed": "Team 仍有共享密钥，无法删除",
+    "deleteFailed": "Team 仍有 Team 密钥，无法删除",
     "enabled": "Team 已启用",
     "disabled": "Team 已停用",
     "guide": {
@@ -1777,25 +1823,25 @@ export default {
       "steps": {
         "usage": {
           "title": "Team 是做什么用的",
-          "content": "Team 是这个实例里一块独立的空间——有自己的规则、共享密钥和用量，与其他场景、其他 Team 都是分开的。",
+          "content": "Team 是这个实例里一块独立的空间——有自己的规则、Team 密钥和用量，与其他场景、其他 Team 都是分开的。",
           "bullet1": "把模型访问权交给某个群体（客户、子团队、外部应用），而不必分享你的主配置。",
           "bullet2": "在下方为这个 Team 添加规则，方式和其他场景页一样。"
         },
         "isolation": {
           "title": "它是怎么被隔离的",
-          "content": "一个共享密钥只能绑定一个 Team，且只能访问 /tingly/team[/v1]。",
+          "content": "一个 Team 密钥只能绑定一个 Team，且只能访问 /tingly/team[/v1]。",
           "bullet1": "移动密钥或停用 Team，都会立即生效。",
           "bullet2": "全局 model token 不受 Team 范围限制，仍拥有完整访问权限。"
         },
         "keys": {
-          "title": "配置共享密钥",
-          "content": "点击上方的\"共享密钥\"按钮，为这个 Team 创建一个。",
+          "title": "配置 Team 密钥",
+          "content": "点击上方的\"Team 密钥\"按钮，为这个 Team 创建一个。",
           "bullet1": "起个名称，复制 tb-share-… 开头的密钥（仅显示一次）。",
           "bullet2": "之后可以随时移动到另一个 Team，无需重新生成。"
         },
         "principles": {
           "title": "怎么用",
-          "content": "让客户端指向这个 Team 的 Base URL，用它的共享密钥作为 API Key。",
+          "content": "让客户端指向这个 Team 的 Base URL，用它的 Team 密钥作为 API Key。",
           "bullet1": "Base URL 和 API Key 都在上方的 Team Access 面板里。",
           "bullet2": "请求会按下方的规则路由——只有添加到规则里的模型才能被访问。"
         }
@@ -2132,6 +2178,7 @@ export default {
     },
     "install": {
       "label": "安装 {{agent}}",
+      "detected": "最近请求 {{time}}",
       "installed": "已安装",
       "confirm": "我已安装",
       "confirmTooltip": "运行下方的安装命令，装好 {{agent}} 后在此确认。",
@@ -2154,6 +2201,7 @@ export default {
     },
   },
   "scenarioPage": {
+    "setupGuide": "配置指南",
     "config": "配置",
     "autoConfig": "自动配置",
     "quickStart": "快速开始",
@@ -2168,7 +2216,7 @@ export default {
       "previewFailed": "加载配置预览失败：{{reason}}",
       "previewFailedGeneric": "加载配置预览失败",
     },
-    "sharingKeys": "共享密钥",
+    "sharingKeys": "Team 密钥",
     "modelRules": "模型规则",
     "embedModelRules": "向量模型规则",
     "imageGenModelRules": "图像模型规则",

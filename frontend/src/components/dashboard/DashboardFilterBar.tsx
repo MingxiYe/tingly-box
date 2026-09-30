@@ -172,7 +172,7 @@ export default function DashboardFilterBar({
                         <ListSubheader key={`keys-${group.team?.id ?? 'other'}`} sx={GROUP_SUBHEADER_SX}>
                             {group.team
                                 ? t('dashboard.overview.sharingKeysForTeam', { team: group.team.name })
-                                : t('dashboard.overview.sharingKeys', { defaultValue: 'Sharing Keys' })}
+                                : t('dashboard.overview.sharingKeys', { defaultValue: 'Team Keys' })}
                         </ListSubheader>,
                         ...group.items.map((identity) => (
                             <MenuItem key={identity.userId} value={identity.userId}>

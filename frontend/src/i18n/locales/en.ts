@@ -1,4 +1,47 @@
 export default {
+  "clientConfigStatus": {
+    "applied": "Applied",
+    "appliedTooltip": "{{path}} routes through Tingly Box with the models shown on this page.",
+    "outdated_one": "Config out of date ({{count}} difference)",
+    "outdated_other": "Config out of date ({{count}} differences)",
+    "outdatedTooltip": "{{path}} still has the values from the last Auto Config:",
+    "notApplied": "Not applied",
+    "notAppliedTooltip": "{{path}} on this machine doesn't route through Tingly Box yet.",
+    "reapply": "Reapply",
+    "apply": "Auto Config"
+  },
+  "statusOverview": {
+    "title": "Overview",
+    "subtitle": "Is the gateway up, does anything need you, and what your agents did lately.",
+    "gateway": {
+      "running": "Gateway running",
+      "unreachable": "Gateway unreachable",
+      "version": "Version {{version}}",
+      "today_one": "Today: {{count}} request · {{errorRate}}% errors",
+      "today_other": "Today: {{count}} requests · {{errorRate}}% errors"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "titleCount": "Needs attention ({{count}})",
+      "none": "Nothing needs attention.",
+      "checking": "Checking…",
+      "disconnected": "The UI can't reach the gateway. Requests from your agents may be failing.",
+      "oauthExpired": "{{provider}}: the OAuth sign-in has expired.",
+      "quotaLow": "{{provider}} · {{window}}: {{percent}}% left.",
+      "update": "A new version of Tingly Box is available.",
+      "openCredentials": "Open credentials",
+      "viewQuota": "View quota",
+      "viewUpdate": "View update"
+    },
+    "agents": {
+      "title": "Your agents",
+      "subtitle": "Last {{days}} days",
+      "noRequests": "No requests yet",
+      "viewUsage": "View usage",
+      "requests_one": "{{count}} request",
+      "requests_other": "{{count}} requests"
+    }
+  },
   "common": {
     "back": "Back",
     "add": "Add",
@@ -84,6 +127,7 @@ export default {
     "activityBar": {
       "disconnected": "Disconnected",
       "disconnectedDebug": "Disconnected (Debug)",
+      "offline": "Offline",
       "devMode": "Dev",
       "newVersionAvailable": "Update",
       "error": "Error",
@@ -96,7 +140,9 @@ export default {
       "ds": "DeepSeek",
       "click": "Click",
       "feedback": "Feedback",
-      "feedbackTooltip": "Send Feedback (opens GitHub Issues)"
+      "feedbackTooltip": "Send Feedback (opens GitHub Issues)",
+      "preferences": "Preferences",
+      "allSettings": "All settings"
     },
     "themeMenu": {
       "switchTo": "Switch to:",
@@ -138,10 +184,11 @@ export default {
     "policyGroups": "Policy Groups",
     "policies": "Policies",
     "guardrailsHistory": "History",
+    "protectedCredentials": "Secrets",
     "mcp": "MCP",
     "sources": "Sources",
     "localMode": "Local Mode",
-    "modelKey": "Model Key",
+    "credentials": "Credentials",
     "virtualModels": "Virtual Models",
     "virtualModelsNavLabel": "VModel",
     "virtualModelsTooltip": "Built-in synthetic model providers for onboarding, demos, and dry-runs. They respond locally without contacting any upstream.",
@@ -157,7 +204,7 @@ export default {
     "addProfile": "Add Profile",
     "addTeam": "Add Team",
     "teamKeys": "Team Keys",
-    "teamKeysTooltip": "Every Team's sharing keys on one page, grouped by Team.",
+    "teamKeysTooltip": "The keys of every Team on one page, grouped by Team.",
     "default": "default",
     "help": "Tips & Help",
     "helpShort": "Help",
@@ -1027,7 +1074,7 @@ export default {
     },
     "team": {
       "title": "Team Guide",
-      "description": "What a Team is for, how it's isolated, and how to configure a Sharing Key — the same guide available on any Team page.",
+      "description": "What a Team is for, how it's isolated, and how to configure a Team Key — the same guide available on any Team page.",
       "action": "How Team works"
     }
   },
@@ -1174,6 +1221,7 @@ export default {
       "renameProfile": "Rename profile",
       "deleteProfile": "Delete profile",
       "quickStart": "Start",
+      "commandGlobal": "Global",
       "settingsFile": "Settings",
       "settingsFileWarning": "Generated runtime settings. Manual edits are overwritten by Profile Overrides and Model Rules.",
       "resolvingSettingsFile": "Resolving generated settings path…",
@@ -1468,14 +1516,15 @@ export default {
       "allProviders": "All providers",
       "allModels": "All models",
       "allIdentities": "All identities",
-      "sharingKeys": "Sharing Keys",
+      "sharingKeys": "Team Keys",
       "disabledSuffix": "(disabled)",
       "clearFilters": "Clear all filters",
       "auto": "Auto",
       "refreshData": "Refresh data",
       "mainAccount": "Main account",
-      "unnamedSharingKey": "Unnamed sharing key",
-      "sharingKeysForTeam": "Sharing Keys · {{team}}",
+      "unnamedSharingKey": "Unnamed Team Key",
+      "sharingKeysForTeam": "Team Keys · {{team}}",
+      "timeRange": "Time range",
       "range": {
         "today": "Today",
         "yesterday": "Yesterday",
@@ -1701,13 +1750,13 @@ export default {
     "copiedToClipboard": "{{label}} copied to clipboard!"
   },
   "sharingKeys": {
-    "title": "Sharing Keys",
-    "titleForTeam": "Sharing Keys · {{team}}",
+    "title": "Team Keys",
+    "titleForTeam": "Team Keys · {{team}}",
     "createToken": "Create Token",
-    "createDialogTitle": "Create Sharing Key",
+    "createDialogTitle": "Create Team Key",
     "displayName": "Display Name",
     "displayNamePlaceholder": "e.g., Team Alpha Key",
-    "displayNameHelper": "A descriptive name for this sharing key",
+    "displayNameHelper": "A descriptive name for this Team Key",
     "deleteToken": "Delete Token",
     "deleteConfirm": "Are you sure you want to delete the token \"{{name}}\"? This action cannot be undone.",
     "nameRequired": "Display Name is required",
@@ -1727,11 +1776,11 @@ export default {
     "moveSuccess": "Key moved to the new team",
     "moveFailed": "Failed to move key",
     "teamKeysTitle": "Team Keys",
-    "allSubtitle": "Every Team's sharing keys, grouped by Team — {{keys}} in total across {{teams}} Teams.",
+    "allSubtitle": "The keys of every Team, grouped by Team — {{keys}} in total across {{teams}} Teams.",
     "openTeam": "Open Team",
-    "emptyTeam": "No sharing keys in this Team yet.",
-    "loadFailed": "Failed to load sharing keys",
-    "createDisabledTeam": "This Team is disabled. Enable it before creating sharing keys.",
+    "emptyTeam": "No Team Keys in this Team yet.",
+    "loadFailed": "Failed to load Team Keys",
+    "createDisabledTeam": "This Team is disabled. Enable it before creating Team Keys.",
     "table": {
       "name": "Name",
       "user": "User",
@@ -1740,7 +1789,7 @@ export default {
       "created": "Created",
       "lastUsed": "Last Used",
       "actions": "Actions",
-      "empty": "No sharing keys yet. Create one to share model access with your team.",
+      "empty": "No Team Keys yet. Create one to share model access with your team.",
       "hide": "Hide",
       "show": "Show",
       "copy": "Copy",
@@ -1753,22 +1802,22 @@ export default {
   "teams": {
     "accessTitle": "Team Access",
     "keyScopeSummary": "Sharing keys for {{team}} ({{slug}}) work only with /tingly/team and /tingly/team/v1. They cannot access other Teams, scenario endpoints, or management APIs.",
-    "allKeysScopeSummary": "Each sharing key works only for the Team it belongs to, via /tingly/team and /tingly/team/v1. Moving a key to another Team takes effect immediately, without rotating it.",
+    "allKeysScopeSummary": "Each Team Key works only for the Team it belongs to, via /tingly/team and /tingly/team/v1. Moving a key to another Team takes effect immediately, without rotating it.",
     "keyScopeInfoLabel": "Sharing key access scope",
     "editTeam": "Team settings",
     "name": "Team name",
     "inactive": "Inactive",
-    "disabledHint": "This team is disabled. Its sharing keys cannot access model endpoints until the team is enabled.",
+    "disabledHint": "This team is disabled. Its Team Keys cannot access model endpoints until the team is enabled.",
     "enableTeam": "Enable team",
     "disableTeam": "Disable team",
     "deleteTeam": "Delete team",
-    "deleteConfirm": "Delete {{team}}? Move or delete all of its sharing keys first.",
+    "deleteConfirm": "Delete {{team}}? Move or delete all of its Team Keys first.",
     "loadFailed": "Failed to load teams",
     "saveFailed": "Failed to save team",
     "createSuccess": "Team created",
     "updateSuccess": "Team updated",
     "deleteSuccess": "Team deleted",
-    "deleteFailed": "Team cannot be deleted while it owns sharing keys",
+    "deleteFailed": "Team cannot be deleted while it owns Team Keys",
     "enabled": "Team enabled",
     "disabled": "Team disabled",
     "guide": {
@@ -1781,25 +1830,25 @@ export default {
       "steps": {
         "usage": {
           "title": "What a Team is for",
-          "content": "A Team is an isolated slice of this instance — its own rules, Sharing Keys, and usage, separate from your other scenarios and Teams.",
+          "content": "A Team is an isolated slice of this instance — its own rules, Team Keys, and usage, separate from your other scenarios and Teams.",
           "bullet1": "Give a group — a customer, a sub-team, an external app — model access without sharing your main setup.",
           "bullet2": "Add rules to this Team below, just like on any other scenario page."
         },
         "isolation": {
           "title": "How it's separated",
-          "content": "A Sharing Key belongs to exactly one Team and can only reach /tingly/team[/v1].",
+          "content": "A Team Key belongs to exactly one Team and can only reach /tingly/team[/v1].",
           "bullet1": "Moving or disabling a key or Team takes effect immediately.",
           "bullet2": "Your Global model token isn't Team-scoped — it still has full access."
         },
         "keys": {
-          "title": "Configure a Sharing Key",
-          "content": "Click \"Sharing Keys\" above to create one for this Team.",
+          "title": "Configure a Team Key",
+          "content": "Click \"Team Keys\" above to create one for this Team.",
           "bullet1": "Name it, then copy the tb-share-… value — shown only once.",
           "bullet2": "Move it to another Team anytime, without rotating it."
         },
         "principles": {
           "title": "How it's used",
-          "content": "Point the client at this Team's Base URL, using its Sharing Key as the API key.",
+          "content": "Point the client at this Team's Base URL, using its Team Key as the API key.",
           "bullet1": "Base URL and API key are shown in the Team Access panel above.",
           "bullet2": "Requests route through the rules below — only models added there are reachable."
         }
@@ -2136,6 +2185,7 @@ export default {
     },
     "install": {
       "label": "Install {{agent}}",
+      "detected": "Last request {{time}}",
       "installed": "Installed",
       "confirm": "I've installed it",
       "confirmTooltip": "Run the install command below, then confirm here once {{agent}} is installed.",
@@ -2158,6 +2208,7 @@ export default {
     }
   },
   "scenarioPage": {
+    "setupGuide": "Setup Guide",
     "config": "Config",
     "autoConfig": "Auto Config",
     "quickStart": "Quick Start",
@@ -2172,7 +2223,7 @@ export default {
       "previewFailed": "Failed to load config preview: {{reason}}",
       "previewFailedGeneric": "Failed to load config preview"
     },
-    "sharingKeys": "Sharing Keys",
+    "sharingKeys": "Team Keys",
     "modelRules": "Model Rules",
     "embedModelRules": "Embedding Model Rules",
     "imageGenModelRules": "Image Model Rules",

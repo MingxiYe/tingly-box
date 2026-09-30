@@ -1,86 +1,28 @@
-// Centralized protocol and URL handling for GUI (Wails) and Web modes
-import TinglyService from "@/bindings";
-
-/**
- * Runtime mode enumeration
- */
-export enum RuntimeMode {
-  GUI = 'gui',       // Wails desktop app
-  WEB = 'web',       // Production web deployment
-  DEV = 'dev',       // Development with Vite dev server
-}
-
-/**
- * Get the current runtime mode
- */
-export function getRuntimeMode(): RuntimeMode {
-  const pkgMode = import.meta.env.VITE_PKG_MODE;
-  if (pkgMode === 'gui') return RuntimeMode.GUI;
-  if (pkgMode === 'ui') return RuntimeMode.DEV;
-  return RuntimeMode.WEB;
-}
-
-/**
- * Get the API protocol for backend communication
- * - GUI mode: Always 'http:' (localhost communication)
- * - Web mode: Use window.location.protocol (http: or https:)
- */
-export function getApiProtocol(): string {
-  const mode = getRuntimeMode();
-  if (mode === RuntimeMode.GUI) {
-    return 'http:';
-  }
-  return window.location.protocol;
-}
+// Where the UI reaches the gateway. In a browser tab the page is served by the
+// gateway, so its own origin is the API; the desktop window is served by the
+// Wails asset server instead and reaches the gateway on its local port.
+// The host bridge (@/host) says which case applies.
+import { host } from '@/host';
 
 /**
  * Get the base URL for API calls
- * - GUI mode: http://localhost:{port} from Wails service
- * - Web mode: {protocol}//{host}
+ * - Desktop: http://localhost:{port} of the in-process gateway
+ * - Browser: {protocol}//{host} of the page
  */
 export async function getApiBaseUrl(): Promise<string> {
-  const mode = getRuntimeMode();
-  const protocol = getApiProtocol();
-
-  if (mode === RuntimeMode.GUI) {
-    const port = await TinglyService.GetPort();
-    return `${protocol}//localhost:${port}`;
+  const port = await host.gatewayPort();
+  if (port !== null) {
+    return `http://localhost:${port}`;
   }
-
-  const host = window.location.host.replace(/\/$/, '');
-  return `${protocol}//${host}`;
-}
-
-/**
- * Get the origin/protocol for display purposes
- * - GUI mode: Return 'wails:' for accurate display
- * - Web mode: Return window.location.origin
- */
-export function getDisplayOrigin(): string {
-  const mode = getRuntimeMode();
-  if (mode === RuntimeMode.GUI) {
-    return 'wails://';
-  }
-  return window.location.origin;
-}
-
-/**
- * Check if running in GUI mode
- */
-export function isGuiMode(): boolean {
-  return getRuntimeMode() === RuntimeMode.GUI;
+  const origin = window.location.host.replace(/\/$/, '');
+  return `${window.location.protocol}//${origin}`;
 }
 
 /**
  * Get the OAuth redirect URI for callback
- * - GUI mode: http://localhost:{port}/oauth/callback (local callback)
- * - Web mode: {origin}/oauth/callback
+ * - Desktop: http://localhost:{port}/oauth/callback (local callback)
+ * - Browser: {origin}/oauth/callback
  */
 export async function getOAuthRedirectPath(): Promise<string> {
-  const mode = getRuntimeMode();
-  if (mode === RuntimeMode.GUI) {
-    const port = await TinglyService.GetPort();
-    return `http://localhost:${port}/oauth/callback`;
-  }
-  return `${window.location.origin}/oauth/callback`;
+  return `${await getApiBaseUrl()}/oauth/callback`;
 }

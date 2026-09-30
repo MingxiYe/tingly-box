@@ -161,7 +161,23 @@ export default function DashboardPage() {
         >
             <PageHeader
                 title={t('dashboard.overview.title', { defaultValue: 'Usage Dashboard' })}
-                subtitle={t(TIME_RANGE_CONFIG[timeRange].labelKey)}
+                subtitle={
+                    // The time range is a filter on this page, not a place to
+                    // go — it used to be six rows in the Dashboard sidebar.
+                    // Each range keeps its own URL (/dashboard/7d, …).
+                    <ToggleButtonGroup
+                        exclusive
+                        size="small"
+                        value={timeRange}
+                        onChange={(_, range: TimeRange | null) => range && navigate(`/dashboard/${range}`)}
+                        aria-label={t('dashboard.overview.timeRange')}
+                        sx={{ mt: 1, flexWrap: 'wrap', '& .MuiToggleButton-root': { px: 1.25, py: 0.25, textTransform: 'none' } }}
+                    >
+                        {validTimeRanges.map(range => (
+                            <ToggleButton key={range} value={range}>{t(TIME_RANGE_CONFIG[range].labelKey)}</ToggleButton>
+                        ))}
+                    </ToggleButtonGroup>
+                }
                 actions={headerActions}
             />
             {/* Main Content */}

@@ -1,10 +1,9 @@
-import { Box, Drawer, IconButton, Popover, Tooltip, Stack } from '@mui/material';
+import { Box, ClickAwayListener, Drawer, IconButton, Tooltip, Stack } from '@mui/material';
 import { Menu as IconMenu, Create as IconPencil, tablerMui } from '@/components/icons';
 import { IconLayoutSidebarLeftCollapse } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useVersion as useAppVersion } from '../contexts/VersionContext';
 import { Z_INDEX } from '../constants/zIndex';
 import { activityBarWidth, sidebarWidth } from './constants';
 import { mobileContentSx, mobileMenuButtonSx, mobileNavigationBarSx } from './styles';
@@ -15,6 +14,7 @@ import { SidebarCollapsedProvider, useSidebarCollapsed } from './useSidebarColla
 import type { ActivityItem, LayoutProps } from './types';
 import { FloatingStatusIndicators } from '../components/FloatingStatusIndicators';
 import { GitHubStarBanner } from './GitHubStarBanner';
+import { syncUiPrefs } from '../services/uiPrefs';
 
 const IconCollapseSidebar = tablerMui(IconLayoutSidebarLeftCollapse);
 
@@ -37,9 +37,13 @@ const LayoutInner = ({ children }: LayoutProps) => {
     const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
-    const { currentVersion } = useAppVersion();
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [easterEggAnchorEl, setEasterEggAnchorEl] = useState<HTMLElement | null>(null);
+
+    // Layout only renders after sign-in: bring this surface's UI prefs in
+    // line with the server's (see services/uiPrefs.ts).
+    useEffect(() => {
+        void syncUiPrefs();
+    }, []);
 
     const activityItems = useActivityItems();
     const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed();
@@ -74,6 +78,11 @@ const LayoutInner = ({ children }: LayoutProps) => {
         return activity?.children || [];
     }, [activityItems, activeActivity]);
 
+    // A sidebar is a choice between pages; an activity with a single page
+    // (Bench, or Prompt with one of its two flags on) has nothing to choose,
+    // so its rail item goes straight to that page with no sidebar.
+    const hasSidebar = sidebarItems.filter(item => item.type !== 'divider').length > 1;
+
     const activeActivityLabel = useMemo(() => {
         const activity = activityItems.find(item => item.key === activeActivity);
         return activity?.label || '';
@@ -82,11 +91,17 @@ const LayoutInner = ({ children }: LayoutProps) => {
     // Navigation itself now happens via ActivityBar's own <RouterLink> (so
     // right-click "copy link"/"open in new tab" work on level-1 items), so
     // this only handles the side effects the click triggers alongside it.
+    // With the sidebar collapsed, clicking a rail item that has pages to
+    // choose between shows its sidebar as a flyout over the content, so the
+    // pages stay one click away; picking one (or clicking elsewhere) closes it.
+    const [flyoutOpen, setFlyoutOpen] = useState(false);
+
     const handleActivityClick = (item: ActivityItem) => {
-        const hasSidebarItems = item.children?.some(child => child.type !== 'divider') ?? false;
+        const hasSidebarItems = (item.children?.filter(child => child.type !== 'divider').length ?? 0) > 1;
         if (!hasSidebarItems) {
             setMobileOpen(false);
         }
+        setFlyoutOpen(sidebarCollapsed && hasSidebarItems);
 
         sessionStorage.setItem('layout.activeActivity', item.key);
     };
@@ -131,21 +146,38 @@ const LayoutInner = ({ children }: LayoutProps) => {
     );
 
     const navigationContent = (
-        <Box sx={{ display: 'flex', height: '100%' }}>
+        <Box data-nav-rail sx={{ display: 'flex', height: '100%', position: 'relative' }}>
             <ActivityBar
                 activityItems={activityItems}
                 activeActivity={activeActivity}
                 onActivityClick={handleActivityClick}
-                onUserClick={(e) => setEasterEggAnchorEl(e.currentTarget)}
                 onStandaloneNavigate={() => setMobileOpen(false)}
             />
-            {sidebarItems.length > 0 && !sidebarCollapsed && (
+            {hasSidebar && !sidebarCollapsed && (
                 <Sidebar
                     sidebarItems={sidebarItems}
                     activeActivityLabel={activeActivityLabel}
                     onClose={() => setMobileOpen(false)}
                     headerAction={sidebarHeaderAction}
                 />
+            )}
+            {hasSidebar && sidebarCollapsed && flyoutOpen && (
+                <ClickAwayListener
+                    onClickAway={(e) => {
+                        // The rail's own clicks decide open/closed themselves.
+                        if ((e.target as Element | null)?.closest?.('[data-nav-rail]')) return;
+                        setFlyoutOpen(false);
+                    }}
+                >
+                    <Box sx={{ position: 'absolute', left: '100%', top: 0, bottom: 0, zIndex: Z_INDEX.drawer + 2, boxShadow: 8, bgcolor: 'background.paper' }}>
+                        <Sidebar
+                            sidebarItems={sidebarItems}
+                            activeActivityLabel={activeActivityLabel}
+                            onClose={() => { setFlyoutOpen(false); setMobileOpen(false); }}
+                            headerAction={sidebarHeaderAction}
+                        />
+                    </Box>
+                </ClickAwayListener>
             )}
         </Box>
     );
@@ -169,7 +201,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
                     display: { xs: 'block', md: 'none' },
                     '& .MuiDrawer-paper': {
                         boxSizing: 'border-box',
-                        width: sidebarItems.length > 0 ? activityBarWidth + sidebarWidth : activityBarWidth,
+                        width: hasSidebar ? activityBarWidth + sidebarWidth : activityBarWidth,
                         zIndex: Z_INDEX.drawer,
                     },
                 }}
@@ -184,23 +216,18 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 component="main"
                 sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden', position: 'relative', zIndex: 1 }}
             >
-                <GitHubStarBanner />
                 <Box sx={mobileContentSx}>
+                    {/* Agent pages carry the (closable) star request; Overview
+                        shows its own always-on copy. See GitHubStarBanner. */}
+                    {location.pathname.startsWith('/agent') && (
+                        <Box sx={{ mb: 2 }}>
+                            <GitHubStarBanner />
+                        </Box>
+                    )}
                     {children ?? <Outlet />}
                 </Box>
             </Box>
 
-            {/* Easter Egg Popover */}
-            <Popover
-                open={Boolean(easterEggAnchorEl)}
-                anchorEl={easterEggAnchorEl}
-                onClose={() => setEasterEggAnchorEl(null)}
-                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                sx={{ zIndex: Z_INDEX.popover, '& .MuiPopover-paper': { bgcolor: 'primary.main', color: 'white', borderRadius: 2, px: 2, py: 1 } }}
-            >
-                {t('layout.easterEgg')} · {currentVersion}
-            </Popover>
         </Box>
     );
 };

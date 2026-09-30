@@ -18,11 +18,13 @@ export const FloatingStatusIndicators = () => {
     return (
         <Box
             sx={{
+                // Desktop shows this in the rail (layout/ActivityBar); only the
+                // mobile layout, whose rail is inside a drawer, floats it.
+                display: { xs: 'flex', md: 'none' },
                 position: 'fixed',
                 top: { xs: 8, md: 'auto' },
                 right: { xs: 8, md: 16 },
                 bottom: { xs: 'auto', md: 16 },
-                display: 'flex',
                 flexDirection: { xs: 'row', md: 'column' },
                 gap: 1,
                 zIndex: Z_INDEX.popover,

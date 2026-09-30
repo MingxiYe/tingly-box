@@ -1,4 +1,5 @@
 import {Close, OpenInNew} from '@/components/icons';
+import { host } from '@/host';
 import CopyIconButton from '@/components/CopyIconButton';
 import {
     Alert,
@@ -81,11 +82,11 @@ const OAuthAuthorizationDialog = ({
     useEffect(() => {
         if (open && authData && !opened) {
             if (authData.flow_type === 'standard' && authData.auth_url) {
-                window.open(authData.auth_url, '_blank');
+                host.openExternal(authData.auth_url);
             } else if (authData.flow_type === 'device_code') {
                 const url = authData.verification_uri_complete || authData.verification_uri;
                 if (url) {
-                    window.open(url, '_blank');
+                    host.openExternal(url);
                 }
             }
             setOpened(true);
@@ -204,11 +205,11 @@ const OAuthAuthorizationDialog = ({
 
     const handleOpenAuthPage = () => {
         if (authData?.flow_type === 'standard' && authData.auth_url) {
-            window.open(authData.auth_url, '_blank');
+            host.openExternal(authData.auth_url);
         } else if (authData?.flow_type === 'device_code') {
             const url = authData.verification_uri_complete || authData.verification_uri;
             if (url) {
-                window.open(url, '_blank');
+                host.openExternal(url);
             }
         }
     };

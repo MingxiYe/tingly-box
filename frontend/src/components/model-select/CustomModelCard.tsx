@@ -103,7 +103,9 @@ export default function CustomModelCard({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    px: 2,
+                    // Room for the corner marks (custom triangle top-left,
+                    // selected check top-right) so a long name wraps first.
+                    px: '22px',
                     width: '100%',
                     height: '100%',
                     zIndex: 1,

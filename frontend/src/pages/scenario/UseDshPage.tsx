@@ -45,6 +45,7 @@ const UseDshPage: React.FC = () => {
                 scenario={scenario}
                 title="DeepSeek Harness"
                 tooltipKey="scenarioPage.tooltip.dsh"
+                clientConfigTool="dsh"
                 providerCard={{ compact: true, showApiKeyRow: true }}
                 withConnectAI
                 renderRightAction={(slot) => (

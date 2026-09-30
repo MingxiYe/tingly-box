@@ -1,0 +1,47 @@
+// A small labelled segmented control for "which variant of this value?"
+// choices that sit next to a copyable value — Local / Docker host for a Base
+// URL, npx / global for a start command. Each option shows its label (and an
+// optional icon), so the current choice reads without hovering; the tooltip
+// explains what it changes. This replaces the earlier pattern of bare icon
+// buttons with a green check badge on the active one.
+import { Box, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
+import React from 'react';
+
+export interface ChoiceOption<T extends string> {
+    value: T;
+    label: string;
+    tooltip?: string;
+    icon?: React.ReactNode;
+}
+
+interface ChoiceToggleProps<T extends string> {
+    value: T;
+    options: ChoiceOption<T>[];
+    onChange: (value: T) => void;
+    ariaLabel?: string;
+}
+
+export function ChoiceToggle<T extends string>({ value, options, onChange, ariaLabel }: ChoiceToggleProps<T>) {
+    return (
+        <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={value}
+            aria-label={ariaLabel}
+            onChange={(_, next: T | null) => next && onChange(next)}
+            sx={{ ml: 0.5, '& .MuiToggleButton-root': { px: 0.75, py: 0.25, gap: 0.5, textTransform: 'none', fontSize: '0.75rem', lineHeight: 1.2 } }}
+        >
+            {options.map((option) => {
+                const button = (
+                    <ToggleButton key={option.value} value={option.value} aria-label={option.label}>
+                        {option.icon && <Box sx={{ display: 'inline-flex', '& svg': { width: 16, height: 16 } }}>{option.icon}</Box>}
+                        {option.label}
+                    </ToggleButton>
+                );
+                return option.tooltip ? <Tooltip key={option.value} title={option.tooltip} arrow>{button}</Tooltip> : button;
+            })}
+        </ToggleButtonGroup>
+    );
+}
+
+export default ChoiceToggle;

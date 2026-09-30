@@ -10,8 +10,7 @@ declare module '../bindings/github.com/tingly-dev/tingly-box/gui/wails3/services
         Stop(): Promise<void>;
     }
 
-    const TinglyService: TinglyService;
-    export default TinglyService;
+    export const TinglyService: TinglyService;
 }
 
 declare module '@wailsio/runtime' {
@@ -22,4 +21,10 @@ declare module '@wailsio/runtime' {
     }
 
     export const Events: Events;
+
+    interface Browser {
+        OpenURL(url: string | URL): Promise<void>;
+    }
+
+    export const Browser: Browser;
 }

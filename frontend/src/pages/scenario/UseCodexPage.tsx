@@ -18,6 +18,8 @@ import { useScenarioPageInternal } from '@/pages/scenario/hooks/useScenarioPageI
 import { useContext1MToggle } from '@/pages/scenario/hooks/useContext1MToggle';
 import { SCENARIO_HEADER_CONTENT_MAX_WIDTH, ScenarioCardHeader } from './ScenarioPage';
 import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { ClientConfigStatusChip } from '@/components/ClientConfigStatusChip';
+import { useClientConfigStatus } from '@/hooks/useClientConfigStatus';
 const scenario = "codex";
 const UseCodexPageContent: React.FC = () => {
     const { t } = useTranslation();
@@ -30,6 +32,7 @@ const UseCodexPageContent: React.FC = () => {
         rules,
     } = useScenarioPageInternal(scenario);
     const [configModalOpen, setConfigModalOpen] = useState(false);
+    const { status: clientConfigStatus } = useClientConfigStatus('codex', [rules, configModalOpen]);
     const [isApplyLoading, setIsApplyLoading] = useState(false);
     // Unified Connect AI add flow (picker + form/OAuth/paste/import dialogs).
     const connectAI = useProviderDialog(showNotification, {
@@ -69,7 +72,11 @@ const UseCodexPageContent: React.FC = () => {
                 <UnifiedCard
                     titleHeadingLevel={1}
                     title={
-                        <ScenarioCardHeader title="Codex" tooltipKey="scenarioPage.tooltip.codex" />
+                        <ScenarioCardHeader
+                            title="Codex"
+                            tooltipKey="scenarioPage.tooltip.codex"
+                            addon={<ClientConfigStatusChip status={clientConfigStatus} onApply={() => setConfigModalOpen(true)} />}
+                        />
                     }
                     size="full"
                     contentMaxWidth={SCENARIO_HEADER_CONTENT_MAX_WIDTH}

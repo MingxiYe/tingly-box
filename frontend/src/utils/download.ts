@@ -1,26 +1,17 @@
 // Saving a blob to the user's disk, and the naming that goes with it.
 //
-// Deliberately not part of any one feature: the anchor-click dance had already
-// been hand-rolled twice in this codebase before this module existed, and each
-// copy learned (or failed to learn) the revoke timing separately.
+// Deliberately not part of any one feature. The actual save is the host
+// bridge's (a browser tab and the desktop WebView may need different
+// mechanisms); this module owns the naming around it.
 //
 // `downloadImage` below is the one export that isn't generic: it composes the
-// anchor-click save here with `fetchBlob`/`extensionForMime` from
+// save above with `fetchBlob`/`extensionForMime` from
 // `@tingly/vision`, which own those two (image-specific) concerns.
 
 import { extensionForMime, fetchBlob } from '@tingly/vision';
+import { host } from '@/host';
 
-export const downloadBlob = (blob: Blob, fileName: string): void => {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    // Revoking synchronously can cancel the download in some browsers.
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-};
+export const downloadBlob = (blob: Blob, fileName: string): void => host.saveFile(blob, fileName);
 
 export const downloadText = (content: string, fileName: string, mimeType: string): void =>
     downloadBlob(new Blob([content], { type: mimeType }), fileName);

@@ -15,7 +15,7 @@ const UseXcodePage: React.FC = () => {
                 renderRightAction={(slot) => (
                     <ScenarioConfigButton
                         onClick={slot.openConfigModal}
-                        label={t('scenarioPage.config')}
+                        label={t('scenarioPage.setupGuide')}
                     />
                 )}
                 renderConfigModal={(slot) => (

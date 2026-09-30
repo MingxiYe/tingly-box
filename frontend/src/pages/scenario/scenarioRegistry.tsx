@@ -4,6 +4,7 @@
 // whole overview page — and its PageLayout/PageHeader dependency chain — just
 // to read this list. AgentOverviewPage.tsx itself imports from here too.
 import { useCallback, useEffect, useState } from 'react';
+import { setSyncedItem } from '@/services/uiPrefs';
 import {
     Extension as IconExtension,
     Photo as IconPhoto,
@@ -193,11 +194,10 @@ const RENAMED_SCENARIO_IDS: Record<string, string> = {
 const readHidden = (): string[] => {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw === null) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_HIDDEN));
-            localStorage.setItem(DEFAULTS_VERSION_KEY, String(DEFAULTS_VERSION));
-            return DEFAULT_HIDDEN;
-        }
+        // Nothing chosen yet on this surface: show the defaults without
+        // persisting them, so a later sync can still bring in a choice made
+        // elsewhere instead of treating these defaults as one.
+        if (raw === null) return DEFAULT_HIDDEN;
         const parsed = JSON.parse(raw);
         let stored: string[] = Array.isArray(parsed)
             ? parsed.filter((x): x is string => typeof x === 'string')
@@ -235,8 +235,13 @@ const readHidden = (): string[] => {
     }
 };
 
+// Only an explicit user choice writes through to the server (services/uiPrefs):
+// the defaults/rename/version writes in readHidden above are derived state that
+// every surface recomputes identically, and uploading them from a fresh
+// desktop window would overwrite the choices made in the browser.
 const writeHidden = (ids: string[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+    setSyncedItem(STORAGE_KEY, JSON.stringify(ids));
+    setSyncedItem(DEFAULTS_VERSION_KEY, String(DEFAULTS_VERSION));
     window.dispatchEvent(new Event(VISIBILITY_EVENT));
 };
 

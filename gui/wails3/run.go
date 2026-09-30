@@ -127,7 +127,7 @@ func useWebSystray(app *application.App, tinglyService *services.TinglyService) 
 		OnClick(func(ctx *application.Context) {
 			WindowSlim.Show()
 			WindowSlim.Focus()
-			WindowSlim.EmitEvent("systray-navigate", "/")
+			WindowSlim.EmitEvent("systray-navigate", RouteDashboard)
 		})
 
 	menu.AddSeparator()
@@ -138,7 +138,7 @@ func useWebSystray(app *application.App, tinglyService *services.TinglyService) 
 		OnClick(func(ctx *application.Context) {
 			WindowSlim.Show()
 			WindowSlim.Focus()
-			WindowSlim.EmitEvent("systray-navigate", "/agent/openai")
+			WindowSlim.EmitEvent("systray-navigate", RouteOpenAI)
 		})
 
 	// Anthropic menu item - show window and navigate to Anthropic page
@@ -147,7 +147,7 @@ func useWebSystray(app *application.App, tinglyService *services.TinglyService) 
 		OnClick(func(ctx *application.Context) {
 			WindowSlim.Show()
 			WindowSlim.Focus()
-			WindowSlim.EmitEvent("systray-navigate", "/agent/anthropic")
+			WindowSlim.EmitEvent("systray-navigate", RouteAnthropic)
 		})
 
 	// Claude Code menu item - show window and navigate to Claude Code page
@@ -156,7 +156,7 @@ func useWebSystray(app *application.App, tinglyService *services.TinglyService) 
 		OnClick(func(ctx *application.Context) {
 			WindowSlim.Show()
 			WindowSlim.Focus()
-			WindowSlim.EmitEvent("systray-navigate", "/agent/claude-code")
+			WindowSlim.EmitEvent("systray-navigate", RouteClaudeCode)
 		})
 
 	menu.AddSeparator()

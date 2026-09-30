@@ -332,7 +332,11 @@ export const ServiceNode: React.FC<ServiceNodeProps> = ({
                         <Divider sx={NODE_LAYER_STYLES.divider} />
 
                         {/* Row 2: provider name (center) + api style tag (right) */}
-                        <Box sx={{ ...NODE_LAYER_STYLES.bottomLayer, position: 'relative', px: '28px' }}>
+                        {/* Side padding reserves the absolutely placed quota (left) and
+                            protocol tag(s) (right) so the provider name never runs under
+                            them; two tags need more room than one. Symmetric, so the
+                            name stays centred. */}
+                        <Box sx={{ ...NODE_LAYER_STYLES.bottomLayer, position: 'relative', px: hasDualApiStyle ? '46px' : '28px' }}>
                             {/* Quota (left) mirrors the api style tag (right); a missing
                                 or disabled provider shows its warning instead. */}
                             {!providerWarning && (
