@@ -13,7 +13,6 @@ import { useActivityItems } from './useActivityItems.tsx';
 import { SidebarCollapsedProvider, useSidebarCollapsed } from './useSidebarCollapsed';
 import type { ActivityItem, LayoutProps } from './types';
 import { FloatingStatusIndicators } from '../components/FloatingStatusIndicators';
-import { GitHubStarBanner } from './GitHubStarBanner';
 import { syncUiPrefs } from '../services/uiPrefs';
 import { useHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
 import { rememberAgentPath } from '@/pages/scenario/lastAgent';
@@ -250,13 +249,6 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden', position: 'relative', zIndex: 1 }}
             >
                 <Box sx={mobileContentSx}>
-                    {/* Agent pages carry the (closable) star request; Overview
-                        shows its own always-on copy. See GitHubStarBanner. */}
-                    {location.pathname.startsWith('/agent') && (
-                        <Box sx={{ mb: 2 }}>
-                            <GitHubStarBanner />
-                        </Box>
-                    )}
                     {children ?? <Outlet />}
                 </Box>
             </Box>

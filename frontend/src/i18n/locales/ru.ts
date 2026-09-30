@@ -120,9 +120,9 @@ export default {
       "theme": "Тема:"
     },
     "easterEgg": "Привет, я Tingly-Box, ваш умный ИИ-оркестратор",
-    "githubStarBanner": {
+    "githubStar": {
       "text": "Нравится Tingly-Box? Поставьте звезду на GitHub, чтобы помочь другим найти проект.",
-      "cta": "Star на GitHub"
+      "label": "Star"
     },
     "dashboard": "Панель",
     "team": "Команда",

@@ -118,9 +118,9 @@ export default {
       "theme": "Theme:"
     },
     "easterEgg": "Hi, I'm Tingly-Box, Your Smart AI Orchestrator",
-    "githubStarBanner": {
+    "githubStar": {
       "text": "Enjoying Tingly-Box? A star on GitHub helps others find it.",
-      "cta": "Star on GitHub"
+      "label": "Star"
     },
     "dashboard": "Dashboard",
     // Rail-level label only — the sidebar rows and the Team page's own

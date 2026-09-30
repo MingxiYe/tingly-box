@@ -118,9 +118,9 @@ export default {
       "theme": "主题："
     },
     "easterEgg": "Hi，我是 Tingly-Box，为您掌控智能",
-    "githubStarBanner": {
+    "githubStar": {
       "text": "喜欢 Tingly-Box 吗？点个 GitHub Star 让更多人发现它吧～",
-      "cta": "去 GitHub 点 Star"
+      "label": "Star"
     },
     "dashboard": "仪表盘",
     // 只用于一级入口（Activity Rail）这一处的 label；侧栏行和 Team 页面自己的

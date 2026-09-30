@@ -19,8 +19,6 @@ const SYNCED: Array<string | RegExp> = [
     'scenario.hiddenDefaultsVersion',
     // Quick Start progress per agent (AgentSetupCard).
     /^setup-card-/,
-    // When the GitHub star banner was last closed (layout/GitHubStarBanner).
-    'layout.githubStarBanner.dismissedAt',
 ];
 
 export const isSyncedKey = (key: string): boolean =>

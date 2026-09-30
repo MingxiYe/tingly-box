@@ -1,9 +1,10 @@
-import { Info as IconInfoCircle, Visibility as IconVisibility, VisibilityOff as IconVisibilityOff } from '@/components/icons';
+import { Info as IconInfoCircle, Star as IconStar, Visibility as IconVisibility, VisibilityOff as IconVisibilityOff } from '@/components/icons';
 import {
     Box,
     Button,
     Divider,
     IconButton,
+    Link,
     List,
     ListItem,
     ListItemButton,
@@ -36,6 +37,8 @@ import {
 import type { NavItem } from './types';
 import { VersionDisplay } from '@/components/VersionDisplay';
 import { UpdatePanelDialog } from '@/components/UpdatePanelDialog';
+
+const REPO_URL = 'https://github.com/tingly-dev/tingly-box';
 
 // Shared sizing for the sidebar's nav-style rows now lives in ./styles
 // (NAV_ROW_SX / navRowTextSlotProps), so every row is the same height whether
@@ -277,7 +280,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     );
                 })}
             </List>
-            {/* Footer top row: version */}
+            {/* Footer: version, and the GitHub star request — one quiet,
+                always-there link instead of a banner over every agent page. */}
             <Box
                 sx={{
                     py: 1.5, px: 2,
@@ -285,11 +289,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    gap: 1.5,
                     flexShrink: 0,
                     height: footerHeight,
                 }}
             >
                 <VersionDisplay onClick={() => setUpdatePanelOpen(true)} />
+                <Tooltip title={t('layout.githubStar.text')} arrow placement="top">
+                    <Link
+                        href={REPO_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        underline="none"
+                        variant="caption"
+                        sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, color: 'text.secondary', '&:hover': { color: 'warning.main' } }}
+                    >
+                        <IconStar sx={{ fontSize: 14 }} />
+                        {t('layout.githubStar.label')}
+                    </Link>
+                </Tooltip>
             </Box>
             {/* Add Profile Popover */}
             <Popover
