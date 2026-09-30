@@ -1720,6 +1720,9 @@ const newcomerHandlers = isNewcomer ? [
 
 const mockUiPrefs: Record<string, unknown> = {};
 
+// Scenario string flags set during this mock session, keyed "scenario/flag".
+const mockScenarioStringFlags = new Map<string, string>()
+
 export const handlers = [
     ...newcomerHandlers,
     // Remote Agents / Remote Graphs API endpoints
@@ -2386,6 +2389,20 @@ export const handlers = [
         const { scenario, flag } = params as { scenario: string; flag: string }
         const body = await request.json() as { value?: boolean }
         return HttpResponse.json({ success: true, data: { scenario, flag, value: body.value ?? true } })
+    }),
+
+    // Scenario string flags (thinking_effort, recording_v2): kept in memory so
+    // a change made in the Plugins panel reads back like the real server's.
+    http.get('/api/v1/scenario/:scenario/string-flag/:flag', ({ params }) => {
+        const { scenario, flag } = params as { scenario: string; flag: string }
+        return HttpResponse.json({ success: true, data: { scenario, flag, value: mockScenarioStringFlags.get(`${scenario}/${flag}`) ?? '' } })
+    }),
+
+    http.put('/api/v1/scenario/:scenario/string-flag/:flag', async ({ params, request }) => {
+        const { scenario, flag } = params as { scenario: string; flag: string }
+        const body = await request.json() as { value?: string }
+        mockScenarioStringFlags.set(`${scenario}/${flag}`, body.value ?? '')
+        return HttpResponse.json({ success: true, data: { scenario, flag, value: body.value ?? '' } })
     }),
 
     http.post('/api/v1/rule', async ({ request }) => {
