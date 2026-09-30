@@ -1,5 +1,6 @@
-import { Box, Tooltip, Typography } from '@mui/material';
-import type { ReactNode } from 'react';
+import { Box, Button, Tooltip, Typography } from '@mui/material';
+import { useState, type MouseEvent, type ReactNode } from 'react';
+import { Code, Refresh } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
 import type { ProviderQuota, QuotaWindowDisplayItem } from '@/types/quota';
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/types/quota';
 import { QUOTA_COLORS, formatNumber } from '../dashboard/chartStyles';
 import { QuotaRing, formatQuotaDuration, quotaRingColor, quotaRingSpinSx } from './QuotaRing';
+import { QuotaRawResponseDialog } from './QuotaRawResponseDialog';
 import { useQuotaBars } from './useQuotaBars';
 
 // Older than this, the figure is dimmed: the cache is refreshed in the
@@ -44,14 +46,16 @@ function periodLabel(minutes?: number): string | undefined {
  *
  * Windows keep quotaToWindows' order (self-healing limits first, shorter
  * periods first), so a 5h + weekly plan reads "5h" then "7d". Beyond
- * MAX_LINES a "+N" marks the rest; every window, reset time, cost and
- * freshness is in the tooltip, and clicking asks upstream for a fresh reading.
+ * MAX_LINES a "+N" marks the rest. Every window, reset time, cost and
+ * freshness is in the tooltip, along with Refresh and — when upstream sent
+ * one — Details (the raw response). Clicking the cell also refreshes.
  *
  * No reading → "—", nothing more (.design/quota-semantics.md §3.6), but the
  * cell stays clickable so a reading can still be requested.
  */
 export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
     const { t } = useTranslation();
+    const [rawOpen, setRawOpen] = useState(false);
     const { resourceItems } = useQuotaBars(quota);
     const windows = quotaToWindows(quota);
     const tightest = tightestWindow(quota);
@@ -109,14 +113,26 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
             <Box sx={{ mt: 0.5, opacity: 0.7 }}>
                 {refreshing
                     ? t('rule.service.quota.refreshing')
-                    : [
-                        Number.isFinite(fetchedAt) && t('rule.service.quota.updated', { duration: formatQuotaDuration(now - fetchedAt) }),
-                        t('rule.service.quota.clickToRefresh'),
-                    ].filter(Boolean).join(' · ')}
+                    : Number.isFinite(fetchedAt) && t('rule.service.quota.updated', { duration: formatQuotaDuration(now - fetchedAt) })}
             </Box>
-            {hasRaw && !lastError && (
-                <Box sx={{ opacity: 0.7 }}>{t('providerTable.quota.detailsHint')}</Box>
-            )}
+            {/* Actions live in the hover itself — a row menu is where nobody
+                looks. React events bubble through the tooltip's portal, so each
+                button stops propagation to keep row-level handlers out of it. */}
+            <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, mx: -0.75 }}>
+                <TooltipAction
+                    icon={<Refresh sx={{ fontSize: 14 }} />}
+                    label={t('providerTable.quota.refresh')}
+                    disabled={refreshing}
+                    onClick={onRefresh}
+                />
+                {hasRaw && (
+                    <TooltipAction
+                        icon={<Code sx={{ fontSize: 14 }} />}
+                        label={t('providerTable.quota.rawResponse')}
+                        onClick={() => setRawOpen(true)}
+                    />
+                )}
+            </Box>
         </Box>
     );
 
@@ -184,6 +200,7 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
 
     const tightestRemaining = tightest ? Math.round(quotaRemainingPercent(tightest)) : undefined;
     return (
+        <>
         <Tooltip title={tooltip} arrow placement="top">
             <Box
                 component="span"
@@ -217,5 +234,44 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
                 {figure}
             </Box>
         </Tooltip>
+        <QuotaRawResponseDialog
+            open={rawOpen}
+            onClose={() => setRawOpen(false)}
+            providerName={quota?.provider_name}
+            response={quota?.raw_response}
+        />
+        </>
+    );
+}
+
+function TooltipAction({ icon, label, disabled, onClick }: {
+    icon: ReactNode;
+    label: string;
+    disabled?: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <Button
+            size="small"
+            variant="text"
+            color="inherit"
+            startIcon={icon}
+            disabled={disabled}
+            onClick={(e: MouseEvent) => {
+                e.stopPropagation();
+                onClick();
+            }}
+            sx={{
+                minWidth: 0,
+                px: 0.75,
+                py: 0.25,
+                fontSize: '0.7rem',
+                fontWeight: 500,
+                textTransform: 'none',
+                '& .MuiButton-startIcon': { mr: 0.5 },
+            }}
+        >
+            {label}
+        </Button>
     );
 }

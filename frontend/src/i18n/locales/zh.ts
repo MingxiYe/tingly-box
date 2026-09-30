@@ -392,12 +392,11 @@ export default {
   "providerTable": {
     "quota": {
       "cost": "费用",
-      "readFailed": "无法读取额度——可在 ⋮ 菜单的「额度详情」查看原始响应",
+      "readFailed": "无法读取额度——可点下方「详情」查看原始响应",
       "noLimits": "上游未报告额度限制",
       "none": "暂无额度数据",
       "refresh": "刷新额度",
-      "rawResponse": "额度详情",
-      "detailsHint": "原始响应：⋮ → 额度详情"
+      "rawResponse": "详情"
     },
     "columns": {
       "name": "名称",

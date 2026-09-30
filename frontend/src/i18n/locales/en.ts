@@ -391,12 +391,11 @@ export default {
   "providerTable": {
     "quota": {
       "cost": "Cost",
-      "readFailed": "Couldn't read quota — see Quota Details in the ⋮ menu",
+      "readFailed": "Couldn't read quota — Details below has the raw response",
       "noLimits": "No quota limits reported",
       "none": "No quota reading yet",
       "refresh": "Refresh quota",
-      "rawResponse": "Quota Details",
-      "detailsHint": "Raw response: ⋮ → Quota Details"
+      "rawResponse": "Details"
     },
     "columns": {
       "name": "Name",

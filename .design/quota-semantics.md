@@ -255,9 +255,10 @@ return w != nil && !w.Unknown && !w.Unlimited && w.Limit > 0
   与规则图 service node 同一个圆环（`credential/QuotaRing.tsx`）+ 窗口名 + `N% left`。
   窗口名优先用周期（`5h` / `7d`），周期重复（如按模型的日限额）时退回窗口自身 label；
   只有余额的行显示数值不画环；无读数显示 `—`（§3.6，不造占位文案）。
-  全部窗口、重置时间、cost、更新时间放 tooltip（最紧窗口加粗）；点击单元格即刷新
-  （取代原 Actions 里的 Quota 按钮）；原始响应入口移到行的 ⋮ 菜单「Quota Details」
-  （仅在有 `raw_response` 时出现，tooltip 里提示位置）。
+  全部窗口、重置时间、cost、更新时间放 tooltip（最紧窗口加粗），tooltip 底部带
+  **Refresh** 和 **Details**（原始响应，仅在有 `raw_response` 时出现）两个按钮——
+  入口必须在 hover 里，放进行的 ⋮ 菜单没人会发现。点击单元格本身也会刷新
+  （取代原 Actions 里的 Quota 按钮）。
 
 ---
 

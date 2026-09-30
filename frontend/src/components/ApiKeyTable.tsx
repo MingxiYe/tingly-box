@@ -5,11 +5,9 @@ import {
     exportProviderAsJsonlToClipboard,
 } from "@/components/rule-card/utils";
 import {QuotaCell} from "@/components/credential/QuotaCell";
-import {QuotaRawResponseDialog} from "@/components/credential/QuotaRawResponseDialog";
 import {
     Check,
     Cancel,
-    Code,
     ContentCopy,
     Delete,
     Edit,
@@ -41,7 +39,6 @@ import {
 } from "@mui/material";
 import type {ProviderQuota} from "@/types/quota";
 import React, {useCallback, useState} from "react";
-import {useTranslation} from "react-i18next";
 import {useCopyFeedback} from "@/hooks/useCopyFeedback";
 import {useDeleteConfirm} from "@/hooks/useDeleteConfirm";
 import {useRowOverflowMenu} from "@/hooks/useRowOverflowMenu";
@@ -113,14 +110,9 @@ const ApiKeyTable = ({
         provider: null,
     });
     const {menu: moreMenu, openMenu: handleMoreOpen, closeMenu: handleMoreClose} = useRowOverflowMenu();
-    const {t} = useTranslation();
     // The quota column needs a refresh handler to be worth a column at all.
     const showQuota = Boolean(onQuotaRefresh);
     const columns = columnsFor(showQuota);
-    // Raw upstream quota payload, reached from the row's overflow menu — often
-    // the only explanation for a missing or odd-looking figure.
-    const [rawQuotaUuid, setRawQuotaUuid] = useState<string | null>(null);
-    const rawQuota = rawQuotaUuid ? providerQuotas?.[rawQuotaUuid] : undefined;
     const {copied: tokenCopied, copy: copyToken} = useCopyFeedback();
 
     const fetchFullToken = async (providerUuid: string): Promise<string> => {
@@ -469,17 +461,6 @@ const ApiKeyTable = ({
                                 <Visibility fontSize="small" sx={{mr: 1}}/> View Token
                             </MenuItem>
                         ),
-                        providerQuotas?.[p.uuid]?.raw_response != null && (
-                            <MenuItem
-                                key="quota-raw"
-                                onClick={() => {
-                                    handleMoreClose();
-                                    setRawQuotaUuid(p.uuid);
-                                }}
-                            >
-                                <Code fontSize="small" sx={{mr: 1}}/> {t("providerTable.quota.rawResponse")}
-                            </MenuItem>
-                        ),
                         <MenuItem
                             key="copy-base64"
                             onClick={() => {
@@ -598,12 +579,6 @@ const ApiKeyTable = ({
                 open={modelListDialog.open}
                 onClose={handleCloseModelListDialog}
                 provider={modelListDialog.provider}
-            />
-            <QuotaRawResponseDialog
-                open={rawQuotaUuid !== null}
-                onClose={() => setRawQuotaUuid(null)}
-                providerName={rawQuota?.provider_name}
-                response={rawQuota?.raw_response}
             />
         </TableContainer>
     );
