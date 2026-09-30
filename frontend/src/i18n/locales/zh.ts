@@ -2177,6 +2177,7 @@ export default {
     },
     "install": {
       "label": "安装 {{agent}}",
+      "detected": "最近请求 {{time}}",
       "installed": "已安装",
       "confirm": "我已安装",
       "confirmTooltip": "运行下方的安装命令，装好 {{agent}} 后在此确认。",

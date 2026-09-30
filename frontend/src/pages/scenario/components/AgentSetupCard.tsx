@@ -23,6 +23,7 @@ import { SPOTLIGHT_ADD_MODEL_EVENT } from '@/components/nodes/ActionAddNode';
 import { EntryGuideDialog } from '@/components/tier/EntryGuideDialog';
 import { useCopyFeedback } from '@/hooks/useCopyFeedback';
 import { removeSyncedItem, setSyncedItem } from '@/services/uiPrefs';
+import { timeAgo } from '@/utils/timeAgo';
 
 export interface AgentApplyResult {
     success: boolean;
@@ -137,7 +138,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
     const viewConfigButtonLabel = viewConfigButtonLabelProp ?? t('agentSetup.apply.viewConfig');
     const initialCollapsedPref = useRef<string | null>(localStorage.getItem(COLLAPSED_KEY(agentKey)));
     const [collapsed, setCollapsed] = useState(initialCollapsedPref.current === 'true');
-    const [installDone, setInstallDone] = useState(
+    const [installConfirmed, setInstallConfirmed] = useState(
         () => localStorage.getItem(INSTALL_DONE_KEY(agentKey)) === 'true'
     );
     const [applyDone, setApplyDone] = useState(
@@ -146,6 +147,19 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
     const [modelSkipped, setModelSkipped] = useState(
         () => localStorage.getItem(MODEL_SKIPPED_KEY(agentKey)) === 'true'
     );
+    // The real signal for "installed": this agent has already sent a request
+    // through the gateway. The manual "I've installed it" stays as the way to
+    // move on before that first request.
+    const [lastRequestAt, setLastRequestAt] = useState<string | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        api.getUsageRecords({ scenario: agentKey, limit: 1 }).then((res) => {
+            const first = Array.isArray(res?.data) ? res.data[0] : undefined;
+            if (!cancelled && first?.timestamp) setLastRequestAt(first.timestamp);
+        }).catch(() => { /* no signal: fall back to the manual confirm */ });
+        return () => { cancelled = true; };
+    }, [agentKey]);
+    const installDone = installConfirmed || lastRequestAt !== null;
     const [hasProvider, setHasProvider] = useState(false);
     const [providerCount, setProviderCount] = useState(0);
     const [providerLoading, setProviderLoading] = useState(true);
@@ -160,7 +174,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
     // up values the post-sign-in sync pulls in while this card is mounted.
     useEffect(() => {
         const onStorage = (e: StorageEvent) => {
-            if (e.key === INSTALL_DONE_KEY(agentKey)) setInstallDone(localStorage.getItem(e.key) === 'true');
+            if (e.key === INSTALL_DONE_KEY(agentKey)) setInstallConfirmed(localStorage.getItem(e.key) === 'true');
             else if (e.key === APPLY_DONE_KEY(agentKey)) setApplyDone(localStorage.getItem(e.key) === 'true');
             else if (e.key === MODEL_SKIPPED_KEY(agentKey)) setModelSkipped(localStorage.getItem(e.key) === 'true');
         };
@@ -230,7 +244,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
 
     const markInstallDone = () => {
         setSyncedItem(INSTALL_DONE_KEY(agentKey), 'true');
-        setInstallDone(true);
+        setInstallConfirmed(true);
     };
 
     const markModelSkipped = () => {
@@ -269,7 +283,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
         removeSyncedItem(APPLY_DONE_KEY(agentKey));
         removeSyncedItem(MODEL_SKIPPED_KEY(agentKey));
         setCollapsed(false);
-        setInstallDone(false);
+        setInstallConfirmed(false);
         setApplyDone(false);
         setModelSkipped(false);
         setApplyResult(null);
@@ -480,7 +494,11 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
                             {installDone && (
                                 <Typography variant="body2" sx={{
                                     color: "text.secondary"
-                                }}>{t('agentSetup.install.installed')}</Typography>
+                                }}>
+                                    {lastRequestAt
+                                        ? t('agentSetup.install.detected', { time: timeAgo(lastRequestAt) })
+                                        : t('agentSetup.install.installed')}
+                                </Typography>
                             )}
                             {/* Step-completing action lives in the row's right action
                                 column, same as steps 1 / 2 / 4. */}

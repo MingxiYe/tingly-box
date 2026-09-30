@@ -3111,6 +3111,7 @@ export const handlers = [
         const limit = parseInt(url.searchParams.get('limit') || '500')
         const offset = parseInt(url.searchParams.get('offset') || '0')
         const statusFilter = url.searchParams.get('status') || ''
+        const scenarioFilter = url.searchParams.get('scenario') || ''
 
         const models = [
             { provider_name: 'Anthropic', model: 'claude-sonnet-5', scenario: 'claude_code', streamed: true, cacheHitRatio: 0.97 },
@@ -3171,7 +3172,8 @@ export const handlers = [
             }
         }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-        const filtered = statusFilter ? all.filter(r => r.status === statusFilter) : all
+        const byStatus = statusFilter ? all.filter(r => r.status === statusFilter) : all
+        const filtered = scenarioFilter ? byStatus.filter(r => r.scenario === scenarioFilter) : byStatus
         const page = filtered.slice(offset, offset + limit)
 
         return HttpResponse.json({

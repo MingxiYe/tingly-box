@@ -2215,6 +2215,7 @@ export default {
     },
     "install": {
       "label": "Установить {{agent}}",
+      "detected": "Последний запрос {{time}}",
       "installed": "Установлено",
       "confirm": "Я установил",
       "confirmTooltip": "Выполните команду ниже, а затем подтвердите здесь, что {{agent}} установлен.",

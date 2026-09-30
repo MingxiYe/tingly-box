@@ -2184,6 +2184,7 @@ export default {
     },
     "install": {
       "label": "Install {{agent}}",
+      "detected": "Last request {{time}}",
       "installed": "Installed",
       "confirm": "I've installed it",
       "confirmTooltip": "Run the install command below, then confirm here once {{agent}} is installed.",
