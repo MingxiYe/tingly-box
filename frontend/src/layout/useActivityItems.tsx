@@ -99,8 +99,11 @@ export function useActivityItems(): ActivityItem[] {
         const claudeCodeProfiles = profiles['claude_code'] || [];
         const profileNavItems: NavItem[] = claudeCodeProfiles.map(p => ({
             path: `/agent/claude_code/profile/${p.id}`,
-            label: t('layout.nav.useClaudeCode', { defaultValue: 'Claude Code' }),
-            subtitle: `${p.id} - ${p.name}`,
+            // The profile is the subject of its row (ux-principles #9): its
+            // own name leads; "Claude Code" + id is the caption. Rows used to
+            // all read "Claude Code" with the name in grey underneath.
+            label: p.name || p.id,
+            subtitle: `${t('layout.nav.useClaudeCode', { defaultValue: 'Claude Code' })} · ${p.id}`,
             icon: <Claude size={20} />,
         }));
         const orderedTeams = orderTeams(teams);
@@ -114,8 +117,8 @@ export function useActivityItems(): ActivityItem[] {
             }]),
             ...orderedTeams.map(team => ({
                 path: teamPath(team),
-                label: t('layout.nav.useTeam', {defaultValue: 'Team'}),
-                subtitle: `${team.slug} - ${team.name}`,
+                label: team.name || team.slug,
+                subtitle: team.slug,
                 icon: <IconUsers sx={{fontSize: 20}} />,
             })),
             {path: '#add-team', label: t('layout.addTeam'), icon: <IconPlus sx={{fontSize: 20}} />},
