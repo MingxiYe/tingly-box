@@ -67,6 +67,14 @@ type Config struct {
 	Debug            bool `json:"-"`                  // Debug mode for Gin debug level logging
 	OpenBrowser      bool `yaml:"-" json:"-"`         // Auto-open browser in web UI mode (default: true)
 
+	// UIPrefs holds small, UI-only preferences (which agents are hidden,
+	// Quick Start progress, ...) so the browser tab and the desktop window —
+	// two different origins with separate localStorage — see the same state.
+	// Values are opaque JSON owned by the frontend; see ui_prefs.go.
+	// Not omitempty: Save() keeps file keys missing from the marshalled
+	// config, so clearing the map must serialize as null to stick.
+	UIPrefs map[string]json.RawMessage `json:"ui_prefs"`
+
 	// Generic tool configs map for all tool types
 	// Key is tool_type (e.g., "tool_interceptor", "code_execution")
 	// Value is the JSON-encoded config for that tool type

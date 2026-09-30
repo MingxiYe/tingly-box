@@ -7190,6 +7190,59 @@
         }
       }
     },
+    "/api/v1/ui-prefs": {
+      "get": {
+        "tags": [
+          "ui-prefs"
+        ],
+        "summary": "Get the UI-only preferences shared by every UI surface (browser and desktop)",
+        "description": "Get the UI-only preferences shared by every UI surface (browser and desktop)",
+        "operationId": "apiV1Ui-prefsGet",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UIPrefsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "ui-prefs"
+        ],
+        "summary": "Merge UI preferences; a null value deletes the key",
+        "description": "Merge UI preferences; a null value deletes the key",
+        "operationId": "apiV1Ui-prefsPatch",
+        "requestBody": {
+          "description": "Request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchUIPrefsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UIPrefsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/usage/performance": {
       "get": {
         "tags": [
@@ -13811,6 +13864,19 @@
           "active"
         ]
       },
+      "PatchUIPrefsRequest": {
+        "type": "object",
+        "properties": {
+          "prefs": {
+            "type": "object",
+            "description": "Field prefs",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "prefs"
+        ]
+      },
       "PerformanceMetricSummary": {
         "type": "object",
         "properties": {
@@ -17295,6 +17361,27 @@
           "spans"
         ]
       },
+      "UIPrefsResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Field error"
+          },
+          "prefs": {
+            "type": "object",
+            "description": "Field prefs",
+            "additionalProperties": {}
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Field success"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
       "UpdateClientRequest": {
         "type": "object",
         "properties": {
@@ -19073,6 +19160,10 @@
     {
       "name": "traces",
       "description": "Operations related to traces"
+    },
+    {
+      "name": "ui-prefs",
+      "description": "Operations related to ui-prefs"
     },
     {
       "name": "usage",

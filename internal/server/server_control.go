@@ -24,6 +24,7 @@ import (
 	oauthmodule "github.com/tingly-dev/tingly-box/internal/server/module/oauth"
 	providerQuotaModule "github.com/tingly-dev/tingly-box/internal/server/module/providerquota"
 	"github.com/tingly-dev/tingly-box/internal/server/module/statusline"
+	"github.com/tingly-dev/tingly-box/internal/server/module/uiprefs"
 	usagemodule "github.com/tingly-dev/tingly-box/internal/server/module/usage"
 	virtualmodelmodule "github.com/tingly-dev/tingly-box/internal/server/module/virtualmodel"
 	"github.com/tingly-dev/tingly-box/internal/tbclient"
@@ -228,6 +229,9 @@ func (s *Server) UseUIEndpoints(ctx context.Context) {
 	// Config apply API routes
 	configapplyHandler := configapply.NewHandler(s.config, s.host)
 	configapply.RegisterRoutes(apiV1, configapplyHandler)
+
+	// UI-only preferences shared by the browser and desktop UIs
+	uiprefs.RegisterRoutes(apiV1, uiprefs.NewHandler(s.config))
 
 	codexImportHandler := codeximport.NewHandler(nil, s.config)
 	codeximport.RegisterRoutes(apiV1, codexImportHandler)

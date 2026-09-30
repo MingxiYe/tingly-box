@@ -18,6 +18,7 @@ import (
 	"github.com/tingly-dev/tingly-box/internal/server/module/sharing"
 	"github.com/tingly-dev/tingly-box/internal/server/module/statusline"
 	team "github.com/tingly-dev/tingly-box/internal/server/module/team"
+	"github.com/tingly-dev/tingly-box/internal/server/module/uiprefs"
 	usagemodule "github.com/tingly-dev/tingly-box/internal/server/module/usage"
 	virtualmodelmodule "github.com/tingly-dev/tingly-box/internal/server/module/virtualmodel"
 	"github.com/tingly-dev/tingly-box/swagger"
@@ -114,6 +115,8 @@ func registerAllAPIRoutes(engine *gin.Engine, manager *swagger.RouteManager, s *
 	// Config apply API routes
 	configapplyHandler := configapply.NewHandler(cfg, "")
 	configapply.RegisterRoutes(apiV1, configapplyHandler)
+
+	uiprefs.RegisterRoutes(apiV1, uiprefs.NewHandler(cfg))
 
 	codexImportHandler := codeximport.NewHandler(nil, cfg)
 	codeximport.RegisterRoutes(apiV1, codexImportHandler)
