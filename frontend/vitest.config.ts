@@ -12,6 +12,13 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
+    // routes.contract.test.tsx reads the Wails tray's route constants from
+    // ../gui/wails3 (via ?raw); Vite refuses files outside the root otherwise.
+    server: {
+        fs: {
+            allow: ['..'],
+        },
+    },
     test: {
         globals: true,
         environment: 'jsdom',

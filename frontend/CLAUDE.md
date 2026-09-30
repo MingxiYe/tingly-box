@@ -4,7 +4,7 @@ Supplements the root `CLAUDE.md`. Covers frontend-specific build/bundle conventi
 
 ## Code-splitting
 
-Every route element in `App.tsx` must be `React.lazy(() => import('./pages/...'))`, not a static import — except `Login`, the only screen reachable before auth. Even `Onboarding` is a normal post-auth route (picked at runtime by `OnboardingGate`), so it's lazy too. Adding a new page means adding a new `lazy()` entry, not a static `import`.
+Every route element in `src/routes/appRoutes.tsx` (the route table `App.tsx` renders) must be `React.lazy(() => import('./pages/...'))`, not a static import — except `Login`, the only screen reachable before auth. Even `Onboarding` is a normal post-auth route (picked at runtime by `OnboardingGate`), so it's lazy too. Adding a new page means adding a new `lazy()` entry, not a static `import`.
 
 **Never export nav-level shared state from a page file.** If something outside `pages/**` (layout, sidebar, contexts, a widget used on another page) needs a constant/hook that happens to live in a page component's file, importing that one named export still pulls in the *whole module* — including the page component and everything it imports — because ES modules are the code-splitting unit. This silently defeats `lazy()` for that page.
 
