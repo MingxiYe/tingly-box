@@ -78,6 +78,11 @@ const LayoutInner = ({ children }: LayoutProps) => {
         return activity?.children || [];
     }, [activityItems, activeActivity]);
 
+    // A sidebar is a choice between pages; an activity with a single page
+    // (Bench, or Prompt with one of its two flags on) has nothing to choose,
+    // so its rail item goes straight to that page with no sidebar.
+    const hasSidebar = sidebarItems.filter(item => item.type !== 'divider').length > 1;
+
     const activeActivityLabel = useMemo(() => {
         const activity = activityItems.find(item => item.key === activeActivity);
         return activity?.label || '';
@@ -87,7 +92,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
     // right-click "copy link"/"open in new tab" work on level-1 items), so
     // this only handles the side effects the click triggers alongside it.
     const handleActivityClick = (item: ActivityItem) => {
-        const hasSidebarItems = item.children?.some(child => child.type !== 'divider') ?? false;
+        const hasSidebarItems = (item.children?.filter(child => child.type !== 'divider').length ?? 0) > 1;
         if (!hasSidebarItems) {
             setMobileOpen(false);
         }
@@ -142,7 +147,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 onActivityClick={handleActivityClick}
                 onStandaloneNavigate={() => setMobileOpen(false)}
             />
-            {sidebarItems.length > 0 && !sidebarCollapsed && (
+            {hasSidebar && !sidebarCollapsed && (
                 <Sidebar
                     sidebarItems={sidebarItems}
                     activeActivityLabel={activeActivityLabel}
@@ -172,7 +177,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
                     display: { xs: 'block', md: 'none' },
                     '& .MuiDrawer-paper': {
                         boxSizing: 'border-box',
-                        width: sidebarItems.length > 0 ? activityBarWidth + sidebarWidth : activityBarWidth,
+                        width: hasSidebar ? activityBarWidth + sidebarWidth : activityBarWidth,
                         zIndex: Z_INDEX.drawer,
                     },
                 }}
