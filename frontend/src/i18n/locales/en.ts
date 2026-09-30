@@ -390,6 +390,8 @@ export default {
   },
   "providerTable": {
     "quota": {
+      "used": "{{value}} used",
+      "balance": "Balance",
       "cost": "Cost",
       "readFailed": "Couldn't read quota — Details below has the raw response",
       "noLimits": "No quota limits reported",

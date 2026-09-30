@@ -391,6 +391,8 @@ export default {
   },
   "providerTable": {
     "quota": {
+      "used": "已用 {{value}}",
+      "balance": "余额",
       "cost": "费用",
       "readFailed": "无法读取额度——可点下方「详情」查看原始响应",
       "noLimits": "上游未报告额度限制",

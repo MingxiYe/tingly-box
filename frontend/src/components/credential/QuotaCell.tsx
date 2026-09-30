@@ -2,7 +2,7 @@ import { Box, Button, Tooltip, Typography } from '@mui/material';
 import { useState, type MouseEvent, type ReactNode } from 'react';
 import { Code, Refresh } from '@/components/icons';
 import { useTranslation } from 'react-i18next';
-import type { ProviderQuota, QuotaWindowDisplayItem } from '@/types/quota';
+import type { ProviderQuota, QuotaWindow, QuotaWindowDisplayItem } from '@/types/quota';
 import {
     formatQuotaAvailable,
     formatQuotaRemaining,
@@ -20,9 +20,12 @@ import { useQuotaBars } from './useQuotaBars';
 // background, so a stale snapshot means the refresher could not reach upstream.
 const STALE_AFTER_MS = 60 * 60 * 1000;
 
-// Lines shown in the cell. Two fit the row height the Actions group already
-// sets, so a provider with quota is no taller than one without.
-const MAX_LINES = 2;
+// Lines shown in the cell: up to two allowances, plus one line kept for money
+// (a balance, a wallet, a spend) when there is any — a balance is exactly the
+// figure that must not end up behind "+N". Three caption lines still fit the
+// row height the Actions group already sets.
+const MAX_ALLOWANCE_LINES = 2;
+const MAX_VALUE_LINES_ALONE = 2;
 
 interface QuotaCellProps {
     quota: ProviderQuota | undefined;
@@ -38,15 +41,36 @@ function periodLabel(minutes?: number): string | undefined {
     return `${minutes}m`;
 }
 
+/** Money is shown as an amount, never as a share: "81.41 CNY", "$37.50". */
+function isMoney(window: QuotaWindow): boolean {
+    return window.unit === 'currency';
+}
+
+function formatMoney(value: number, window: QuotaWindow): string {
+    const amount = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return window.currency_code ? `${amount} ${window.currency_code}` : `$${amount}`;
+}
+
+interface CellLine {
+    item: QuotaWindowDisplayItem;
+    /** allowance: a share of a cap · wallet: money against a cap · balance: an amount left · spend: an amount used */
+    kind: 'allowance' | 'wallet' | 'balance' | 'spend';
+    /** Remaining share, for the ring; only allowance and wallet have one. */
+    remaining?: number;
+    text: string;
+}
+
 /**
  * The Quota column of the credential tables. One line per window worth a
  * figure — the same ring the rule graph shows on a service node, the window's
  * name, and the share left ("left", not a bare percent, which reads as either
- * used or remaining). Balance-only windows show their value with no ring.
+ * used or remaining). Money is an amount, not a share: a balance ("81.41 CNY",
+ * no ring), a capped wallet ("$37.50 left", with its ring), or an uncapped
+ * spend ("$8.10 used", no ring — there is nothing to run out of).
  *
- * Windows keep quotaToWindows' order (self-healing limits first, shorter
- * periods first), so a 5h + weekly plan reads "5h" then "7d". Beyond
- * MAX_LINES a "+N" marks the rest. Every window, reset time, cost and
+ * Allowances keep quotaToWindows' order (self-healing limits first, shorter
+ * periods first), so a 5h + weekly plan reads "5h" then "7d"; money comes
+ * after them on a line of its own. Anything left over is marked "+N". Every window, reset time, cost and
  * freshness is in the tooltip, along with Refresh and — when upstream sent
  * one — Details (the raw response). Clicking the cell also refreshes.
  *
@@ -59,16 +83,44 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
     const { resourceItems } = useQuotaBars(quota);
     const windows = quotaToWindows(quota);
     const tightest = tightestWindow(quota);
-    const shown = windows.filter(({ window }) => isCountable(window) || window.available != null);
-    const lines = shown.slice(0, MAX_LINES);
-    const hidden = shown.length - lines.length;
+    const describe = (item: QuotaWindowDisplayItem): CellLine | undefined => {
+        const { window } = item;
+        const countable = isCountable(window);
+        if (isMoney(window)) {
+            if (countable) {
+                const left = Math.max(0, window.available ?? window.limit - window.used);
+                return { item, kind: 'wallet', remaining: quotaRemainingPercent(window), text: t('rule.service.quota.left', { value: formatMoney(left, window) }) };
+            }
+            if (window.available != null) return { item, kind: 'balance', text: formatMoney(window.available, window) };
+            if (window.used > 0) return { item, kind: 'spend', text: t('providerTable.quota.used', { value: formatMoney(window.used, window) }) };
+            return undefined;
+        }
+        if (countable) {
+            const remaining = quotaRemainingPercent(window);
+            return { item, kind: 'allowance', remaining, text: t('rule.service.quota.left', { value: `${Math.round(remaining)}%` }) };
+        }
+        // A non-money balance, e.g. credits reported only as what is left.
+        const available = formatQuotaAvailable(window, formatNumber);
+        return available ? { item, kind: 'balance', text: available } : undefined;
+    };
+    const described = windows.map(describe).filter((line): line is CellLine => !!line);
+    const allowances = described.filter(line => line.kind === 'allowance');
+    const values = described.filter(line => line.kind !== 'allowance');
+    const allowanceLines = allowances.slice(0, MAX_ALLOWANCE_LINES);
+    const lines = [...allowanceLines, ...values.slice(0, allowanceLines.length ? 1 : MAX_VALUE_LINES_ALONE)];
+    const hidden = described.length - lines.length;
 
-    // Name by period ("5h", "7d") when that tells the lines apart — short and
-    // scannable down a column. Two windows of the same period (e.g. per-model
-    // daily limits) need their own labels instead.
-    const periods = lines.map(({ window }) => periodLabel(window.window_minutes));
+    // Allowances are named by period ("5h", "7d") when that tells them apart —
+    // short and scannable down a column. Two of the same period (e.g.
+    // per-model daily limits) need their own labels instead. Money reads as
+    // "Balance" (the currency is in the figure), a spend by its period.
+    const periods = allowanceLines.map(({ item }) => periodLabel(item.window.window_minutes));
     const periodsDistinct = periods.every(p => p) && new Set(periods).size === periods.length;
-    const nameOf = (item: QuotaWindowDisplayItem, i: number) => (periodsDistinct ? periods[i] : item.label);
+    const nameOf = (line: CellLine, i: number): string | undefined => {
+        if (line.kind === 'allowance') return periodsDistinct ? periods[i] : line.item.label;
+        if (line.kind === 'spend') return periodLabel(line.item.window.window_minutes) ?? line.item.label;
+        return isMoney(line.item.window) ? t('providerTable.quota.balance') : line.item.label;
+    };
 
     const now = Date.now();
     const fetchedAt = quota?.fetched_at ? new Date(quota.fetched_at).getTime() : NaN;
@@ -78,10 +130,13 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
 
     const tooltip = (
         <Box sx={{ minWidth: 160 }}>
-            {windows.map(({ key, label, window }) => {
-                const value = isCountable(window)
-                    ? t('rule.service.quota.left', { value: formatQuotaRemaining(window, formatNumber) })
-                    : formatQuotaAvailable(window, formatNumber);
+            {windows.map((item) => {
+                const { key, label, window } = item;
+                const value = isMoney(window)
+                    ? describe(item)?.text
+                    : isCountable(window)
+                        ? t('rule.service.quota.left', { value: formatQuotaRemaining(window, formatNumber) })
+                        : formatQuotaAvailable(window, formatNumber);
                 if (!value) return null;
                 const resetsAt = window.resets_at ? new Date(window.resets_at).getTime() : NaN;
                 return (
@@ -103,7 +158,7 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
                         : `${quota.cost.currency_code || '$'}${quota.cost.used.toFixed(2)}`}
                 </Box>
             )}
-            {shown.length === 0 && (
+            {described.length === 0 && (
                 <Box sx={{ mb: 0.25, color: lastError ? QUOTA_COLORS.error : undefined }}>
                     {lastError
                         ? t('providerTable.quota.readFailed')
@@ -139,47 +194,44 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
     let figure: ReactNode;
     if (lines.length > 0) {
         figure = (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0, opacity: refreshing ? 0.6 : 1 }}>
-                {lines.map((item, i) => {
-                    const { window } = item;
-                    const countable = isCountable(window);
-                    const remaining = countable ? quotaRemainingPercent(window) : 0;
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.125, minWidth: 0, opacity: refreshing ? 0.6 : 1 }}>
+                {lines.map((line, i) => {
+                    const { remaining } = line;
                     return (
-                        <Box key={item.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                            {countable ? (
+                        <Box key={line.item.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                            {remaining != null ? (
                                 <Box component="span" sx={{ display: 'inline-flex', ...(refreshing && quotaRingSpinSx) }}>
                                     {/* While refreshing, a fixed quarter arc spins like a loader — the
                                         real arc can be empty (used up), and an empty ring shows no motion. */}
                                     <QuotaRing remaining={refreshing ? 25 : remaining} color={quotaRingColor(remaining)} size={14} />
                                 </Box>
                             ) : (
-                                // Keeps balance lines aligned with the ringed ones above/below.
+                                // Keeps ringless lines aligned with the ringed ones above/below.
                                 <Box component="span" sx={{ width: 14, flexShrink: 0 }} />
                             )}
                             <Typography
                                 variant="caption"
                                 sx={{
                                     color: 'text.secondary',
+                                    lineHeight: 1.4,
                                     flexShrink: 1,
-                                    minWidth: periodsDistinct ? 22 : 0,
-                                    maxWidth: periodsDistinct ? undefined : 64,
+                                    minWidth: 22,
+                                    maxWidth: 64,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
                                 }}
                             >
-                                {nameOf(item, i)}
+                                {nameOf(line, i)}
                             </Typography>
                             <Typography
                                 variant="caption"
-                                sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: 'text.primary' }}
+                                sx={{ fontWeight: 600, lineHeight: 1.4, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: 'text.primary' }}
                             >
-                                {countable
-                                    ? t('rule.service.quota.left', { value: `${Math.round(remaining)}%` })
-                                    : formatQuotaAvailable(window, formatNumber)}
+                                {line.text}
                             </Typography>
                             {hidden > 0 && i === lines.length - 1 && (
-                                <Typography variant="caption" sx={{ color: 'text.disabled', whiteSpace: 'nowrap' }}>
+                                <Typography variant="caption" sx={{ color: 'text.disabled', lineHeight: 1.4, whiteSpace: 'nowrap' }}>
                                     +{hidden}
                                 </Typography>
                             )}
