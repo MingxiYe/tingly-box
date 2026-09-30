@@ -10,38 +10,6 @@ export default {
     "reapply": "Reapply",
     "apply": "Auto Config"
   },
-  "statusOverview": {
-    "title": "Overview",
-    "subtitle": "Is the gateway up, does anything need you, and what your agents did lately.",
-    "gateway": {
-      "running": "Gateway running",
-      "unreachable": "Gateway unreachable",
-      "version": "Version {{version}}",
-      "today_one": "Today: {{count}} request · {{errorRate}}% errors",
-      "today_other": "Today: {{count}} requests · {{errorRate}}% errors"
-    },
-    "attention": {
-      "title": "Needs attention",
-      "titleCount": "Needs attention ({{count}})",
-      "none": "Nothing needs attention.",
-      "checking": "Checking…",
-      "disconnected": "The UI can't reach the gateway. Requests from your agents may be failing.",
-      "oauthExpired": "{{provider}}: the OAuth sign-in has expired.",
-      "quotaLow": "{{provider}} · {{window}}: {{percent}}% left.",
-      "update": "A new version of Tingly Box is available.",
-      "openCredentials": "Open credentials",
-      "viewQuota": "View quota",
-      "viewUpdate": "View update"
-    },
-    "agents": {
-      "title": "Your agents",
-      "subtitle": "Last {{days}} days",
-      "noRequests": "No requests yet",
-      "viewUsage": "View usage",
-      "requests_one": "{{count}} request",
-      "requests_other": "{{count}} requests"
-    }
-  },
   "common": {
     "back": "Back",
     "add": "Add",

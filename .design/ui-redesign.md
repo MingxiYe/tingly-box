@@ -14,8 +14,8 @@
 |---|---|---|
 | P0 词汇 | ✅ | Team Keys 统一；Guardrails 的密钥页改名 Secrets；Credential 侧栏行改为 Credentials（见 §3.6） |
 | P1 路由契约 + Host Bridge | ✅ | `routes/appRoutes.tsx` + `routes.contract.test.tsx`（托盘路径、所有 redirect）；修复托盘 `/agent/claude-code`；`host/` bridge（浏览器 / Wails 两个实现）；UI 偏好存服务端 `/api/v1/ui-prefs`（隐藏的 Agent、Quick Start 进度）。主题 / 语言仍在本机：它们登录前就要生效 |
-| P2 Dashboard 概览 | ✅ | `/dashboard/overview`：网关状态、需要处理的事项、各 Agent 最近请求 |
-| P3 导航减负 | ✅ | 底部 4 个按钮合并为偏好菜单；单页 activity 不弹 sidebar；时间范围改为页内筛选；profile / Team 行以名字为主标签；折叠时 rail 浮层；900–1200px 自动折叠；断线指示收进 rail；Dashboard 默认进入 Overview。⌘K 未做（增量，后续再议）；GitHub star 横幅：Overview 常驻，Agent 页可关闭（关闭后 3 天内不再显示，跨浏览器 / 桌面同步），其他页面不显示 |
+| P2 Dashboard 概览 | ❌ 已删除（2026-09-30） | 实现过 `/dashboard/overview`（网关状态、需要处理的事项、各 Agent 最近请求），也试过并入 `/agent`；评审认为整页意义不大：网关状态由 rail 表达，Agent 列表与 sidebar 重复。已删除，旧地址重定向到用量页 |
+| P3 导航减负 | ✅ | 底部 4 个按钮合并为偏好菜单；单页 activity 不弹 sidebar；时间范围改为页内筛选；profile / Team 行以名字为主标签；折叠时 rail 浮层；900–1200px 自动折叠；断线指示收进 rail；Dashboard 默认进入用量页。⌘K 未做（增量，后续再议）；GitHub star 横幅：Overview 常驻，Agent 页可关闭（关闭后 3 天内不再显示，跨浏览器 / 桌面同步），其他页面不显示 |
 | P4 Agent 页 | ✅（Profile 合并暂缓） | A–D 已落地：descriptor 模板、配置状态；E 中插件与模式切换的挪位、Quick Start 3 步重排，评审后撤回。见 `agent-page-redesign.md` 顶部进度表 |
 
 ---

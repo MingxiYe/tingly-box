@@ -12,42 +12,6 @@ export default {
     "reapply": "Применить снова",
     "apply": "Auto Config"
   },
-  "statusOverview": {
-    "title": "Обзор",
-    "subtitle": "Работает ли шлюз, что требует внимания и что недавно делали ваши агенты.",
-    "gateway": {
-      "running": "Шлюз работает",
-      "unreachable": "Шлюз недоступен",
-      "version": "Версия {{version}}",
-      "today_one": "Сегодня: {{count}} запрос · ошибок {{errorRate}}%",
-      "today_few": "Сегодня: {{count}} запроса · ошибок {{errorRate}}%",
-      "today_many": "Сегодня: {{count}} запросов · ошибок {{errorRate}}%",
-      "today_other": "Сегодня: {{count}} запроса · ошибок {{errorRate}}%"
-    },
-    "attention": {
-      "title": "Требует внимания",
-      "titleCount": "Требует внимания ({{count}})",
-      "none": "Всё в порядке.",
-      "checking": "Проверка…",
-      "disconnected": "Интерфейс не может связаться со шлюзом. Запросы агентов могут завершаться ошибкой.",
-      "oauthExpired": "{{provider}}: срок входа OAuth истёк.",
-      "quotaLow": "{{provider}} · {{window}}: осталось {{percent}}%.",
-      "update": "Доступна новая версия Tingly Box.",
-      "openCredentials": "Открыть ключи",
-      "viewQuota": "Посмотреть квоту",
-      "viewUpdate": "Посмотреть обновление"
-    },
-    "agents": {
-      "title": "Ваши агенты",
-      "subtitle": "Последние {{days}} дн.",
-      "noRequests": "Запросов пока нет",
-      "viewUsage": "Посмотреть расход",
-      "requests_one": "{{count}} запрос",
-      "requests_few": "{{count}} запроса",
-      "requests_many": "{{count}} запросов",
-      "requests_other": "{{count}} запроса"
-    }
-  },
   "common": {
     "back": "Назад",
     "add": "Добавить",

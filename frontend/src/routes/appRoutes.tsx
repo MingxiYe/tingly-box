@@ -51,7 +51,6 @@ const GuardrailsCredentialsPage = lazy(() => import('@/pages/guardrails/Credenti
 const GuardrailsGroupsPage = lazy(() => import('@/pages/guardrails/GroupsPage'));
 const GuardrailsHistoryPage = lazy(() => import('@/pages/guardrails/HistoryPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-const StatusOverviewPage = lazy(() => import('@/pages/overview/StatusOverviewPage'));
 const UserUsagePage = lazy(() => import('@/pages/UserUsagePage'));
 const QuotaHistoryPage = lazy(() => import('@/pages/QuotaHistoryPage'));
 const ModelTestPage = lazy(() => import('@/pages/ModelTestPage'));
@@ -190,8 +189,9 @@ export const appRoutes = (
             <Route path="/system/logs" element={<LogsPage />} />
             <Route path="/system/experimental" element={<ExperimentalPage />} />
             {/* Dashboard routes with time range */}
-            <Route path="/dashboard" element={<Navigate to="/dashboard/overview" replace />} />
-            <Route path="/dashboard/overview" element={<StatusOverviewPage />} />
+            <Route path="/dashboard" element={<Navigate to="/dashboard/today" replace />} />
+            {/* The Overview page was removed; keep its bookmarks working. */}
+            <Route path="/dashboard/overview" element={<Navigate to="/dashboard/today" replace />} />
         <Route path="/dashboard/users" element={<UserUsagePage />} />
             <Route path="/dashboard/quota-history" element={<QuotaHistoryPage />} />
             <Route path="/dashboard/:timeRange" element={<DashboardPage />} />
