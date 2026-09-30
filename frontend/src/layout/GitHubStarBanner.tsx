@@ -1,27 +1,53 @@
 import { IconButton, Link, Stack, Typography } from '@mui/material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Close, GitHub, Star } from '@/components/icons';
+import { setSyncedItem } from '@/services/uiPrefs';
 
 const REPO_URL = 'https://github.com/tingly-dev/tingly-box';
-const DISMISS_KEY = 'layout.githubStarBanner.dismissed';
+// When the banner was last closed on an agent page (epoch ms). Synced through
+// services/uiPrefs so closing it in the browser also counts in the desktop
+// window.
+export const STAR_BANNER_DISMISSED_AT_KEY = 'layout.githubStarBanner.dismissedAt';
+// A closed banner stays away this long, then comes back.
+const DISMISS_FOR_MS = 3 * 24 * 60 * 60 * 1000;
 
-// Shows once per app run (sessionStorage clears on restart, so the banner
-// reappears next launch) and asks the user to star the repo. Dismissing it
-// only hides it for the current run — there's no permanent opt-out, in line
-// with keeping this low-friction rather than adding another setting.
+const isSnoozed = (): boolean => {
+    try {
+        const at = Number(localStorage.getItem(STAR_BANNER_DISMISSED_AT_KEY));
+        return at > 0 && Date.now() - at < DISMISS_FOR_MS;
+    } catch {
+        return false;
+    }
+};
+
+// Asks the user to star the repo. Two placements:
+// - Dashboard › Overview: always shown (`persistent`), no close button.
+// - Agent pages (rendered by Layout on /agent/*): closable; closing hides it
+//   on every agent page for three days, then it returns.
+// Other pages don't show it.
 //
 // Styled as a plain surface card (paper bg + divider border) rather than a
 // MUI Alert, so it reads as part of the app chrome instead of a status/info
 // message with its own fixed hue.
-export const GitHubStarBanner = () => {
+export const GitHubStarBanner = ({ persistent = false }: { persistent?: boolean }) => {
     const { t } = useTranslation();
-    const [dismissed, setDismissed] = useState(() => sessionStorage.getItem(DISMISS_KEY) === '1');
+    const [dismissed, setDismissed] = useState(() => !persistent && isSnoozed());
+
+    // The post-sign-in sync may bring in a dismissal made on the other surface.
+    useEffect(() => {
+        if (persistent) return;
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === STAR_BANNER_DISMISSED_AT_KEY) setDismissed(isSnoozed());
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, [persistent]);
 
     if (dismissed) return null;
 
     const handleDismiss = () => {
-        sessionStorage.setItem(DISMISS_KEY, '1');
+        setSyncedItem(STAR_BANNER_DISMISSED_AT_KEY, String(Date.now()));
         setDismissed(true);
     };
 
@@ -31,8 +57,6 @@ export const GitHubStarBanner = () => {
             spacing={1.5}
             sx={{
                 alignItems: 'center',
-                mx: 2,
-                mt: 2,
                 px: 2,
                 py: 1,
                 borderRadius: 2,
@@ -55,14 +79,16 @@ export const GitHubStarBanner = () => {
                     {t('layout.githubStarBanner.cta')}
                 </Link>
             </Typography>
-            <IconButton
-                size="small"
-                aria-label={t('common.dismiss')}
-                onClick={handleDismiss}
-                sx={{ color: 'text.secondary' }}
-            >
-                <Close sx={{ fontSize: 18 }} />
-            </IconButton>
+            {!persistent && (
+                <IconButton
+                    size="small"
+                    aria-label={t('common.dismiss')}
+                    onClick={handleDismiss}
+                    sx={{ color: 'text.secondary' }}
+                >
+                    <Close sx={{ fontSize: 18 }} />
+                </IconButton>
+            )}
         </Stack>
     );
 };

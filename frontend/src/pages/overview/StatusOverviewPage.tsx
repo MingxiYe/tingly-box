@@ -18,6 +18,7 @@ import CopyIconButton from '@/components/CopyIconButton';
 import PageHeader from '@/components/PageHeader';
 import Surface from '@/components/Surface';
 import { useHealth } from '@/contexts/HealthContext';
+import { GitHubStarBanner } from '@/layout/GitHubStarBanner';
 import { useVersion } from '@/contexts/VersionContext';
 import { SCENARIOS, useHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
 import { api, fetchUIAPI } from '@/services/api';
@@ -194,6 +195,8 @@ const StatusOverviewPage = () => {
                     </Tooltip>
                 }
             />
+
+            <GitHubStarBanner persistent />
 
             {/* Is the gateway up? */}
             <Surface variant="outlined">
