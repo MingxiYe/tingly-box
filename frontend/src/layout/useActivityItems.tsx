@@ -216,8 +216,8 @@ export function useActivityItems(): ActivityItem[] {
                 defaultPath: '/agent',
                 children: scenarioChildren,
             },
-            // Shown/hidden together with the team scenario card on /agent, the
-            // same single switch Image uses (see the Image item below).
+            // Shown/hidden by its switch in the rail's Power-ups menu (the
+            // 'team' entry of the hidden-scenario set), like Image below.
             ...(!hiddenScenarios.has('team') ? [teamActivityItem] : []),
             // Image — the playground outgrew a card on the scenario page
             // (.design/image-layout.md). Shown/hidden together with the
@@ -241,7 +241,7 @@ export function useActivityItems(): ActivityItem[] {
             // as new rows — the rail icon never grows. Desk (no bot, browser
             // only) closes the list behind its own divider. See bot-arch.md §10.
             // (key stays 'bots' — internal id, not user-visible.)
-            // Hidden via the Remote power-up switch on /agent (same hidden set as
+            // Hidden via the Remote switch in the rail's Power-ups menu (same hidden set as
             // Team/Image) — hides the rail item only, bots keep running.
             ...(isFullEdition && !hiddenScenarios.has('remote') ? [{
                 key: 'bots' as const,

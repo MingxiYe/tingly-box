@@ -21,7 +21,6 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '@/services/api';
 import PageLayout from '@/components/PageLayout';
 import { SCENARIOS, useHiddenScenarios, type ScenarioDescriptor } from './scenarioRegistry';
-import PowerUpsSection from './PowerUpsSection';
 import UnifiedCard from '@/components/UnifiedCard';
 
 const scenarioIconSize = 28;
@@ -263,7 +262,6 @@ const AgentOverviewPage: React.FC = () => {
                         )}
                     </UnifiedCard>
 
-                    <PowerUpsSection />
                 </Stack>
             </Box>
         </PageLayout>

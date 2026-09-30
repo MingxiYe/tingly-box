@@ -176,6 +176,7 @@ export default {
     "default": "默认",
     "help": "帮助与技巧",
     "helpShort": "帮助",
+    "powerUps": "扩展",
     "tools": "工具",
     "servertool": "服务端工具",
     "botsRunning": "{{total}} 个 bot 中 {{active}} 个在运行"
@@ -2241,7 +2242,7 @@ export default {
     "editTooltip": "管理可见的智能应用",
     "powerUps": {
       "title": "增强能力",
-      "subtitle": "扩展智能应用的可选能力。开启后会出现在侧边栏中。",
+      "subtitle": "可选能力。开启后出现在这一栏，关闭则隐藏。",
       "experimental": "实验",
       "experimentalTooltip": "实验性功能",
       "beta": "Beta",

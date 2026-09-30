@@ -176,6 +176,7 @@ export default {
     "default": "default",
     "help": "Tips & Help",
     "helpShort": "Help",
+    "powerUps": "Power-ups",
     "tools": "Tools",
     "servertool": "Servertool",
     "botsRunning": "{{active}} of {{total}} bots running"
@@ -2246,7 +2247,7 @@ export default {
     "editTooltip": "Manage visible agents",
     "powerUps": {
       "title": "Power-ups",
-      "subtitle": "Optional capabilities that extend your agents. Turn one on to add it to the sidebar.",
+      "subtitle": "Optional capabilities. Turn one on to add it to this bar; turn it off to hide it.",
       "experimental": "Exp.",
       "experimentalTooltip": "Experimental feature",
       "beta": "Beta",
