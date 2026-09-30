@@ -15,6 +15,7 @@ import { SidebarCollapsedProvider, useSidebarCollapsed } from './useSidebarColla
 import type { ActivityItem, LayoutProps } from './types';
 import { FloatingStatusIndicators } from '../components/FloatingStatusIndicators';
 import { GitHubStarBanner } from './GitHubStarBanner';
+import { syncUiPrefs } from '../services/uiPrefs';
 
 const IconCollapseSidebar = tablerMui(IconLayoutSidebarLeftCollapse);
 
@@ -40,6 +41,12 @@ const LayoutInner = ({ children }: LayoutProps) => {
     const { currentVersion } = useAppVersion();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [easterEggAnchorEl, setEasterEggAnchorEl] = useState<HTMLElement | null>(null);
+
+    // Layout only renders after sign-in: bring this surface's UI prefs in
+    // line with the server's (see services/uiPrefs.ts).
+    useEffect(() => {
+        void syncUiPrefs();
+    }, []);
 
     const activityItems = useActivityItems();
     const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed();

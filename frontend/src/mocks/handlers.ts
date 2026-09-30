@@ -1718,6 +1718,8 @@ const newcomerHandlers = isNewcomer ? [
     http.get('/api/v1/requests', () => HttpResponse.json({ total: 0, requests: [] })),
 ] : []
 
+const mockUiPrefs: Record<string, unknown> = {};
+
 export const handlers = [
     ...newcomerHandlers,
     // Remote Agents / Remote Graphs API endpoints
@@ -3587,6 +3589,18 @@ export const handlers = [
     // ============================================
     // Claude Code Profiles API (v1)
     // ============================================
+    // UI prefs (services/uiPrefs.ts): an in-memory store, so mock-mode runs
+    // exercise the same sync path as a real server.
+    http.get('/api/v1/ui-prefs', () => HttpResponse.json({ success: true, prefs: mockUiPrefs })),
+    http.patch('/api/v1/ui-prefs', async ({ request }) => {
+        const { prefs } = await request.json() as { prefs: Record<string, unknown> };
+        for (const [key, value] of Object.entries(prefs ?? {})) {
+            if (value === null) delete mockUiPrefs[key];
+            else mockUiPrefs[key] = value;
+        }
+        return HttpResponse.json({ success: true, prefs: mockUiPrefs });
+    }),
+
     http.get('/api/v1/config/claude', () => {
         return HttpResponse.json({
             success: true,

@@ -22,6 +22,7 @@ import { api } from '@/services/api';
 import { SPOTLIGHT_ADD_MODEL_EVENT } from '@/components/nodes/ActionAddNode';
 import { EntryGuideDialog } from '@/components/tier/EntryGuideDialog';
 import { useCopyFeedback } from '@/hooks/useCopyFeedback';
+import { removeSyncedItem, setSyncedItem } from '@/services/uiPrefs';
 
 export interface AgentApplyResult {
     success: boolean;
@@ -155,6 +156,18 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
     // Tracks which completed steps the user has manually expanded
     const [expandedDoneSteps, setExpandedDoneSteps] = useState<Set<number>>(new Set());
 
+    // Progress is shared with the other UI surface (services/uiPrefs); pick
+    // up values the post-sign-in sync pulls in while this card is mounted.
+    useEffect(() => {
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === INSTALL_DONE_KEY(agentKey)) setInstallDone(localStorage.getItem(e.key) === 'true');
+            else if (e.key === APPLY_DONE_KEY(agentKey)) setApplyDone(localStorage.getItem(e.key) === 'true');
+            else if (e.key === MODEL_SKIPPED_KEY(agentKey)) setModelSkipped(localStorage.getItem(e.key) === 'true');
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, [agentKey]);
+
     const toggleDoneStep = (step: number) => {
         setExpandedDoneSteps(prev => {
             const next = new Set(prev);
@@ -196,13 +209,13 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
         if (allDone) {
             autoCollapsedRef.current = true;
             setCollapsed(true);
-            localStorage.setItem(COLLAPSED_KEY(agentKey), 'true');
+            setSyncedItem(COLLAPSED_KEY(agentKey), 'true');
         }
     }, [providerLoading, allDone, agentKey]);
 
     const toggleCollapsed = () => {
         const next = !collapsed;
-        localStorage.setItem(COLLAPSED_KEY(agentKey), String(next));
+        setSyncedItem(COLLAPSED_KEY(agentKey), String(next));
         setCollapsed(next);
     };
 
@@ -216,12 +229,12 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
     };
 
     const markInstallDone = () => {
-        localStorage.setItem(INSTALL_DONE_KEY(agentKey), 'true');
+        setSyncedItem(INSTALL_DONE_KEY(agentKey), 'true');
         setInstallDone(true);
     };
 
     const markModelSkipped = () => {
-        localStorage.setItem(MODEL_SKIPPED_KEY(agentKey), 'true');
+        setSyncedItem(MODEL_SKIPPED_KEY(agentKey), 'true');
         setModelSkipped(true);
     };
 
@@ -230,7 +243,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
     // row flips back to the real "configured" state as soon as a model is set.
     const handleChooseModel = () => {
         if (modelSkipped) {
-            localStorage.removeItem(MODEL_SKIPPED_KEY(agentKey));
+            removeSyncedItem(MODEL_SKIPPED_KEY(agentKey));
             setModelSkipped(false);
         }
         onSelectModel?.();
@@ -245,16 +258,16 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
         const result = await apply();
         setApplyResult(result);
         if (result.success) {
-            localStorage.setItem(APPLY_DONE_KEY(agentKey), 'true');
+            setSyncedItem(APPLY_DONE_KEY(agentKey), 'true');
             setApplyDone(true);
         }
     };
 
     const handleReset = () => {
-        localStorage.removeItem(COLLAPSED_KEY(agentKey));
-        localStorage.removeItem(INSTALL_DONE_KEY(agentKey));
-        localStorage.removeItem(APPLY_DONE_KEY(agentKey));
-        localStorage.removeItem(MODEL_SKIPPED_KEY(agentKey));
+        removeSyncedItem(COLLAPSED_KEY(agentKey));
+        removeSyncedItem(INSTALL_DONE_KEY(agentKey));
+        removeSyncedItem(APPLY_DONE_KEY(agentKey));
+        removeSyncedItem(MODEL_SKIPPED_KEY(agentKey));
         setCollapsed(false);
         setInstallDone(false);
         setApplyDone(false);
@@ -599,7 +612,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
                                     )}
                                     <Button variant="text" size="small" onClick={(e) => {
                                         e.stopPropagation();
-                                        localStorage.setItem(APPLY_DONE_KEY(agentKey), 'true');
+                                        setSyncedItem(APPLY_DONE_KEY(agentKey), 'true');
                                         setApplyDone(true);
                                     }} sx={{ py: 0, textTransform: 'none', color: 'text.disabled', minWidth: 0 }}>
                                         {t('agentSetup.apply.skip')}
