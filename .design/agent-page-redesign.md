@@ -30,7 +30,7 @@
 | Codex | `Auto Config` | 有 | 自动写 `config.toml` 等 | 可增删 | 有 |
 | Claude Code | `Unified / Separate` + `Auto Config` | 有 | 自动写 `settings.json` | 固定内置规则 | 有 |
 | Claude Code Profile | 无（标题旁有重命名、删除） | 无，改为 `Start \| Settings` 行 | 无，改为 Profile Overrides 卡片 | 固定 | — |
-| Team | `Enabled` 开关 + `Sharing Keys` | 无 | 无（分发 key） | 可增删 | 无 |
+| Team | `Enabled` 开关 + `Team Keys` | 无 | 无（分发 key） | 可增删 | 无 |
 
 同一个位置出现了 7 种不同的按钮组合；Quick Start 只有 6 个页面有；"配置"这件事分别叫 `Config`、`Auto Config`、`Apply`、`Settings`、`Profile Overrides`。
 
@@ -181,7 +181,7 @@ interface AgentCapabilities {
 | Pi / VS Code | 链接 | manual | 否 | free | — |
 | Cursor / Xcode | — | manual | 否 | free | — |
 | OpenAI / Anthropic / Embed / Custom | — | none（给代码片段） | 否 | free | — |
-| Team | — | none（分发 Sharing Keys） | 否 | free | teams |
+| Team | — | none（分发 Team Keys） | 否 | free | teams |
 
 有了这张表，5 个自己排版的页面都可以收敛到模板 + descriptor。现有的 `ScenarioPage` 骨架和 slot 机制已经完成了一半。
 

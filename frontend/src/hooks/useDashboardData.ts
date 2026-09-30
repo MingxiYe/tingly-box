@@ -160,7 +160,7 @@ export function useDashboardData({
                     if (!token.user_id) return;
                     sharingKeysByUserId.set(token.user_id, {
                         userId: token.user_id,
-                        label: token.display_name?.trim() || t('dashboard.overview.unnamedSharingKey', { defaultValue: 'Unnamed sharing key' }),
+                        label: token.display_name?.trim() || t('dashboard.overview.unnamedSharingKey', { defaultValue: 'Unnamed Team Key' }),
                         type: 'sharing_key',
                         enabled: token.enabled !== false,
                         teamId: token.team_id,

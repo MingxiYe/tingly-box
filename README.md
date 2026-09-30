@@ -159,10 +159,10 @@ Any application is ready to use.
 <details>
 <summary><strong>Team - Shared Model Deployment</strong></summary>
 
-Give your whole team one endpoint backed by centrally managed model rules. Each member gets a dedicated sharing key, and usage is tracked per user.
+Give your whole team one endpoint backed by centrally managed model rules. Each member gets a dedicated Team Key, and usage is tracked per user.
 
 1. Open Web UI like `http://localhost:12580`
-2. Navigate to **Team**, configure the model rules, then hand out keys via **Sharing Keys**
+2. Navigate to **Team**, configure the model rules, then hand out keys via **Team Keys**
 3. Track per-user consumption under **Dashboard → Team usage**
 
 ![Team Demo](./docs/images/2-1-team.png)
