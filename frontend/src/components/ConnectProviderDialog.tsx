@@ -569,7 +569,7 @@ export const ProviderListContent: React.FC<ProviderListContentProps> = ({
     );
 };
 
-// The full provider catalog (Help → Providers) is the same list with each
+// The full provider catalog (Help → Provider Catalog) is the same list with each
 // provider's website and API docs. Pages used to carry their own "Providers"
 // button for it; the way there now starts from the picker, where the question
 // "which provider should I pick?" actually comes up.
@@ -586,7 +586,7 @@ const BrowseCatalogButton: React.FC<{onClose: () => void}> = ({onClose}) => {
             }}
             sx={{textTransform: 'none', color: 'text.secondary', '&:hover': {color: 'primary.main'}}}
         >
-            Browse provider catalog
+            Provider catalog
         </Button>
     );
 };

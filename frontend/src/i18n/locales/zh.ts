@@ -1013,7 +1013,7 @@ export default {
       "createFailed": "创建快捷方式失败：{{error}}"
     },
     "providers": {
-      "title": "提供商",
+      "title": "提供商目录",
       "description": "浏览目录，或粘贴一段配置片段——剩下的交给我们。"
     },
     "routing": {

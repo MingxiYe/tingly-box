@@ -1012,7 +1012,7 @@ export default {
       "createFailed": "Failed to create shortcut: {{error}}"
     },
     "providers": {
-      "title": "Providers",
+      "title": "Provider Catalog",
       "description": "Browse the catalog or paste a config snippet — we'll figure out the rest."
     },
     "routing": {
