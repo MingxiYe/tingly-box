@@ -132,7 +132,9 @@ export default {
       "ds": "DeepSeek",
       "click": "Нажмите",
       "feedback": "Обратная связь",
-      "feedbackTooltip": "Отправить отзыв (откроется GitHub Issues)"
+      "feedbackTooltip": "Отправить отзыв (откроется GitHub Issues)",
+      "preferences": "Настройки интерфейса",
+      "allSettings": "Все настройки"
     },
     "themeMenu": {
       "switchTo": "Переключить на:",

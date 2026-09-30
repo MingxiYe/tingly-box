@@ -1,10 +1,9 @@
-import { Box, Drawer, IconButton, Popover, Tooltip, Stack } from '@mui/material';
+import { Box, Drawer, IconButton, Tooltip, Stack } from '@mui/material';
 import { Menu as IconMenu, Create as IconPencil, tablerMui } from '@/components/icons';
 import { IconLayoutSidebarLeftCollapse } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useVersion as useAppVersion } from '../contexts/VersionContext';
 import { Z_INDEX } from '../constants/zIndex';
 import { activityBarWidth, sidebarWidth } from './constants';
 import { mobileContentSx, mobileMenuButtonSx, mobileNavigationBarSx } from './styles';
@@ -38,9 +37,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
     const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
-    const { currentVersion } = useAppVersion();
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [easterEggAnchorEl, setEasterEggAnchorEl] = useState<HTMLElement | null>(null);
 
     // Layout only renders after sign-in: bring this surface's UI prefs in
     // line with the server's (see services/uiPrefs.ts).
@@ -143,7 +140,6 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 activityItems={activityItems}
                 activeActivity={activeActivity}
                 onActivityClick={handleActivityClick}
-                onUserClick={(e) => setEasterEggAnchorEl(e.currentTarget)}
                 onStandaloneNavigate={() => setMobileOpen(false)}
             />
             {sidebarItems.length > 0 && !sidebarCollapsed && (
@@ -197,17 +193,6 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 </Box>
             </Box>
 
-            {/* Easter Egg Popover */}
-            <Popover
-                open={Boolean(easterEggAnchorEl)}
-                anchorEl={easterEggAnchorEl}
-                onClose={() => setEasterEggAnchorEl(null)}
-                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                sx={{ zIndex: Z_INDEX.popover, '& .MuiPopover-paper': { bgcolor: 'primary.main', color: 'white', borderRadius: 2, px: 2, py: 1 } }}
-            >
-                {t('layout.easterEgg')} · {currentVersion}
-            </Popover>
         </Box>
     );
 };

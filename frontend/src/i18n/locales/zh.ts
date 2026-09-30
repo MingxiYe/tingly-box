@@ -127,7 +127,9 @@ export default {
       "ds": "DeepSeek",
       "click": "点击",
       "feedback": "反馈",
-      "feedbackTooltip": "发送反馈（跳转到 GitHub Issues）"
+      "feedbackTooltip": "发送反馈（跳转到 GitHub Issues）",
+      "preferences": "偏好设置",
+      "allSettings": "全部设置"
     },
     "themeMenu": {
       "switchTo": "切换到：",

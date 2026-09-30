@@ -1,10 +1,9 @@
-import { Person as IconUser, Translate as IconLanguage, MessageReport as IconMessageReport, ChevronRight as IconChevronRight, Lightbulb as IconLightbulb } from '@/components/icons';
-import { Box, Divider, IconButton, ListItemButton, ListItemIcon, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
-import React, { useMemo, useState } from 'react';
+import { Person as IconUser, ChevronRight as IconChevronRight, Lightbulb as IconLightbulb } from '@/components/icons';
+import { Box, Divider, IconButton, ListItemButton, ListItemIcon, Tooltip, Typography } from '@mui/material';
+import React, { useState } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useVersion as useAppVersion } from '../contexts/VersionContext';
-import { useThemeMode } from '../contexts/ThemeContext';
 import {
     activityBarWidth,
     footerHeight,
@@ -21,15 +20,12 @@ import {
 } from './styles';
 import { useSidebarCollapsed } from './useSidebarCollapsed';
 import type { ActivityItem } from './types';
-import type { ThemeMode } from '@/theme';
-import { getThemeOptions } from '@/theme/options';
-import { SUPPORTED_LANGUAGES, resolveLanguage } from '@/i18n';
+import { PreferencesMenu } from './PreferencesMenu';
 
 interface ActivityBarProps {
     activityItems: ActivityItem[];
     activeActivity: string;
     onActivityClick: (item: ActivityItem) => void;
-    onUserClick: (event: React.MouseEvent<HTMLElement>) => void;
     onStandaloneNavigate?: () => void;
 }
 
@@ -37,51 +33,14 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
     activityItems,
     activeActivity,
     onActivityClick,
-    onUserClick,
     onStandaloneNavigate,
 }) => {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const location = useLocation();
     const { currentVersion } = useAppVersion();
-    const { mode: themeMode, setTheme } = useThemeMode();
-    const [languageMenuAnchorEl, setLanguageMenuAnchorEl] = useState<HTMLElement | null>(null);
-    const [themeMenuAnchorEl, setThemeMenuAnchorEl] = useState<HTMLElement | null>(null);
-
-    const currentLanguage = resolveLanguage(i18n.language);
-    const currentShortLabel = SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguage)?.shortLabel ?? currentLanguage.toUpperCase();
-
-    const themeOptions = useMemo(() => getThemeOptions(t), [t]);
-    const currentThemeOption = themeOptions.find((option) => option.value === themeMode);
-    const renderCurrentThemeIcon = currentThemeOption?.renderIcon ?? themeOptions[0].renderIcon;
+    const [preferencesAnchorEl, setPreferencesAnchorEl] = useState<HTMLElement | null>(null);
     const isHelpActive = location.pathname === '/help';
     const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed();
-
-    const handleLanguageMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-        setLanguageMenuAnchorEl(event.currentTarget);
-    };
-
-    const handleLanguageMenuClose = () => {
-        setLanguageMenuAnchorEl(null);
-    };
-
-    const handleLanguageChange = (lng: string) => {
-        i18n.changeLanguage(lng);
-        localStorage.setItem('i18nextLng', lng);
-        handleLanguageMenuClose();
-    };
-
-    const handleThemeMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-        setThemeMenuAnchorEl(event.currentTarget);
-    };
-
-    const handleThemeMenuClose = () => {
-        setThemeMenuAnchorEl(null);
-    };
-
-    const handleThemeChange = (mode: ThemeMode) => {
-        setTheme(mode);
-        handleThemeMenuClose();
-    };
 
     return (
         <Box
@@ -173,62 +132,6 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
 
                 <Divider sx={{ mx: 2, my: 1 }} />
 
-                {/* Language menu */}
-                    <Menu
-                        anchorEl={languageMenuAnchorEl}
-                        open={Boolean(languageMenuAnchorEl)}
-                        onClose={handleLanguageMenuClose}
-                        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                        slotProps={{
-                            paper: {
-                                sx: {
-                                    minWidth: 140,
-                                    mt: 1,
-                                },
-                            },
-                        }}
-                    >
-                        {SUPPORTED_LANGUAGES.map(({ code, labelKey }) => (
-                            <MenuItem
-                                key={code}
-                                selected={currentLanguage === code}
-                                onClick={() => handleLanguageChange(code)}
-                                sx={{ gap: 1.5 }}
-                            >
-                                <Typography>{t(labelKey)}</Typography>
-                            </MenuItem>
-                        ))}
-                    </Menu>
-
-                    <Menu
-                        anchorEl={themeMenuAnchorEl}
-                        open={Boolean(themeMenuAnchorEl)}
-                        onClose={handleThemeMenuClose}
-                        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                        slotProps={{
-                            paper: {
-                                sx: {
-                                    minWidth: 156,
-                                    mt: 1,
-                                },
-                            },
-                        }}
-                    >
-                        {themeOptions.map(({ value, label, renderIcon }) => (
-                            <MenuItem
-                                key={value}
-                                selected={themeMode === value}
-                                onClick={() => handleThemeChange(value)}
-                                sx={{ gap: 1.5 }}
-                            >
-                                {renderIcon({ size: 18 })}
-                                <Typography>{label}</Typography>
-                            </MenuItem>
-                        ))}
-                    </Menu>
-
                 {/* Help — the onboarding front door now (replaces the old
                     standalone "Quick Add Provider" wand in this exact slot).
                     Opens the lightbulb Help page: a small, growing set of
@@ -270,66 +173,6 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
 
             </Box>
 
-            {/* Feedback button - bottom-left, above language icon */}
-            <Box sx={activityBottomClusterSx}>
-                <Tooltip title={t('layout.activityBar.feedbackTooltip')} placement="right" arrow>
-                    <ListItemButton
-                        component="a"
-                        href="https://github.com/tingly-dev/tingly-box/issues/new/choose"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        sx={activityBottomItemSx({
-                            '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
-                        })}
-                    >
-                        <ListItemIcon sx={{ minWidth: 0, color: 'inherit', justifyContent: 'center' }}>
-                            <IconMessageReport sx={{ fontSize: 22 }} />
-                        </ListItemIcon>
-                        <Typography variant="caption" sx={{ color: 'inherit', textAlign: 'center', lineHeight: 1.2 }}>
-                            {t('layout.activityBar.feedback')}
-                        </Typography>
-                    </ListItemButton>
-                </Tooltip>
-            </Box>
-
-            {/* Language button - bottom-left, above user icon */}
-            <Box sx={activityBottomClusterSx}>
-                <Tooltip title={t('system.language.title')} placement="right" arrow>
-                    <ListItemButton
-                        onClick={handleLanguageMenuClick}
-                        sx={activityBottomItemSx({
-                            '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
-                        })}
-                    >
-                        <ListItemIcon sx={{ minWidth: 0, color: 'inherit', justifyContent: 'center' }}>
-                            <IconLanguage sx={{ fontSize: 22 }} />
-                        </ListItemIcon>
-                        <Typography variant="caption" sx={{ color: 'inherit', textAlign: 'center', lineHeight: 1.1, fontSize: '0.65rem' }}>
-                            {currentShortLabel}
-                        </Typography>
-                    </ListItemButton>
-                </Tooltip>
-            </Box>
-
-            {/* Theme button - bottom-left, above language icon */}
-            <Box sx={activityBottomClusterSx}>
-                <Tooltip title={t('layout.activityBar.theme')} placement="right" arrow>
-                    <ListItemButton
-                        onClick={handleThemeMenuClick}
-                        sx={activityBottomItemSx({
-                            '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
-                        })}
-                    >
-                        <ListItemIcon sx={{ minWidth: 0, color: 'inherit', justifyContent: 'center' }}>
-                            {renderCurrentThemeIcon({ size: 22 })}
-                        </ListItemIcon>
-                        <Typography variant="caption" sx={{ color: 'inherit', textAlign: 'center', lineHeight: 1.1, fontSize: '0.65rem' }}>
-                            {currentThemeOption?.label ?? 'Light'}
-                        </Typography>
-                    </ListItemButton>
-                </Tooltip>
-            </Box>
-
             {/* Bottom: User icon */}
             <Box
                 sx={{
@@ -345,10 +188,11 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
                     height: footerHeight,
                 }}
             >
-                {/* User icon */}
-                <Tooltip title={t('layout.activityBar.click')} placement="right" arrow>
+                {/* Preferences: language, theme, feedback, version */}
+                <Tooltip title={t('layout.activityBar.preferences')} placement="right" arrow>
                     <ListItemButton
-                        onClick={onUserClick}
+                        onClick={(e) => setPreferencesAnchorEl(e.currentTarget)}
+                        aria-label={t('layout.activityBar.preferences')}
                         sx={activityBottomItemSx({
                             '&:hover': { bgcolor: 'action.hover', color: 'text.primary' },
                         })}
@@ -358,6 +202,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
                         </ListItemIcon>
                     </ListItemButton>
                 </Tooltip>
+                <PreferencesMenu anchorEl={preferencesAnchorEl} onClose={() => setPreferencesAnchorEl(null)} />
             </Box>
         </Box>
     );

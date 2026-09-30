@@ -128,7 +128,9 @@ export default {
       "ds": "DeepSeek",
       "click": "Click",
       "feedback": "Feedback",
-      "feedbackTooltip": "Send Feedback (opens GitHub Issues)"
+      "feedbackTooltip": "Send Feedback (opens GitHub Issues)",
+      "preferences": "Preferences",
+      "allSettings": "All settings"
     },
     "themeMenu": {
       "switchTo": "Switch to:",
