@@ -29,10 +29,28 @@ func RegisterRoutes(router *swagger.RouteGroup, handler *Handler) {
 		swagger.WithResponseModel(ClaudeCodeEnvResponse{}),
 	)
 
+	router.GET("/config/claude/status", handler.GetClaudeConfigStatus,
+		swagger.WithDescription("Whether ~/.claude/settings.json routes through this gateway with the values Auto Config would write now"),
+		swagger.WithTags("config"),
+		swagger.WithResponseModel(ClientConfigStatusResponse{}),
+	)
+
 	router.GET("/config/codex", handler.GetCodexConfig,
 		swagger.WithDescription("Get the currently applied Codex preferences"),
 		swagger.WithTags("config"),
 		swagger.WithResponseModel(CodexConfigResponse{}),
+	)
+
+	router.GET("/config/codex/status", handler.GetCodexConfigStatus,
+		swagger.WithDescription("Whether ~/.codex/config.toml routes through this gateway with the models Auto Config would write now"),
+		swagger.WithTags("config"),
+		swagger.WithResponseModel(ClientConfigStatusResponse{}),
+	)
+
+	router.GET("/config/dsh/status", handler.GetDshConfigStatus,
+		swagger.WithDescription("Whether $DSH_HOME/settings.yaml routes through this gateway with the models Auto Config would write now"),
+		swagger.WithTags("config"),
+		swagger.WithResponseModel(ClientConfigStatusResponse{}),
 	)
 
 	router.GET("/config/dsh", handler.GetDshConfig,

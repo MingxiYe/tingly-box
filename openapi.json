@@ -1827,6 +1827,28 @@
         }
       }
     },
+    "/api/v1/config/claude/status": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Whether ~/.claude/settings.json routes through this gateway with the values Auto Config would write now",
+        "description": "Whether ~/.claude/settings.json routes through this gateway with the values Auto Config would write now",
+        "operationId": "apiV1ConfigClaudeStatusGet",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientConfigStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/config/codex": {
       "get": {
         "tags": [
@@ -1849,6 +1871,28 @@
         }
       }
     },
+    "/api/v1/config/codex/status": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Whether ~/.codex/config.toml routes through this gateway with the models Auto Config would write now",
+        "description": "Whether ~/.codex/config.toml routes through this gateway with the models Auto Config would write now",
+        "operationId": "apiV1ConfigCodexStatusGet",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientConfigStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/config/dsh": {
       "get": {
         "tags": [
@@ -1864,6 +1908,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DshConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config/dsh/status": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Whether $DSH_HOME/settings.yaml routes through this gateway with the models Auto Config would write now",
+        "description": "Whether $DSH_HOME/settings.yaml routes through this gateway with the models Auto Config would write now",
+        "operationId": "apiV1ConfigDshStatusGet",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientConfigStatusResponse"
                 }
               }
             }
@@ -9970,6 +10036,63 @@
           "defaultMode",
           "installStatusLine",
           "showThinkingSummaries"
+        ]
+      },
+      "ClientConfigDifference": {
+        "type": "object",
+        "properties": {
+          "applied": {
+            "type": "string",
+            "description": "Field applied"
+          },
+          "expected": {
+            "type": "string",
+            "description": "Field expected"
+          },
+          "key": {
+            "type": "string",
+            "description": "Field key"
+          }
+        },
+        "required": [
+          "key",
+          "applied",
+          "expected"
+        ]
+      },
+      "ClientConfigStatusResponse": {
+        "type": "object",
+        "properties": {
+          "differences": {
+            "type": "array",
+            "description": "Field differences",
+            "items": {
+              "$ref": "#/components/schemas/ClientConfigDifference"
+            }
+          },
+          "error": {
+            "type": "string",
+            "description": "Field error"
+          },
+          "path": {
+            "type": "string",
+            "description": "Field path",
+            "example": "~/.claude/settings.json"
+          },
+          "state": {
+            "type": "string",
+            "description": "Field state",
+            "example": "outdated"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Field success"
+          }
+        },
+        "required": [
+          "success",
+          "state",
+          "differences"
         ]
       },
       "ClientListResponse": {
