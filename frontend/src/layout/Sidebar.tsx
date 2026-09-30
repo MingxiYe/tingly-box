@@ -1,8 +1,9 @@
-import { Info as IconInfoCircle } from '@/components/icons';
+import { Info as IconInfoCircle, Visibility as IconVisibility, VisibilityOff as IconVisibilityOff } from '@/components/icons';
 import {
     Box,
     Button,
     Divider,
+    IconButton,
     List,
     ListItem,
     ListItemButton,
@@ -45,9 +46,12 @@ interface SidebarProps {
     activeActivityLabel: string;
     onClose: () => void;
     headerAction?: React.ReactNode;
+    /** Edit mode: hidden rows are listed (dimmed) and every hideable row gets a visibility toggle. */
+    editing?: boolean;
+    onToggleHidden?: (id: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLabel, onClose, headerAction }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLabel, onClose, headerAction, editing = false, onToggleHidden }) => {
     const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
@@ -148,8 +152,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     const isAddAction = isAddProfile || isAddTeam;
                     const active = !isAddAction && (item.match ? item.match(location.pathname) : isActive(item.path));
 
+                    const toggleable = editing && item.hideId && onToggleHidden;
                     const button = (
-                        <ListItem disablePadding>
+                        <ListItem
+                            disablePadding
+                            sx={{ opacity: editing && item.hidden ? 0.5 : 1 }}
+                            secondaryAction={toggleable ? (
+                                <Tooltip title={item.hidden ? t('scenarioOverview.showInSidebar') : t('scenarioOverview.hideFromSidebar')} placement="right" arrow>
+                                    <IconButton
+                                        size="small"
+                                        edge="end"
+                                        onClick={() => onToggleHidden(item.hideId!)}
+                                        aria-label={item.hidden ? t('scenarioOverview.showInSidebar') : t('scenarioOverview.hideFromSidebar')}
+                                        sx={{ color: active ? 'primary.contrastText' : 'text.secondary', mr: 0.5 }}
+                                    >
+                                        {item.hidden ? <IconVisibilityOff sx={{ fontSize: 18 }} /> : <IconVisibility sx={{ fontSize: 18 }} />}
+                                    </IconButton>
+                                </Tooltip>
+                            ) : undefined}
+                        >
                             <ListItemButton
                                 {...(isAddAction
                                     ? { onClick: isAddProfile ? handleAddProfileClick : handleAddTeamClick }
@@ -227,6 +248,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                                 </Tooltip>
                             ) : isAddTeam ? (
                                 <Tooltip title={t('layout.sidebar.createTeamTooltip')} arrow placement="right">
+                                    {button}
+                                </Tooltip>
+                            ) : item.hint && !editing ? (
+                                <Tooltip
+                                    title={item.hint}
+                                    arrow
+                                    placement="right"
+                                    enterDelay={800}
+                                    enterNextDelay={800}
+                                    slotProps={{ tooltip: { sx: { maxWidth: 280 } } }}
+                                >
                                     {button}
                                 </Tooltip>
                             ) : item.tooltip ? (

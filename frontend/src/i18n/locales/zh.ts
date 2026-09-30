@@ -90,6 +90,7 @@ export default {
       "createTeamTooltip": "创建一个独立鉴权的 Team 工作区",
       "sloganTooltip": "致，所有独立开发者、开发团队和智能应用。",
       "collapse": "收起侧边栏",
+      "doneEditing": "完成",
       "expand": "展开侧边栏"
     },
     "activityBar": {

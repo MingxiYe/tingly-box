@@ -90,6 +90,7 @@ export default {
       "createTeamTooltip": "Create an isolated Team workspace",
       "sloganTooltip": "For all Solo Builders, Dev Teams and Agents.",
       "collapse": "Collapse sidebar",
+      "doneEditing": "Done",
       "expand": "Expand sidebar"
     },
     "activityBar": {

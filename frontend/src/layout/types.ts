@@ -21,6 +21,18 @@ export interface NavItemBase {
     /** Optional descriptive copy shown as a delayed hover tooltip on the sidebar item. */
     tooltip?: string;
     /**
+     * Like `tooltip` but without the info marker: a description for rows
+     * whose name already says what they are (an agent's one-line summary).
+     */
+    hint?: string;
+    /**
+     * Hidden-scenario id this row can be hidden by. The sidebar's edit mode
+     * shows a visibility toggle for it; outside edit mode a `hidden` row
+     * isn't rendered at all.
+     */
+    hideId?: string;
+    hidden?: boolean;
+    /**
      * Optional override for "is this item active": receives the current
      * pathname, returns whether this item should highlight. Defaults to an
      * exact match on `path`. Use this for an item whose route has a dynamic

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
+import { SCENARIOS, getHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
 import { OpenAI, Anthropic, Claude, Cursor, DeepSeek, OpenCode, Pi, Xcode, VSCode, Codex, ClaudeDesktop } from '../components/BrandIcons';
 import {
     SettingsApplications,
@@ -136,9 +136,16 @@ export function useActivityItems(): ActivityItem[] {
             },
         ];
 
-        type HideableScenario = { id: string; nav: NavItem };
-        const visible = (group: HideableScenario[]): NavItem[] =>
-            group.filter(s => !hiddenScenarios.has(s.id)).map(s => s.nav);
+        // Hidden agents stay in the list, flagged: the sidebar's edit mode
+        // shows them (to un-hide), and drops them otherwise (see
+        // withoutHidden in Layout).
+        type HideableScenario = { id: string; nav: NavItemBase };
+        const hintOf = (id: string) => {
+            const s = SCENARIOS.find(x => x.id === id);
+            return s ? t(s.descKey) : undefined;
+        };
+        const flagged = (group: HideableScenario[]): NavItem[] =>
+            group.map(s => ({ ...s.nav, hideId: s.id, hidden: hiddenScenarios.has(s.id), hint: hintOf(s.id) }));
 
         const teamActivityItem: ActivityItem = {
             key: 'team',
@@ -148,7 +155,7 @@ export function useActivityItems(): ActivityItem[] {
             children: teamNavItems,
         };
 
-        const codingTools = visible([
+        const codingTools = flagged([
             // Claude Desktop leads so all Claude-branded scenarios stay grouped
             // at the front, right after the Claude Code block.
             { id: 'claude_desktop', nav: { path: '/agent/claude_desktop', label: t('layout.nav.useClaudeDesktop', { defaultValue: 'Claude Desktop' }), icon: <ClaudeDesktop size={20} /> } },
@@ -163,21 +170,26 @@ export function useActivityItems(): ActivityItem[] {
             // tools group, right after the named integrations it's a fallback for.
             { id: 'custom', nav: { path: '/agent/custom', label: t('layout.nav.useCustom', { defaultValue: 'Custom' }), icon: <IconExtension sx={{ fontSize: 20 }} /> } },
         ]);
-        const sdkTools = visible([
+        const sdkTools = flagged([
             { id: 'openai', nav: { path: '/agent/openai', label: t('layout.nav.useOpenAI', { defaultValue: 'OpenAI' }), icon: <OpenAI size={20} /> } },
             { id: 'anthropic', nav: { path: '/agent/anthropic', label: t('layout.nav.useAnthropic', { defaultValue: 'Anthropic' }), icon: <Anthropic size={20} /> } },
             { id: 'embed', nav: { path: '/agent/embed', label: t('layout.nav.useEmbed', { defaultValue: 'Embedding' }), icon: <IconVector sx={{ fontSize: 20 }} /> } },
         ]);
 
         const scenarioChildren: NavItem[] = [];
-        if (!hiddenScenarios.has('claude_code')) {
+        const claudeCodeHidden = hiddenScenarios.has('claude_code');
+        scenarioChildren.push({
+            path: '/agent/claude_code',
+            subtitle: t('layout.default'),
+            label: t('layout.nav.useClaudeCode', { defaultValue: 'Claude Code' }),
+            icon: <Claude size={20} />,
+            hideId: 'claude_code',
+            hidden: claudeCodeHidden,
+            hint: hintOf('claude_code'),
+        });
+        // Profiles and "Add Profile" belong to Claude Code: hidden with it.
+        if (!claudeCodeHidden) {
             scenarioChildren.push(
-                {
-                    path: '/agent/claude_code',
-                    subtitle: t('layout.default'),
-                    label: t('layout.nav.useClaudeCode', { defaultValue: 'Claude Code' }),
-                    icon: <Claude size={20} />,
-                },
                 ...profileNavItems,
                 { path: '#add-profile', label: t('layout.addProfile'), icon: <IconPlus sx={{ fontSize: 20 }} /> },
             );

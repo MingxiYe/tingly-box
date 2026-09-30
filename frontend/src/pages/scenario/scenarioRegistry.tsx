@@ -1,8 +1,6 @@
-// Scenario metadata + hidden-scenario state, split out of AgentOverviewPage.tsx
-// so that nav-level consumers (layout/useActivityItems.tsx,
-// components/dashboard/AgentQuickNav.tsx) don't have to statically import the
-// whole overview page — and its PageLayout/PageHeader dependency chain — just
-// to read this list. AgentOverviewPage.tsx itself imports from here too.
+// Scenario metadata + hidden-scenario state, kept free of page imports so
+// nav-level consumers (layout/useActivityItems.tsx, the Power-ups menu,
+// components/dashboard/AgentQuickNav.tsx) can read this list cheaply.
 import { useCallback, useEffect, useState } from 'react';
 import { setSyncedItem } from '@/services/uiPrefs';
 import {

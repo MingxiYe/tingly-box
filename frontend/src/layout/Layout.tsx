@@ -1,9 +1,9 @@
 import { Box, ClickAwayListener, Drawer, IconButton, Tooltip, Stack } from '@mui/material';
-import { Menu as IconMenu, Create as IconPencil, tablerMui } from '@/components/icons';
+import { Menu as IconMenu, Create as IconPencil, Check as IconCheck, tablerMui } from '@/components/icons';
 import { IconLayoutSidebarLeftCollapse } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Z_INDEX } from '../constants/zIndex';
 import { activityBarWidth, sidebarWidth } from './constants';
 import { mobileContentSx, mobileMenuButtonSx, mobileNavigationBarSx } from './styles';
@@ -15,6 +15,17 @@ import type { ActivityItem, LayoutProps } from './types';
 import { FloatingStatusIndicators } from '../components/FloatingStatusIndicators';
 import { GitHubStarBanner } from './GitHubStarBanner';
 import { syncUiPrefs } from '../services/uiPrefs';
+import { useHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
+import { rememberAgentPath } from '@/pages/scenario/lastAgent';
+import type { NavItem } from './types';
+
+// Outside edit mode hidden rows go, and so does any divider they leave
+// leading, trailing or doubled.
+const withoutHidden = (items: NavItem[]): NavItem[] => {
+    const kept = items.filter(item => item.type === 'divider' || !item.hidden);
+    return kept.filter((item, i) => item.type !== 'divider'
+        || (i > 0 && i < kept.length - 1 && kept[i + 1].type !== 'divider'));
+};
 
 const IconCollapseSidebar = tablerMui(IconLayoutSidebarLeftCollapse);
 
@@ -36,7 +47,6 @@ const MobileNavigationBar = ({ onMenuClick }: { onMenuClick: () => void }) => (
 const LayoutInner = ({ children }: LayoutProps) => {
     const { t } = useTranslation();
     const location = useLocation();
-    const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
 
     // Layout only renders after sign-in: bring this surface's UI prefs in
@@ -73,10 +83,24 @@ const LayoutInner = ({ children }: LayoutProps) => {
         localStorage.setItem('layout.activeActivity', activeActivity);
     }, [activeActivity, location.pathname]);
 
+    // Agent pages are what /agent (the rail item and the landing) reopens.
+    useEffect(() => {
+        rememberAgentPath(location.pathname);
+    }, [location.pathname]);
+
+    // Edit mode of the Agent sidebar: every agent, hidden ones included,
+    // each with its visibility toggle. It replaced the /agent card page.
+    const [editingAgents, setEditingAgents] = useState(false);
+    const { toggleHidden } = useHiddenScenarios();
+    useEffect(() => {
+        if (activeActivity !== 'scenario') setEditingAgents(false);
+    }, [activeActivity]);
+
     const sidebarItems = useMemo(() => {
         const activity = activityItems.find(item => item.key === activeActivity);
-        return activity?.children || [];
-    }, [activityItems, activeActivity]);
+        const children = activity?.children || [];
+        return editingAgents ? children : withoutHidden(children);
+    }, [activityItems, activeActivity, editingAgents]);
 
     // A sidebar is a choice between pages; an activity with a single page
     // (Bench, or Prompt with one of its two flags on) has nothing to choose,
@@ -128,16 +152,21 @@ const LayoutInner = ({ children }: LayoutProps) => {
     const sidebarHeaderAction = (
         <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
             {activeActivity === 'scenario' && (
-                <Tooltip title={t('scenarioOverview.editTooltip', { defaultValue: 'Manage visible agents' })} arrow placement="bottom">
+                <Tooltip
+                    title={editingAgents ? t('layout.sidebar.doneEditing') : t('scenarioOverview.editTooltip')}
+                    arrow
+                    placement="bottom"
+                >
                     <IconButton
                         size="small"
-                        onClick={() => navigate('/agent')}
+                        onClick={() => setEditingAgents(v => !v)}
+                        aria-pressed={editingAgents}
                         sx={{
-                            color: 'text.secondary',
+                            color: editingAgents ? 'primary.main' : 'text.secondary',
                             '&:hover': { color: 'primary.main' },
                         }}
                     >
-                        <IconPencil sx={{ fontSize: 16 }} />
+                        {editingAgents ? <IconCheck sx={{ fontSize: 16 }} /> : <IconPencil sx={{ fontSize: 16 }} />}
                     </IconButton>
                 </Tooltip>
             )}
@@ -159,6 +188,8 @@ const LayoutInner = ({ children }: LayoutProps) => {
                     activeActivityLabel={activeActivityLabel}
                     onClose={() => setMobileOpen(false)}
                     headerAction={sidebarHeaderAction}
+                    editing={editingAgents}
+                    onToggleHidden={toggleHidden}
                 />
             )}
             {hasSidebar && sidebarCollapsed && flyoutOpen && (
@@ -175,6 +206,8 @@ const LayoutInner = ({ children }: LayoutProps) => {
                             activeActivityLabel={activeActivityLabel}
                             onClose={() => { setFlyoutOpen(false); setMobileOpen(false); }}
                             headerAction={sidebarHeaderAction}
+                            editing={editingAgents}
+                            onToggleHidden={toggleHidden}
                         />
                     </Box>
                 </ClickAwayListener>
