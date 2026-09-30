@@ -197,8 +197,9 @@ export function useActivityItems(): ActivityItem[] {
                 key: 'dashboard',
                 icon: <IconChartBar sx={{ fontSize: 22 }} />,
                 label: t('layout.dashboard', { defaultValue: 'Dashboard' }),
-                path: '/dashboard/today',
-                defaultPath: '/dashboard/today',
+                // Opens on Overview ("is it working, what needs me"); the
+                // usage charts are one row below it.
+                defaultPath: '/dashboard/overview',
                 children: [
                     { path: '/dashboard/overview', label: t('layout.overview', { defaultValue: 'Overview' }), icon: <IconHome sx={{ fontSize: 20 }} /> },
                     // One row for the usage charts; the time range is a filter

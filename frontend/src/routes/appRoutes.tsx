@@ -195,7 +195,7 @@ export const appRoutes = (
             <Route path="/system/logs" element={<LogsPage />} />
             <Route path="/system/experimental" element={<ExperimentalPage />} />
             {/* Dashboard routes with time range */}
-            <Route path="/dashboard" element={<Navigate to="/dashboard/7d" replace />} />
+            <Route path="/dashboard" element={<Navigate to="/dashboard/overview" replace />} />
             <Route path="/dashboard/overview" element={<StatusOverviewPage />} />
         <Route path="/dashboard/users" element={<UserUsagePage />} />
             <Route path="/dashboard/quota-history" element={<QuotaHistoryPage />} />
