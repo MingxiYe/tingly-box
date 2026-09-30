@@ -8,6 +8,18 @@
 
 ---
 
+## 进度（2026-09-30）
+
+| 阶段 | 状态 | 落地内容 |
+|---|---|---|
+| P0 词汇 | ✅ | Team Keys 统一；Guardrails 的密钥页改名 Secrets；Credential 侧栏行改为 Credentials（见 §3.6） |
+| P1 路由契约 + Host Bridge | ✅ | `routes/appRoutes.tsx` + `routes.contract.test.tsx`（托盘路径、所有 redirect）；修复托盘 `/agent/claude-code`；`host/` bridge（浏览器 / Wails 两个实现）；UI 偏好存服务端 `/api/v1/ui-prefs`（隐藏的 Agent、Quick Start 进度）。主题 / 语言仍在本机：它们登录前就要生效 |
+| P2 Dashboard 概览 | ✅ | `/dashboard/overview`：网关状态、需要处理的事项、各 Agent 最近请求 |
+| P3 导航减负 | ✅ | 底部 4 个按钮合并为偏好菜单；单页 activity 不弹 sidebar；时间范围改为页内筛选；profile / Team 行以名字为主标签；折叠时 rail 浮层；900–1200px 自动折叠；断线指示收进 rail；Dashboard 默认进入 Overview。⌘K 未做（增量，后续再议）；GitHub star 横幅：Overview 常驻，Agent 页可关闭（关闭后 3 天内不再显示，跨浏览器 / 桌面同步），其他页面不显示 |
+| P4 Agent 页 | 进行中（A/B/C 已落地） | 见 `agent-page-redesign.md` 顶部进度表 |
+
+---
+
 ## 0. 结论先行
 
 1. **这次重设计的核心是信息架构，不是换皮。** 现在的问题主要是"东西放在哪、叫什么"，不是"长得不好看"。视觉刷新可以放最后，甚至可以不做。
@@ -192,7 +204,7 @@ gpt-5.6-terra     Direct · T0       →  glm-5.1, deepseek-v4-flash            
 | 概念 | 用词 | 处理 |
 |---|---|---|
 | 客户端接入点（Claude Code、Codex、SDK…） | **Agent** | 不变。Remote Control 路由图里的 "Agent: Claude Code" 指的也是同一个 agent，不算碰撞 |
-| 上游 AI 凭据与账号 | **Credentials** | ✅ sidebar「Model Key」改为「Credentials」，与页面标题一致（key `layout.credentials`）。页内「Providers」按钮打开的是可接入服务目录，是另一个概念，保留 |
+| 上游 AI 凭据与账号 | **Credentials** | ✅ sidebar「Model Key」改为「Credentials」，与页面标题一致（key `layout.credentials`）。（上游已移除页内「Providers」按钮，目录改由 Connect AI 进入） |
 | 接入 AI 服务的动作 | **Connect AI** | 已统一，保持 |
 | 团队成员使用的 key | **Team Key** | ✅ 所有面向用户的文案（导航、页面、Team 页按钮与弹窗、引导、README）统一为 Team Key(s)；后端标识符（sharing）不变 |
 | 护栏里要保护的敏感凭据 | **Secrets** | ✅ Guardrails sidebar 不再复用 `layout.nav.credential`，改为独立的 `layout.protectedCredentials`；页面标题同步改为 Secrets（"Protected Credentials" 在 sidebar 里会被截断） |

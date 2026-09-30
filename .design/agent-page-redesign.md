@@ -5,6 +5,19 @@
 
 ---
 
+## 进度（2026-09-30）
+
+| 项 | 状态 | 说明 |
+|---|---|---|
+| A 不改布局的修复 | ✅ | 没插件的规则不再占 Plugins 列（改为标题行「+ Plugins」）；API Key 单独一行；Local / Docker 与 profile 的 npx / Global 统一为带文字的 `ChoiceToggle`；手动类 Agent 按钮改为「Setup Guide」；ScenarioPage 与 TemplatePage 共用一份规则；Quick Start 进度存服务端（见 ui-redesign P1） |
+| B 客户端配置状态 | ✅ Claude Code / Codex / DSH | `GET /api/v1/config/{claude,codex,dsh}/status` + 标题旁状态 chip（`useClientConfigStatus`、`ScenarioPage.clientConfigTool`）；旧 toast / 确认框暂留一个版本 |
+| C 验证 | ✅（轻量版） | 安装步骤检测到真实请求即完成，手动确认保留；3 步重排未做 |
+| D 模板 + descriptor | 未开始 | 结构改动，逐页开关 |
+| E 分区调整 | 未开始 | 模式切换移入路由区、插件默认值行 |
+| Profile 合并 | 暂缓 | 见 §3.6 |
+
+---
+
 ## 0. 结论先行
 
 1. **根本问题是两条轴缠在一起**：一条是"客户端配置"，即写到用户机器上的文件，如 `~/.claude/settings.json`；另一条是"网关路由"，即服务端的规则。页面上好几个控件同时动这两条轴，却没有任何地方告诉用户"你的 Claude Code 现在用的，是不是这个页面上显示的"（P4）。
