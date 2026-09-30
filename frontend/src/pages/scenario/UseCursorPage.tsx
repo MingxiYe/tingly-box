@@ -10,7 +10,7 @@ const cursor: AgentPageDescriptor = {
         kind: 'guide',
         renderDialog: (slot) => (
             <CursorConfigModal
-                open={slot.configModalOpen}
+                open={slot.dialogOpen}
                 onClose={slot.closeDialog}
                 baseUrl={slot.baseUrl}
                 copyToClipboard={slot.copyToClipboard}

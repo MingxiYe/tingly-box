@@ -37,7 +37,7 @@ const dsh: AgentPageDescriptor = {
         },
         renderDialog: (slot) => (
             <DshConfigModal
-                open={slot.configModalOpen}
+                open={slot.dialogOpen}
                 onClose={slot.closeDialog}
                 copyToClipboard={slot.copyToClipboard}
                 showNotification={slot.showNotification}

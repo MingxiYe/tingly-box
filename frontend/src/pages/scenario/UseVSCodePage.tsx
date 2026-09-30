@@ -11,7 +11,7 @@ const vscode: AgentPageDescriptor = {
     connection: { compact: true, apiKeyRow: true, baseUrlRow: true },
     setup: {
         kind: 'guide',
-        renderDialog: (slot) => <VSCodeConfigModal open={slot.configModalOpen} onClose={slot.closeDialog} />,
+        renderDialog: (slot) => <VSCodeConfigModal open={slot.dialogOpen} onClose={slot.closeDialog} />,
     },
     quickStart: {
         installDescriptionKey: 'scenarioPage.vscode.installDescription',

@@ -44,7 +44,7 @@ const ClaudeCodeSetupDialog: React.FC<{ slot: AgentPageSlot }> = ({ slot }) => {
     const { t } = useTranslation();
     return (
         <ClaudeCodeConfigModal
-            open={slot.configModalOpen}
+            open={slot.dialogOpen}
             onClose={slot.closeDialog}
             configMode={slot.slotMode ?? 'unified'}
             baseUrl={slot.baseUrl}

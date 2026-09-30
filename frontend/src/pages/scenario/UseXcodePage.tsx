@@ -10,7 +10,7 @@ const xcode: AgentPageDescriptor = {
         kind: 'guide',
         renderDialog: (slot) => (
             <XcodeConfigModal
-                open={slot.configModalOpen}
+                open={slot.dialogOpen}
                 onClose={slot.closeDialog}
                 baseUrl={slot.baseUrl}
                 copyToClipboard={slot.copyToClipboard}

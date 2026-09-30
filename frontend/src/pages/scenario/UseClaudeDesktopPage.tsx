@@ -11,7 +11,7 @@ const claudeDesktop: AgentPageDescriptor = {
         kind: 'guide',
         renderDialog: (slot) => (
             <ClaudeDesktopConfigModal
-                open={slot.configModalOpen}
+                open={slot.dialogOpen}
                 onClose={slot.closeDialog}
                 baseUrl={slot.baseUrl}
                 copyToClipboard={slot.copyToClipboard}

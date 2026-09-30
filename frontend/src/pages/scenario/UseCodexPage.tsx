@@ -32,7 +32,7 @@ const codex: AgentPageDescriptor = {
         },
         renderDialog: (slot) => (
             <CodexConfigModal
-                open={slot.configModalOpen}
+                open={slot.dialogOpen}
                 onClose={slot.closeDialog}
                 copyToClipboard={slot.copyToClipboard}
                 showNotification={slot.showNotification}

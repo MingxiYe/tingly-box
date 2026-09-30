@@ -11,7 +11,7 @@ const OpenCodeSetupDialog: React.FC<{ slot: AgentPageSlot }> = ({ slot }) => {
     const [scriptWindows, setScriptWindows] = useState('');
     const [scriptUnix, setScriptUnix] = useState('');
     const [isConfigLoading, setIsConfigLoading] = useState(false);
-    const { configModalOpen: open, showNotification } = slot;
+    const { dialogOpen: open, showNotification } = slot;
 
     useEffect(() => {
         if (!open) return;

@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import ScenarioPageSkeleton from '@/pages/scenario/components/ScenarioPageSkeleton';
 import TemplatePage from '@/pages/scenario/components/TemplatePage.tsx';
-import { SCENARIO_HEADER_CONTENT_MAX_WIDTH, ScenarioCardHeader } from '@/pages/scenario/ScenarioPage';
+import { SCENARIO_HEADER_CONTENT_MAX_WIDTH, ScenarioCardHeader } from '@/pages/scenario/components/ScenarioCardHeader';
 import { useScenarioPageInternal } from '@/pages/scenario/hooks/useScenarioPageInternal.ts';
 import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
 

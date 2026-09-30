@@ -10,7 +10,7 @@ const pi: AgentPageDescriptor = {
     connection: { compact: true, apiKeyRow: true },
     setup: {
         kind: 'guide',
-        renderDialog: (slot) => <PiConfigModal open={slot.configModalOpen} onClose={slot.closeDialog} />,
+        renderDialog: (slot) => <PiConfigModal open={slot.dialogOpen} onClose={slot.closeDialog} />,
     },
     quickStart: {
         installDescriptionKey: 'scenarioPage.pi.installDescription',

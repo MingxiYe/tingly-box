@@ -1,7 +1,7 @@
 import CardGrid from "@/components/CardGrid.tsx";
 import PageLayout from '@/components/PageLayout';
 import ScenarioPageSkeleton from './components/ScenarioPageSkeleton';
-import { SCENARIO_HEADER_CONTENT_MAX_WIDTH } from './ScenarioPage';
+import { SCENARIO_HEADER_CONTENT_MAX_WIDTH } from './components/ScenarioCardHeader';
 import ProviderConfigCard from "@/components/ProviderConfigCard.tsx";
 import UnifiedCard from "@/components/UnifiedCard.tsx";
 import ConfigRow from "@/components/ConfigRow.tsx";
