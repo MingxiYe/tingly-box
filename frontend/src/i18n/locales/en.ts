@@ -10,16 +10,22 @@ export default {
     "reapply": "Reapply",
     "apply": "Auto Config"
   },
-  "agentHome": {
-    "subtitle": "Does anything need you, and how is each agent you use doing.",
+  "statusOverview": {
+    "title": "Overview",
+    "subtitle": "Is the gateway up, does anything need you, and what your agents did lately.",
+    "gateway": {
+      "running": "Gateway running",
+      "unreachable": "Gateway unreachable",
+      "version": "Version {{version}}",
+      "today_one": "Today: {{count}} request · {{errorRate}}% errors",
+      "today_other": "Today: {{count}} requests · {{errorRate}}% errors"
+    },
     "attention": {
-      "titleCount": "Needs attention ({{n}})",
+      "title": "Needs attention",
+      "titleCount": "Needs attention ({{count}})",
+      "none": "Nothing needs attention.",
+      "checking": "Checking…",
       "disconnected": "The UI can't reach the gateway. Requests from your agents may be failing.",
-      "noProvider": "No AI is connected yet, so no request can be routed.",
-      "connectAI": "Connect AI",
-      "noService": "{{agent}} is in use, but none of its rules has a model to route to.",
-      "openRules": "Open rules",
-      "configOutdated": "{{agent}}: the client config is out of date ({{diffs}} setting(s) differ).",
       "oauthExpired": "{{provider}}: the OAuth sign-in has expired.",
       "quotaLow": "{{provider}} · {{window}}: {{percent}}% left.",
       "update": "A new version of Tingly Box is available.",
@@ -29,18 +35,11 @@ export default {
     },
     "agents": {
       "title": "Your agents",
-      "subtitle": "used in the last {{days}} days",
-      "noRecentRequests": "No requests in the last {{days}} days",
-      "empty": "No agent has sent a request yet. Pick your tool below and follow its Quick Start.",
+      "subtitle": "Last {{days}} days",
+      "noRequests": "No requests yet",
       "viewUsage": "View usage",
       "requests_one": "{{count}} request",
       "requests_other": "{{count}} requests"
-    },
-    "more": {
-      "title": "More agents ({{n}})",
-      "subtitle": "Tools you haven't used here yet. Hide the ones you'll never use to keep the sidebar tidy.",
-      "ready": "Ready to connect",
-      "noService": "No model in rules yet"
     }
   },
   "common": {

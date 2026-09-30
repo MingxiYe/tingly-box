@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAttentionItems, hasRoutableService, isAgentInUse, summarizeAgentActivity } from './homeModel';
+import { buildAttentionItems, summarizeAgentActivity } from './overviewModel';
 import type { ProviderQuota } from '@/types/quota';
 
 const NOW = new Date('2026-09-30T12:00:00Z').getTime();
@@ -60,53 +60,5 @@ describe('summarizeAgentActivity', () => {
         });
         expect(out.team.model).toBe('glm-5.1');
         expect(out.codex).toEqual({ requestCount: 3, errorCount: 0 });
-    });
-});
-
-describe('agent attention', () => {
-    it('flags no provider, and only in-use agents that route nowhere or have stale config', () => {
-        const items = buildAttentionItems({
-            healthy: true, hasUpdate: false, now: NOW,
-            providers: [], providersLoaded: true, quotas: {},
-            agents: [
-                { id: 'claude_code', inUse: true, routable: true, configState: 'outdated', configDiffCount: 2 },
-                { id: 'openai', inUse: true, routable: false },
-                { id: 'codex', inUse: false, routable: false, configState: 'outdated' },
-            ],
-        });
-        expect(items).toEqual([
-            { kind: 'noProvider' },
-            { kind: 'configOutdated', agentId: 'claude_code', count: 2 },
-            { kind: 'noService', agentId: 'openai' },
-        ]);
-    });
-
-    it('does not count built-in virtual models as a connected AI', () => {
-        expect(buildAttentionItems({
-            healthy: true, hasUpdate: false, quotas: {}, providersLoaded: true,
-            providers: [{ uuid: 'v', auth_type: 'vmodel' }],
-        })).toEqual([{ kind: 'noProvider' }]);
-    });
-
-    it('does not claim nothing is connected before providers are read', () => {
-        expect(buildAttentionItems({ healthy: true, hasUpdate: false, providers: [], quotas: {} })).toEqual([]);
-    });
-});
-
-describe('hasRoutableService', () => {
-    it('counts top-level and smart-routing services on active rules only', () => {
-        expect(hasRoutableService([{ services: [] }])).toBe(false);
-        expect(hasRoutableService([{ active: false, services: [{}] }])).toBe(false);
-        expect(hasRoutableService([{ services: [], smart_routing: [{ services: [{}] }] }])).toBe(true);
-        expect(hasRoutableService([{ services: [{}] }])).toBe(true);
-    });
-});
-
-describe('isAgentInUse', () => {
-    it('is in use with recent requests or a written client config', () => {
-        expect(isAgentInUse(undefined)).toBe(false);
-        expect(isAgentInUse({ requestCount: 0, errorCount: 0 }, 'not_applied')).toBe(false);
-        expect(isAgentInUse({ requestCount: 3, errorCount: 0 })).toBe(true);
-        expect(isAgentInUse(undefined, 'outdated')).toBe(true);
     });
 });

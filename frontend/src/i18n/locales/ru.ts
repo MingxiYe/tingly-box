@@ -12,16 +12,24 @@ export default {
     "reapply": "Применить снова",
     "apply": "Auto Config"
   },
-  "agentHome": {
-    "subtitle": "Что требует внимания и как дела у каждого агента, которым вы пользуетесь.",
+  "statusOverview": {
+    "title": "Обзор",
+    "subtitle": "Работает ли шлюз, что требует внимания и что недавно делали ваши агенты.",
+    "gateway": {
+      "running": "Шлюз работает",
+      "unreachable": "Шлюз недоступен",
+      "version": "Версия {{version}}",
+      "today_one": "Сегодня: {{count}} запрос · ошибок {{errorRate}}%",
+      "today_few": "Сегодня: {{count}} запроса · ошибок {{errorRate}}%",
+      "today_many": "Сегодня: {{count}} запросов · ошибок {{errorRate}}%",
+      "today_other": "Сегодня: {{count}} запроса · ошибок {{errorRate}}%"
+    },
     "attention": {
-      "titleCount": "Требует внимания ({{n}})",
+      "title": "Требует внимания",
+      "titleCount": "Требует внимания ({{count}})",
+      "none": "Всё в порядке.",
+      "checking": "Проверка…",
       "disconnected": "Интерфейс не может связаться со шлюзом. Запросы агентов могут завершаться ошибкой.",
-      "noProvider": "ИИ ещё не подключён, запросам некуда идти.",
-      "connectAI": "Подключить ИИ",
-      "noService": "{{agent}} используется, но ни в одном его правиле нет модели для маршрутизации.",
-      "openRules": "Открыть правила",
-      "configOutdated": "{{agent}}: конфигурация клиента устарела (отличий: {{diffs}}).",
       "oauthExpired": "{{provider}}: срок входа OAuth истёк.",
       "quotaLow": "{{provider}} · {{window}}: осталось {{percent}}%.",
       "update": "Доступна новая версия Tingly Box.",
@@ -31,20 +39,13 @@ export default {
     },
     "agents": {
       "title": "Ваши агенты",
-      "subtitle": "за последние {{days}} дн.",
-      "noRecentRequests": "Нет запросов за последние {{days}} дн.",
-      "empty": "Ни один агент ещё не отправил запрос. Выберите инструмент ниже и пройдите его Quick Start.",
+      "subtitle": "Последние {{days}} дн.",
+      "noRequests": "Запросов пока нет",
       "viewUsage": "Посмотреть расход",
       "requests_one": "{{count}} запрос",
       "requests_few": "{{count}} запроса",
       "requests_many": "{{count}} запросов",
       "requests_other": "{{count}} запроса"
-    },
-    "more": {
-      "title": "Другие агенты ({{n}})",
-      "subtitle": "Инструменты, которыми вы здесь ещё не пользовались. Скройте ненужные, чтобы боковая панель осталась опрятной.",
-      "ready": "Готов к подключению",
-      "noService": "В правилах пока нет модели"
     }
   },
   "common": {

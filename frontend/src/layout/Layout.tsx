@@ -217,8 +217,8 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden', position: 'relative', zIndex: 1 }}
             >
                 <Box sx={mobileContentSx}>
-                    {/* The agent home and agent pages carry the (closable)
-                        star request. See GitHubStarBanner. */}
+                    {/* Agent pages carry the (closable) star request; Overview
+                        shows its own always-on copy. See GitHubStarBanner. */}
                     {location.pathname.startsWith('/agent') && (
                         <Box sx={{ mb: 2 }}>
                             <GitHubStarBanner />
