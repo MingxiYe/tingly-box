@@ -115,6 +115,7 @@ export default {
     "activityBar": {
       "disconnected": "已断开",
       "disconnectedDebug": "已断开（调试）",
+      "offline": "离线",
       "devMode": "开发",
       "newVersionAvailable": "更新",
       "error": "错误",

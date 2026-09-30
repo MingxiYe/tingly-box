@@ -116,6 +116,7 @@ export default {
     "activityBar": {
       "disconnected": "Disconnected",
       "disconnectedDebug": "Disconnected (Debug)",
+      "offline": "Offline",
       "devMode": "Dev",
       "newVersionAvailable": "Update",
       "error": "Error",

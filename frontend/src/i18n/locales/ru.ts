@@ -120,6 +120,7 @@ export default {
     "activityBar": {
       "disconnected": "Нет связи",
       "disconnectedDebug": "Нет связи (отладка)",
+      "offline": "Нет связи",
       "devMode": "Dev",
       "newVersionAvailable": "Обновление",
       "error": "Ошибка",

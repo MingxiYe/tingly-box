@@ -1,9 +1,10 @@
-import { Person as IconUser, ChevronRight as IconChevronRight, Lightbulb as IconLightbulb } from '@/components/icons';
+import { Person as IconUser, ChevronRight as IconChevronRight, Lightbulb as IconLightbulb, Error as IconAlertCircle } from '@/components/icons';
 import { Box, Divider, IconButton, ListItemButton, ListItemIcon, Tooltip, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useVersion as useAppVersion } from '../contexts/VersionContext';
+import { useHealth } from '../contexts/HealthContext';
 import {
     activityBarWidth,
     footerHeight,
@@ -39,6 +40,8 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
     const location = useLocation();
     const { currentVersion } = useAppVersion();
     const [preferencesAnchorEl, setPreferencesAnchorEl] = useState<HTMLElement | null>(null);
+    const { isHealthy, showDisconnectDialog } = useHealth();
+    const showDisconnected = !isHealthy || import.meta.env.DEV;
     const isHelpActive = location.pathname === '/help';
     const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed();
 
@@ -172,6 +175,33 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
                     </Tooltip>
 
             </Box>
+
+            {/* Gateway unreachable — docked in the rail instead of floating
+                over the page (FloatingStatusIndicators keeps that role on
+                mobile, where the rail lives in a drawer). Forced on in dev
+                builds, as before, so the dialog stays easy to exercise. */}
+            {showDisconnected && (
+                <Box sx={activityBottomClusterSx}>
+                    <Tooltip
+                        title={import.meta.env.DEV && isHealthy ? t('layout.activityBar.disconnectedDebug') : t('layout.activityBar.disconnected')}
+                        placement="right"
+                        arrow
+                    >
+                        <ListItemButton
+                            onClick={showDisconnectDialog}
+                            aria-label={t('layout.activityBar.disconnected')}
+                            sx={activityBottomItemSx({ color: 'error.main', '&:hover': { bgcolor: 'action.hover', color: 'error.dark' } })}
+                        >
+                            <ListItemIcon sx={{ minWidth: 0, color: 'inherit', justifyContent: 'center' }}>
+                                <IconAlertCircle sx={{ fontSize: 22 }} />
+                            </ListItemIcon>
+                            <Typography variant="caption" sx={{ color: 'inherit', textAlign: 'center', lineHeight: 1.1, fontSize: '0.65rem' }}>
+                                {t('layout.activityBar.offline')}
+                            </Typography>
+                        </ListItemButton>
+                    </Tooltip>
+                </Box>
+            )}
 
             {/* Bottom: User icon */}
             <Box
