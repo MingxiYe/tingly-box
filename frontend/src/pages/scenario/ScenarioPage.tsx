@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Box, Button, IconButton, Tooltip } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { Info as InfoIcon } from '@/components/icons';
+import { ClientConfigStatusChip } from '@/components/ClientConfigStatusChip';
+import { useClientConfigStatus, type ClientConfigTool } from '@/hooks/useClientConfigStatus';
 import CardGrid from '@/components/CardGrid.tsx';
 import ConnectAIDialogs from '@/components/ConnectAIDialogs';
 import PageLayout from '@/components/PageLayout';
@@ -26,7 +28,7 @@ export const SCENARIO_HEADER_CONTENT_MAX_WIDTH = 960;
  * title plus an optional i18n-keyed info tooltip. Pages that keep their own
  * structure (Codex, ImageGen) reuse this instead of re-rolling the Box.
  */
-export const ScenarioCardHeader: React.FC<{ title: string; tooltipKey?: string }> = ({ title, tooltipKey }) => {
+export const ScenarioCardHeader: React.FC<{ title: string; tooltipKey?: string; addon?: React.ReactNode }> = ({ title, tooltipKey, addon }) => {
     const { t } = useTranslation();
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -38,6 +40,7 @@ export const ScenarioCardHeader: React.FC<{ title: string; tooltipKey?: string }
                     </IconButton>
                 </Tooltip>
             )}
+            {addon && <Box sx={{ ml: 0.5 }}>{addon}</Box>}
         </Box>
     );
 };
@@ -80,6 +83,8 @@ export interface ScenarioPageProps {
     title: string;
     /** i18n key for the info tooltip next to the title. */
     tooltipKey?: string;
+    /** Show the client-config status chip for a tool whose config the gateway can read back. */
+    clientConfigTool?: ClientConfigTool;
     /** UnifiedCard rightAction slot (static node). */
     rightAction?: React.ReactNode;
     /**
@@ -120,6 +125,7 @@ export const ScenarioPage: React.FC<ScenarioPageProps> = ({
     scenario,
     title,
     tooltipKey,
+    clientConfigTool,
     rightAction,
     renderRightAction,
     providerCard,
@@ -143,6 +149,7 @@ export const ScenarioPage: React.FC<ScenarioPageProps> = ({
     } = useScenarioPageInternal(scenario);
 
     const [configModalOpen, setConfigModalOpen] = useState(false);
+    const { status: clientConfigStatus } = useClientConfigStatus(clientConfigTool ?? null, [rules, configModalOpen]);
     // Context-1M toggle plumbing for pages whose TemplatePage wires it up.
     const context1MState = useContext1MToggle(() => setConfigModalOpen(true));
     // Unified Connect AI add flow (picker + form/OAuth/paste/import dialogs).
@@ -171,7 +178,13 @@ export const ScenarioPage: React.FC<ScenarioPageProps> = ({
             <CardGrid>
                 <UnifiedCard
                     titleHeadingLevel={1}
-                    title={<ScenarioCardHeader title={title} tooltipKey={tooltipKey} />}
+                    title={
+                        <ScenarioCardHeader
+                            title={title}
+                            tooltipKey={tooltipKey}
+                            addon={clientConfigTool && <ClientConfigStatusChip status={clientConfigStatus} onApply={() => setConfigModalOpen(true)} />}
+                        />
+                    }
                     size="full"
                     contentMaxWidth={SCENARIO_HEADER_CONTENT_MAX_WIDTH}
                     rightAction={renderRightAction ? renderRightAction(slot) : rightAction}

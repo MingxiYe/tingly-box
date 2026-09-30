@@ -30,6 +30,8 @@ import {
     Alert
 } from '@mui/material';
 import React, {useEffect, useState} from 'react';
+import { ClientConfigStatusChip } from '@/components/ClientConfigStatusChip';
+import { useClientConfigStatus } from '@/hooks/useClientConfigStatus';
 import {useTranslation} from 'react-i18next';
 import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
 
@@ -70,6 +72,9 @@ const UseClaudeCodePageContent: React.FC = () => {
         onProviderAdded: () => window.location.reload(),
     });
     const [pendingContext1MChange, setPendingContext1MChange] = useState<{ enabled: boolean; ruleUuid?: string } | null>(null);
+    // Whether ~/.claude/settings.json matches what this page would apply now;
+    // re-read whenever something that feeds it changes.
+    const { status: clientConfigStatus } = useClientConfigStatus('claude', [rules, configMode, configModalOpen, pendingContext1MChange]);
 
     const handleContext1MToggle = (newState: boolean, ruleUuid?: string) => {
         // Store the pending change (scoped to the toggled rule) and open the
@@ -232,6 +237,9 @@ const UseClaudeCodePageContent: React.FC = () => {
                                     <InfoIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                                 </IconButton>
                             </Tooltip>
+                            <Box sx={{ ml: 1.5 }}>
+                                <ClientConfigStatusChip status={clientConfigStatus} onApply={() => setConfigModalOpen(true)} />
+                            </Box>
                         </Box>
                     }
                     size="full"

@@ -3601,6 +3601,29 @@ export const handlers = [
         return HttpResponse.json({ success: true, prefs: mockUiPrefs });
     }),
 
+    // Client config status (Agent page chip). Mock mode reports an outdated
+    // settings.json so the chip's warning state is visible in previews.
+    http.get('/api/v1/config/claude/status', () => HttpResponse.json({
+        success: true,
+        state: 'outdated',
+        path: '~/.claude/settings.json',
+        differences: [
+            { key: 'ANTHROPIC_MODEL', applied: 'claude-sonnet-5', expected: 'claude-sonnet-5[1m]' },
+        ],
+    })),
+
+    http.get('/api/v1/config/codex/status', () => HttpResponse.json({
+        success: true,
+        state: 'outdated',
+        path: '~/.codex/config.toml',
+        differences: [
+            { key: 'models', applied: 'gpt-5.6-luna', expected: 'gpt-5.6-luna, gpt-5.6-terra' },
+        ],
+    })),
+    http.get('/api/v1/config/dsh/status', () => HttpResponse.json({
+        success: true, state: 'applied', path: '~/.dsh/settings.yaml', differences: [],
+    })),
+
     http.get('/api/v1/config/claude', () => {
         return HttpResponse.json({
             success: true,
