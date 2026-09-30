@@ -9,7 +9,7 @@ import Surface from '@/components/Surface';
 import { useProviderQuota } from '@/hooks/useProviderQuota';
 import { useProviderEditDialog } from '@/hooks/useProviderEditDialog';
 import { useProviderDialog } from '@/hooks/useProviderDialog';
-import { Add, ListAlt, VpnKey } from '@/components/icons';
+import { Add, VpnKey } from '@/components/icons';
 import {
     Alert,
     Box,
@@ -24,9 +24,16 @@ import {
     Typography,
 } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useNotify } from '@/hooks/useNotify';
+
+const SectionTitle = ({ label, count }: { label: string; count: number }) => (
+    <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.5 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{label}</Typography>
+        <Chip label={count} size="small" color="primary" variant="outlined" sx={{ height: 20, minWidth: 20, fontSize: '0.7rem' }}/>
+    </Stack>
+);
 
 const CredentialPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -150,85 +157,52 @@ const CredentialPage = () => {
             <Stack spacing={2.5}>
                 <PageHeader
                     title="Credentials"
-                    subtitle={`Managing ${credentialCounts.total} credential${credentialCounts.total !== 1 ? 's' : ''}`}
-                    actions={
-                        <Stack
-                            direction="row"
-                            spacing={1}
-                            useFlexGap
-                            sx={{
-                                flexWrap: "wrap",
-                                justifyContent: { xs: 'flex-start', sm: 'flex-end' }
-                            }}>
-                            {/* The provider catalog (browse + connect in one place) now lives
-                                on the Help page's ProvidersCard, not a standalone page — the
-                                old read-only ProviderListPage was redundant with it and has
-                                been removed. */}
-                            <Button component={Link} to="/help" variant="outlined" startIcon={<ListAlt />} size="small" sx={{ minWidth: 130 }}>Providers</Button>
-                            <Button variant="contained" startIcon={<Add />} onClick={handleConnectAIClick} size="small" sx={{ minWidth: 150 }}>Connect AI</Button>
-                        </Stack>
-                    }
+                    subtitle={credentialCounts.total === 0
+                        ? 'No credentials yet'
+                        : `Managing ${credentialCounts.total} credential${credentialCounts.total !== 1 ? 's' : ''}`}
+                    // Empty: the landing below carries Connect AI — one CTA, not two.
+                    // The provider catalog is reached from inside Connect AI.
+                    actions={credentialCounts.total === 0 ? undefined : (
+                        <Button variant="contained" startIcon={<Add />} onClick={handleConnectAIClick} size="small" sx={{ minWidth: 150 }}>Connect AI</Button>
+                    )}
                 />
 
                 {/* Both credential kinds share one card so the page reads as a
                     single "Credentials" surface, not two unrelated panels — but
                     each keeps its own table, since OAuth and API key credentials
                     show different columns (issuer/expiry vs. base URL/key) that
-                    don't collapse into shared columns without losing detail. */}
+                    don't collapse into shared columns without losing detail.
+
+                    Only kinds that exist get a section. An empty kind used to
+                    render its own "No … Configured" block with its own Connect
+                    AI button, so a new user met the page split in two with three
+                    identical buttons, and a user with only API keys kept an
+                    empty OAuth block on top. The header's Connect AI adds either
+                    kind; with nothing at all, one landing replaces both. */}
                 <Surface padding={{ xs: 2, sm: 2.5 }}>
-                    <Stack spacing={3}>
-                        <Box>
-                            <Stack
-                                direction="row"
-                                spacing={1}
-                                sx={{
-                                    alignItems: "center",
-                                    mb: 1.5
-                                }}>
-                                <Typography variant="subtitle1" sx={{
-                                    fontWeight: 500
-                                }}>OAuth</Typography>
-                                <Chip label={credentialCounts.oauth} size="small" color="primary" variant="outlined" sx={{ height: 20, minWidth: 20, fontSize: '0.7rem' }}/>
-                            </Stack>
-                            {credentialCounts.oauth > 0 ? (
-                                <OAuthTable providers={oauthProviders} onEdit={handleEditProvider} onToggle={handleToggleProvider} onDelete={handleDeleteProvider} onRefreshToken={handleRefreshToken} onReauthorize={handleReauthorize} onNotification={showNotification} providerQuotas={quotaData} refreshingQuotas={refreshing} onQuotaRefresh={refreshQuota}/>
-                            ) : (
-                                <EmptyState
-                                    title="No OAuth Providers Configured"
-                                    description="Connect AI providers like Claude Code, Gemini CLI, Qwen, etc. via OAuth sign-in."
-                                    primaryAction={{ label: 'Connect AI', onClick: handleConnectAIClick }}
-                                    compact
-                                />
+                    {credentialCounts.total === 0 ? (
+                        <EmptyState
+                            icon={<VpnKey />}
+                            title="Connect your first AI"
+                            description="Sign in with a subscription you already have (Claude Code, Codex, Gemini CLI…) or paste an API key (OpenAI, Anthropic, DeepSeek…). Every credential lands here, and routing rules pick models from them."
+                            primaryAction={{ label: 'Connect AI', icon: <Add />, onClick: handleConnectAIClick }}
+                        />
+                    ) : (
+                        <Stack spacing={3} divider={<Divider />}>
+                            {credentialCounts.oauth > 0 && (
+                                <Box>
+                                    <SectionTitle label="OAuth" count={credentialCounts.oauth}/>
+                                    <OAuthTable providers={oauthProviders} onEdit={handleEditProvider} onToggle={handleToggleProvider} onDelete={handleDeleteProvider} onRefreshToken={handleRefreshToken} onReauthorize={handleReauthorize} onNotification={showNotification} providerQuotas={quotaData} refreshingQuotas={refreshing} onQuotaRefresh={refreshQuota}/>
+                                </Box>
                             )}
-                        </Box>
-
-                        <Divider />
-
-                        <Box>
-                            <Stack
-                                direction="row"
-                                spacing={1}
-                                sx={{
-                                    alignItems: "center",
-                                    mb: 1.5
-                                }}>
-                                <Typography variant="subtitle1" sx={{
-                                    fontWeight: 500
-                                }}>API Keys</Typography>
-                                <Chip label={credentialCounts.apiKeys} size="small" color="primary" variant="outlined" sx={{ height: 20, minWidth: 20, fontSize: '0.7rem' }}/>
-                            </Stack>
-                            {credentialCounts.apiKeys > 0 ? (
-                                <ApiKeyTable providers={apiKeyProviders} onEdit={handleEditProvider} onToggle={handleToggleProvider} onDelete={handleDeleteProvider} onNotification={showNotification} providerQuotas={quotaData} refreshingQuotas={refreshing} onQuotaRefresh={refreshQuota}/>
-                            ) : (
-                                <EmptyState
-                                    title="No API Keys Configured"
-                                    description="Connect AI providers like OpenAI, Anthropic, etc. via API key."
-                                    primaryAction={{ label: 'Connect AI', onClick: handleConnectAIClick }}
-                                    compact
-                                />
+                            {credentialCounts.apiKeys > 0 && (
+                                <Box>
+                                    <SectionTitle label="API Keys" count={credentialCounts.apiKeys}/>
+                                    <ApiKeyTable providers={apiKeyProviders} onEdit={handleEditProvider} onToggle={handleToggleProvider} onDelete={handleDeleteProvider} onNotification={showNotification} providerQuotas={quotaData} refreshingQuotas={refreshing} onQuotaRefresh={refreshQuota}/>
+                                </Box>
                             )}
-                        </Box>
-                    </Stack>
+                        </Stack>
+                    )}
                 </Surface>
             </Stack>
             {/* Unified Connect AI add flow: picker + form/OAuth/paste/import dialogs

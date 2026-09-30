@@ -390,6 +390,17 @@ export default {
     }
   },
   "providerTable": {
+    "quota": {
+      "used": "已用 {{value}}",
+      "balance": "余额",
+      "leftOf": "剩余 {{value}} / {{limit}}",
+      "cost": "费用",
+      "readFailed": "无法读取额度——可点下方「详情」查看原始响应",
+      "noLimits": "上游未报告额度限制",
+      "none": "暂无额度数据",
+      "refresh": "刷新",
+      "rawResponse": "详情"
+    },
     "columns": {
       "name": "名称",
       "apiKey": "API 密钥",
@@ -1005,7 +1016,7 @@ export default {
       "createFailed": "创建快捷方式失败：{{error}}"
     },
     "providers": {
-      "title": "提供商",
+      "title": "提供商目录",
       "description": "浏览目录，或粘贴一段配置片段——剩下的交给我们。"
     },
     "routing": {

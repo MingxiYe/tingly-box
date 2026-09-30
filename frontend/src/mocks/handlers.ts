@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { mockClaudeCodeModels } from './claudeCodeModels'
 import { deskHandlers } from './deskHandlers'
+import { resolveMockDataProfile } from './mockConfig'
 
 // ============================================
 // Mock Model Requests (correlated per-request traces)
@@ -927,6 +928,22 @@ const validateMockRuleCatalog = () => {
 
 validateMockRuleCatalog()
 
+// ?mockData=newcomer (see mockConfig.ts): a fresh install. It keeps the
+// built-in rules — a real first run has them too, just with no services — and
+// empties everything the user would have added. Runs after validation so the
+// populated catalog is still checked on every load.
+const isNewcomer = resolveMockDataProfile() === 'newcomer'
+if (isNewcomer) {
+    mockStandardProviderCatalog.length = 0
+    mockOAuthProviderCatalog.length = 0
+    for (const rules of Object.values(mockV1Rules)) {
+        for (const rule of rules) {
+            rule.services = []
+            delete rule.smart_routing
+        }
+    }
+}
+
 const getMockRulesForScenario = (scenario: string): any[] => {
     if (!mockV1Rules[scenario] && scenario.startsWith('claude_code:')) {
         const profileId = scenario.slice('claude_code:'.length)
@@ -939,7 +956,7 @@ const getMockRulesForScenario = (scenario: string): any[] => {
                 active: true,
                 description: `Profile ${profileId} - Smart routing rule`,
                 flags: { claude_code_compat: true, clean_header: true },
-                services: [
+                services: isNewcomer ? [] : [
                     { uuid: `svc-cc-${profileId}-1`, provider: 'mock-provider-anthropic', model: 'claude-sonnet-5', weight: 1, active: true },
                 ],
             },
@@ -1000,6 +1017,54 @@ const mockQuotas: Record<string, any> = {
     },
 
     // Free key: monthly spend has no cap, so there is no percentage to report.
+    // Balance only, one window per currency — the shape ai/quota/fetcher/
+    // deepseek.go builds from the real response (sample from its test). No
+    // cap to measure against, so the figure is the balance itself.
+    'mock-provider-deepseek': {
+        provider_uuid: 'mock-provider-deepseek',
+        provider_name: 'DeepSeek',
+        provider_type: 'deepseek',
+        fetched_at: now.toISOString(),
+        expires_at: inOneHour,
+        windows: [
+            {
+                key: 'cny',
+                type: 'balance',
+                kind: 'resource',
+                available: 81.41,
+                unknown: true,
+                used: 0,
+                limit: 0,
+                used_percent: 0,
+                unit: 'currency',
+                currency_code: 'CNY',
+                label: 'CNY Balance',
+                description: 'Granted: 0.00 CNY · Topped up: 81.41 CNY',
+            },
+            {
+                key: 'usd',
+                type: 'balance',
+                kind: 'resource',
+                available: 2.5,
+                unknown: true,
+                used: 0,
+                limit: 0,
+                used_percent: 0,
+                unit: 'currency',
+                currency_code: 'USD',
+                label: 'USD Balance',
+                description: 'Granted: 1.00 USD · Topped up: 1.50 USD',
+            },
+        ],
+        raw_response: {
+            is_available: true,
+            balance_infos: [
+                { currency: 'CNY', total_balance: '81.41', granted_balance: '0.00', topped_up_balance: '81.41' },
+                { currency: 'USD', total_balance: '2.50', granted_balance: '1.00', topped_up_balance: '1.50' },
+            ],
+        },
+    },
+
     // The key limit caps lifetime usage, not the month.
     'mock-provider-openrouter': {
         provider_uuid: 'mock-provider-openrouter',
@@ -1509,6 +1574,9 @@ const mockQuotas: Record<string, any> = {
         },
     },
 }
+if (isNewcomer) {
+    for (const uuid of Object.keys(mockQuotas)) delete mockQuotas[uuid]
+}
 
 // Mock remote graphs data
 const mockRemoteGraphs: any[] = [
@@ -1574,6 +1642,7 @@ const mockClaudeCodeProfiles = [
         updated_at: '2024-02-01T00:00:00Z',
     },
 ]
+if (isNewcomer) mockClaudeCodeProfiles.length = 0
 
 const mockMainClaudeCodePreferences: Record<string, string> = {
     ANTHROPIC_MODEL: 'tingly/cc',
@@ -1634,7 +1703,23 @@ let mockSharingKeys = [
 const svgDataUrl = (svg: string): string =>
     `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
 
+// Newcomer profile: nothing has run through the gateway yet. These come first
+// in the handler list, and MSW answers with the first match, so they shadow
+// the populated usage/request endpoints without touching them.
+const newcomerHandlers = isNewcomer ? [
+    http.get('/api/v1/usage/stats', () => HttpResponse.json({ success: true, data: [] })),
+    http.get('/api/v1/usage/timeseries', () => HttpResponse.json({ success: true, data: [] })),
+    http.get('/api/v1/usage/records', () => HttpResponse.json({ success: true, meta: { total: 0, limit: 500, offset: 0 }, data: [] })),
+    http.get('/api/v1/usage/performance', () => HttpResponse.json({
+        ttft: { sample_count: 0, p10: 0, p50: 0, p90: 0, p95: 0, p99: 0 },
+        tps: { sample_count: 0, p10: 0, p50: 0, p90: 0, p95: 0, p99: 0 },
+        completion: { sample_count: 0, p10: 0, p50: 0, p90: 0, p95: 0, p99: 0 },
+    })),
+    http.get('/api/v1/requests', () => HttpResponse.json({ total: 0, requests: [] })),
+] : []
+
 export const handlers = [
+    ...newcomerHandlers,
     // Remote Agents / Remote Graphs API endpoints
     http.get('/api/remote-agents', () => {
         return HttpResponse.json({

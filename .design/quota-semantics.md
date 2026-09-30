@@ -249,6 +249,20 @@ return w != nil && !w.Unknown && !w.Unlimited && w.Limit > 0
 - **前端**：`isCountable` 同款门闩；无比例的窗口显示数值不画条；排序同后端
   （`kind` 在旧版 `api.ts` 中仍缺失，前端用 `QuotaWindow` 局部类型收窄，见下文遗留）；
   mock（`frontend/src/mocks/handlers.ts`）按 taskfile 真实样本重写，覆盖全部渲染态。
+- **凭据页表格**（`ApiKeyTable` / `OAuthTable` → `credential/QuotaCell.tsx`）：quota 是一**列**，
+  不是每行下面挂的明细行——有的 provider 有 quota 有的没有，明细行会让表格行高参差不齐。
+  单元格每个窗口一行（最多 2 行，恰好不超出 Actions 撑起的行高，多出的记 `+N`）：
+  与规则图 service node 同一个圆环（`credential/QuotaRing.tsx`）+ 窗口名 + `N% left`。
+  窗口名优先用周期（`5h` / `7d`），周期重复（如按模型的日限额）时退回窗口自身 label。
+  **钱显示金额，不显示百分比**，且额度之外单独保留一行（余额恰恰是不能被挤进 `+N` 的数字，
+  所以最多 2 行额度 + 1 行钱）：纯余额 `Balance 81.41 CNY`（无环）；有上限的钱包
+  `Balance $37.50 left`（带环）；无上限的花费 `30d $8.10 used`（无环，没有可耗尽的东西）。
+  无读数显示 `—`（§3.6，不造占位文案）。
+  Hover 是两列清单：小圆环 + 窗口全名在左、数值右对齐，重置时间作为次行；cost 只在没有
+  「钱」窗口时才单列（否则与钱包重复），写作 `X left of Y`。底部分隔线下左侧是更新时间，
+  右侧是 **Refresh** 和 **Details**（原始响应，仅在有 `raw_response` 时出现）——
+  入口必须在 hover 里，放进行的 ⋮ 菜单没人会发现。点击单元格本身也会刷新
+  （取代原 Actions 里的 Quota 按钮）。
 
 ---
 

@@ -78,6 +78,26 @@ await page.goto('http://localhost:3000/agent/openai?mockOnboarding=on', { waitUn
 `?mockOnboarding=off` is the (redundant) explicit default, useful when a test wants
 to assert the off state regardless of what a prior run left in localStorage.
 
+## Data profile: populated vs. newcomer
+
+The onboarding flag above only controls dialogs. What data the mock backend
+"has" is a separate switch (`src/mocks/mockConfig.ts`):
+
+```js
+await page.goto('http://localhost:3000/credentials?mockData=newcomer', { waitUntil: 'networkidle' });
+```
+
+- `?mockData=populated` (default): the full demo data set.
+- `?mockData=newcomer`: a fresh install. It has no credentials, quota, usage,
+  request logs or Claude Code profiles, and the built-in rules have no services.
+  Use it to check that each page lands sensibly before the user has added
+  anything. It also turns the first-run guides on, unless `?mockOnboarding=off`
+  is given.
+
+The profile is kept in `sessionStorage` for the tab, so in-app navigation stays
+in the chosen world. Pass `?mockData=populated` to switch back, or use a fresh
+browser context.
+
 ## Scripts
 
 All scripts live here and are run from `frontend/`. They use `createRequire(cwd)` to

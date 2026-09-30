@@ -1,7 +1,8 @@
-import {Add, Close, Cloud, Computer, ContentPaste, Key, Login, Search, Language, Description, Upload} from '@/components/icons';
+import {Add, Close, Cloud, Computer, ContentPaste, Key, ListAlt, Login, Search, Language, Description, Upload} from '@/components/icons';
 import RegionBadge from './RegionBadge';
 import {
     Box,
+    Button,
     ButtonBase,
     Card,
     Chip,
@@ -16,6 +17,7 @@ import {
     alpha,
 } from '@mui/material';
 import React, {useMemo, useState} from 'react';
+import {useInRouterContext, useNavigate} from 'react-router-dom';
 import {type UniqueProvider, useProviderCatalogs, useCloudProviders, searchProviders} from '../services/serviceProviders';
 import ProviderIcon from './ProviderIcon';
 import {FALLBACK_OAUTH_PROVIDERS, type OAuthProvider} from './oauth/fallbackProviders';
@@ -567,8 +569,32 @@ export const ProviderListContent: React.FC<ProviderListContentProps> = ({
     );
 };
 
+// The full provider catalog (Help → Provider Catalog) is the same list with each
+// provider's website and API docs. Pages used to carry their own "Providers"
+// button for it; the way there now starts from the picker, where the question
+// "which provider should I pick?" actually comes up.
+const BrowseCatalogButton: React.FC<{onClose: () => void}> = ({onClose}) => {
+    const navigate = useNavigate();
+    return (
+        <Button
+            size="small"
+            variant="text"
+            startIcon={<ListAlt/>}
+            onClick={() => {
+                onClose();
+                navigate('/help');
+            }}
+            sx={{textTransform: 'none', color: 'text.secondary', '&:hover': {color: 'primary.main'}}}
+        >
+            Provider catalog
+        </Button>
+    );
+};
+
 const ConnectProviderDialog: React.FC<ConnectProviderDialogProps> = ({open, onClose, onSelect, hideOfficialInfo = false}) => {
     const [query, setQuery] = useState('');
+    // Rendered outside a router in unit tests; the link needs one to navigate.
+    const inRouter = useInRouterContext();
 
     return (
         <Dialog
@@ -591,7 +617,10 @@ const ConnectProviderDialog: React.FC<ConnectProviderDialogProps> = ({open, onCl
                         justifyContent: "space-between"
                     }}>
                     <Typography component="span" variant="h6">Connect AI</Typography>
-                    <IconButton aria-label="Close Connect AI" onClick={onClose} size="small"><Close/></IconButton>
+                    <Stack direction="row" spacing={0.5} sx={{alignItems: 'center'}}>
+                        {inRouter && <BrowseCatalogButton onClose={onClose}/>}
+                        <IconButton aria-label="Close Connect AI" onClick={onClose} size="small"><Close/></IconButton>
+                    </Stack>
                 </Stack>
             </DialogTitle>
             <DialogContent

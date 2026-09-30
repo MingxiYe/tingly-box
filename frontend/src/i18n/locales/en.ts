@@ -389,6 +389,17 @@ export default {
     }
   },
   "providerTable": {
+    "quota": {
+      "used": "{{value}} used",
+      "balance": "Balance",
+      "leftOf": "{{value}} left of {{limit}}",
+      "cost": "Cost",
+      "readFailed": "Couldn't read quota — Details below has the raw response",
+      "noLimits": "No quota limits reported",
+      "none": "No quota reading yet",
+      "refresh": "Refresh",
+      "rawResponse": "Details"
+    },
     "columns": {
       "name": "Name",
       "apiKey": "API Key",
@@ -1004,7 +1015,7 @@ export default {
       "createFailed": "Failed to create shortcut: {{error}}"
     },
     "providers": {
-      "title": "Providers",
+      "title": "Provider Catalog",
       "description": "Browse the catalog or paste a config snippet — we'll figure out the rest."
     },
     "routing": {
