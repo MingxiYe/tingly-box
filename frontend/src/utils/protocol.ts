@@ -19,18 +19,6 @@ export async function getApiBaseUrl(): Promise<string> {
 }
 
 /**
- * Get the origin/protocol for display purposes
- * - Desktop: 'wails://'
- * - Browser: window.location.origin
- */
-export function getDisplayOrigin(): string {
-  if (host.kind === 'desktop') {
-    return 'wails://';
-  }
-  return window.location.origin;
-}
-
-/**
  * Get the OAuth redirect URI for callback
  * - Desktop: http://localhost:{port}/oauth/callback (local callback)
  * - Browser: {origin}/oauth/callback
