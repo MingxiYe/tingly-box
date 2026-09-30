@@ -174,6 +174,7 @@ export default {
     "policyGroups": "Группы политик",
     "policies": "Политики",
     "guardrailsHistory": "История",
+    "protectedCredentials": "Секреты",
     "mcp": "MCP",
     "sources": "Источники",
     "localMode": "Локальный режим",

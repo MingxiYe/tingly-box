@@ -315,7 +315,7 @@ const GuardrailsCredentialsPage = () => {
     return (
         <PageLayout
             loading={loading}
-            title="Protected Credentials"
+            title="Secrets"
             subtitle="Keep real secrets local and replace them with alias tokens before content reaches the model."
             rightAction={
                 <Stack direction="row" spacing={1}>
@@ -327,7 +327,7 @@ const GuardrailsCredentialsPage = () => {
         >
             <Stack spacing={3}>
                 <UnifiedCard
-                    title="Protected Credentials"
+                    title="Protected secrets"
                     subtitle="Add sensitive credentials here when you do not want the model to see them directly."
                     size="full"
                     rightAction={

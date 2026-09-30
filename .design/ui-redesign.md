@@ -194,8 +194,8 @@ gpt-5.6-terra     Direct · T0       →  glm-5.1, deepseek-v4-flash            
 | 客户端接入点（Claude Code、Codex、SDK…） | **Agent** | 不变。Remote Control 路由图里的 "Agent: Claude Code" 指的也是同一个 agent，不算碰撞 |
 | 上游 AI 凭据与账号 | **Credentials** | ✅ sidebar「Model Key」改为「Credentials」，与页面标题一致（key `layout.credentials`）。页内「Providers」按钮打开的是可接入服务目录，是另一个概念，保留 |
 | 接入 AI 服务的动作 | **Connect AI** | 已统一，保持 |
-| 团队成员使用的 key | **Sharing Key** | ✅ 原「Team Keys」导航项与页面改为「All Sharing Keys」。后端、README、Team 页按钮和弹窗本来就用 Sharing Key，所以向它统一，而不是反过来 |
-| 护栏里要保护的敏感凭据 | **Protected Credentials** | ✅ Guardrails sidebar 不再复用 `layout.nav.credential`，改为独立的 `layout.protectedCredentials`，与页面标题一致 |
+| 团队成员使用的 key | **Sharing Key** | ✅ 原「Team Keys」导航项改为「Sharing Keys」、页面标题改为「All Sharing Keys」。后端、README、Team 页按钮和弹窗本来就用 Sharing Key，所以向它统一，而不是反过来 |
+| 护栏里要保护的敏感凭据 | **Secrets** | ✅ Guardrails sidebar 不再复用 `layout.nav.credential`，改为独立的 `layout.protectedCredentials`；页面标题同步改为 Secrets（"Protected Credentials" 在 sidebar 里会被截断） |
 | 可选能力的成熟度 | `Exp.` / `Beta` | 不变。这是有意设计的两级成熟度（各带 tooltip），不是一词多义 |
 | Remote / Bots / Remote Control / IM Notify | — | 不变。rail 以产品支柱命名、Bots 作为入口，是 `bot-arch.md` §10 的既定设计 |
 | 请求级行为开关 | **Plugins**（Agent 级默认值 / 规则级覆盖） | 放到 Agent 页阶段处理（`agent-page-redesign.md` §3.5） |

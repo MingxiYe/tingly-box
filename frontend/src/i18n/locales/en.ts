@@ -172,6 +172,7 @@ export default {
     "policyGroups": "Policy Groups",
     "policies": "Policies",
     "guardrailsHistory": "History",
+    "protectedCredentials": "Secrets",
     "mcp": "MCP",
     "sources": "Sources",
     "localMode": "Local Mode",

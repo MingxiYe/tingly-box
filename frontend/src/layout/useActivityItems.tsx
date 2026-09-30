@@ -278,7 +278,7 @@ export function useActivityItems(): ActivityItem[] {
                     { path: '/guardrails', label: t('layout.overview'), icon: <IconShield sx={{ fontSize: 20 }} /> },
                     { path: '/guardrails/groups', label: t('layout.policyGroups'), icon: <IconLicense sx={{ fontSize: 20 }} /> },
                     { path: '/guardrails/rules', label: t('layout.policies'), icon: <IconLicense sx={{ fontSize: 20 }} /> },
-                    { path: '/guardrails/credentials', label: t('layout.nav.credential', { defaultValue: 'Credential' }), icon: <IconKey sx={{ fontSize: 20 }} /> },
+                    { path: '/guardrails/credentials', label: t('layout.protectedCredentials', { defaultValue: 'Secrets' }), icon: <IconKey sx={{ fontSize: 20 }} /> },
                     { path: '/guardrails/history', label: t('layout.guardrailsHistory'), icon: <IconHistory sx={{ fontSize: 20 }} /> },
                 ] as NavItem[],
             }] as ActivityItem[] : []),

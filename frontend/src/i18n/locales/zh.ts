@@ -171,6 +171,7 @@ export default {
     "policyGroups": "策略组",
     "policies": "策略",
     "guardrailsHistory": "历史",
+    "protectedCredentials": "密钥保护",
     "mcp": "MCP",
     "sources": "来源",
     "localMode": "本地模式",
