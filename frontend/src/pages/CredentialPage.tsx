@@ -24,7 +24,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useNotify } from '@/hooks/useNotify';
 
@@ -40,7 +40,6 @@ const CredentialPage = () => {
     const [providers, setProviders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const notify = useNotify();
-    const navigate = useNavigate();
 
     // Reauthorize dialog state (page-local: re-authenticates an existing OAuth
     // provider in place — the shared Connect AI flow only covers adding).
@@ -161,7 +160,7 @@ const CredentialPage = () => {
                     subtitle={credentialCounts.total === 0
                         ? 'No credentials yet'
                         : `Managing ${credentialCounts.total} credential${credentialCounts.total !== 1 ? 's' : ''}`}
-                    // Empty: the landing below carries the same two actions — one CTA, not two.
+                    // Empty: the landing below carries Connect AI — one CTA, not two.
                     actions={credentialCounts.total === 0 ? undefined : (
                         <Stack
                             direction="row"
@@ -200,7 +199,6 @@ const CredentialPage = () => {
                             title="Connect your first AI"
                             description="Sign in with a subscription you already have (Claude Code, Codex, Gemini CLI…) or paste an API key (OpenAI, Anthropic, DeepSeek…). Every credential lands here, and routing rules pick models from them."
                             primaryAction={{ label: 'Connect AI', icon: <Add />, onClick: handleConnectAIClick }}
-                            secondaryAction={{ label: 'Browse providers', icon: <ListAlt />, onClick: () => navigate('/help') }}
                         />
                     ) : (
                         <Stack spacing={3} divider={<Divider />}>
