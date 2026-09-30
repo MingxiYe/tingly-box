@@ -7,6 +7,9 @@
 import { Box, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
 import React from 'react';
 
+// Fits the widest option in use (icon + "Docker") with room to spare.
+const OPTION_WIDTH = 84;
+
 export interface ChoiceOption<T extends string> {
     value: T;
     label: string;
@@ -29,7 +32,10 @@ export function ChoiceToggle<T extends string>({ value, options, onChange, ariaL
             value={value}
             aria-label={ariaLabel}
             onChange={(_, next: T | null) => next && onChange(next)}
-            sx={{ ml: 0.5, '& .MuiToggleButton-root': { px: 0.75, py: 0.25, gap: 0.5, textTransform: 'none', fontSize: '0.75rem', lineHeight: 1.2 } }}
+            // Every option is the same width, so switches next to each other
+            // (Local / Docker under NPX / Global) line up, and so do the copy
+            // buttons beside them.
+            sx={{ ml: 0.5, '& .MuiToggleButton-root': { width: OPTION_WIDTH, justifyContent: 'center', px: 0.75, py: 0.25, gap: 0.5, textTransform: 'none', fontSize: '0.75rem', lineHeight: 1.2 } }}
         >
             {options.map((option) => {
                 const button = (
