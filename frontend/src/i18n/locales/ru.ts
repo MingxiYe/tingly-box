@@ -1239,6 +1239,7 @@ export default {
       "renameProfile": "Переименовать профиль",
       "deleteProfile": "Удалить профиль",
       "quickStart": "Запуск",
+      "commandGlobal": "Глобально",
       "settingsFile": "Настройки",
       "settingsFileWarning": "Сгенерированные рабочие настройки. Ручные правки перезаписываются переопределениями профиля и правилами моделей.",
       "resolvingSettingsFile": "Определяем путь к сгенерированным настройкам…",

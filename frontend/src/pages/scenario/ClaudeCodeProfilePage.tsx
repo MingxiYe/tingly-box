@@ -5,7 +5,7 @@ import { SCENARIO_HEADER_CONTENT_MAX_WIDTH } from './ScenarioPage';
 import ProviderConfigCard from "@/components/ProviderConfigCard.tsx";
 import UnifiedCard from "@/components/UnifiedCard.tsx";
 import ConfigRow from "@/components/ConfigRow.tsx";
-import { ActiveBadge } from "@/components/ActiveBadge";
+import { ChoiceToggle } from "@/components/ChoiceToggle";
 import { useProfileContext } from '@/contexts/ProfileContext';
 import { useVersion } from '@/contexts/VersionContext';
 import { useScenarioPageInternal } from '@/pages/scenario/hooks/useScenarioPageInternal.ts';
@@ -255,55 +255,22 @@ const ClaudeCodeProfilePageContent: React.FC = () => {
                                                     <ContentCopyIcon fontSize="small" />
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title="Use npx command">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleCommandModeChange('npx')}
-                                                    sx={{
-                                                        position: 'relative',
-                                                        opacity: commandMode === 'npx' ? 1 : 0.5,
-                                                        transition: 'opacity 0.2s',
-                                                        '&:hover': {
-                                                            opacity: 1,
-                                                            backgroundColor: 'action.hover',
-                                                        },
-                                                    }}
-                                                >
-                                                    <Box
-                                                        sx={{
-                                                            width: 20,
-                                                            height: 20,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: 'success.main',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                        }}
-                                                    >
-                                                        <Typography sx={{ fontSize: '12px', lineHeight: 1, color: 'background.paper', fontWeight: 'bold' }}>
-                                                            n
-                                                        </Typography>
-                                                    </Box>
-                                                    {commandMode === 'npx' && <ActiveBadge />}
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Use global CLI command">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleCommandModeChange('global')}
-                                                    sx={{
-                                                        opacity: commandMode === 'global' ? 1 : 0.5,
-                                                        transition: 'opacity 0.2s',
-                                                        '&:hover': {
-                                                            opacity: 1,
-                                                            backgroundColor: 'action.hover',
-                                                        },
-                                                    }}
-                                                >
-                                                    <TerminalIcon fontSize="small" sx={{ color: 'text.primary' }} />
-                                                    {commandMode === 'global' && <ActiveBadge />}
-                                                </IconButton>
-                                            </Tooltip>
+                                            <ChoiceToggle
+                                                value={commandMode}
+                                                onChange={handleCommandModeChange}
+                                                options={[
+                                                    {
+                                                        value: 'npx', label: 'npx', tooltip: 'Use npx command',
+                                                        // The same green "n" disc the old icon-only switch used for npx.
+                                                        icon: (
+                                                            <Box component="span" sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: 'success.main', color: 'background.paper', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>
+                                                                n
+                                                            </Box>
+                                                        ),
+                                                    },
+                                                    { value: 'global', label: t('claudeCode.profile.commandGlobal'), tooltip: 'Use global CLI command', icon: <TerminalIcon /> },
+                                                ]}
+                                            />
                                         </>
                                     ),
                                 },

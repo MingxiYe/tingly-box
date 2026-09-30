@@ -1,9 +1,7 @@
 import { Laptop as LaptopIcon } from '@/components/icons';
-import { Box, Tooltip, Typography } from '@mui/material';
-import IconButton from '@mui/material/IconButton';
+import { ChoiceToggle } from './ChoiceToggle';
 import React from 'react';
 import DockerOriginal from 'devicons-react/icons/DockerOriginal';
-import { ActiveBadge } from './ActiveBadge';
 
 // ============================================================================
 // Types
@@ -58,10 +56,8 @@ interface EnvironmentModeSwitcherProps {
 /**
  * Environment mode switcher for URL transformation.
  *
- * Displays all available mode icons side by side:
- * - [💻] [🐳]  <- Click to switch
- *
- * Active mode is highlighted with a green checkmark badge.
+ * [💻 Local][🐳 Docker] as a ChoiceToggle; the tooltip names the host each
+ * mode puts in the URL.
  */
 export const EnvironmentModeSwitcher: React.FC<EnvironmentModeSwitcherProps> = ({
     value,
@@ -75,32 +71,11 @@ export const EnvironmentModeSwitcher: React.FC<EnvironmentModeSwitcherProps> = (
             : (modes as EnvironmentModeOption[]);
     })();
     return (
-        <Box sx={{ display: 'flex', gap: 0.25 }}>
-            {resolvedModes.map((mode) => {
-                const isActive = value === mode.value;
-
-                return (
-                    <Tooltip key={mode.value} title={mode.tooltip} arrow>
-                        <IconButton
-                            onClick={() => onChange(mode.value)}
-                            size="small"
-                            sx={{
-                                position: 'relative',
-                                opacity: isActive ? 1 : 0.5,
-                                transition: 'opacity 0.2s',
-                                '&:hover': {
-                                    opacity: 1,
-                                    backgroundColor: 'action.hover',
-                                },
-                            }}
-                        >
-                            {mode.icon}
-                            {isActive && <ActiveBadge />}
-                        </IconButton>
-                    </Tooltip>
-                );
-            })}
-        </Box>
+        <ChoiceToggle
+            value={value}
+            onChange={onChange}
+            options={resolvedModes.map((mode) => ({ value: mode.value, label: mode.label, tooltip: mode.tooltip, icon: mode.icon }))}
+        />
     );
 };
 

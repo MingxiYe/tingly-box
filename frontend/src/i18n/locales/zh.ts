@@ -1219,6 +1219,7 @@ export default {
       "renameProfile": "重命名配置文件",
       "deleteProfile": "删除配置文件",
       "quickStart": "启动",
+      "commandGlobal": "全局",
       "settingsFile": "设置",
       "settingsFileWarning": "这是生成的运行配置；手动修改会被 Profile 覆盖和模型规则重新生成。",
       "resolvingSettingsFile": "正在计算生成文件位置…",

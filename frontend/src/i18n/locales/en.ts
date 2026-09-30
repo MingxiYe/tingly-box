@@ -1221,6 +1221,7 @@ export default {
       "renameProfile": "Rename profile",
       "deleteProfile": "Delete profile",
       "quickStart": "Start",
+      "commandGlobal": "Global",
       "settingsFile": "Settings",
       "settingsFileWarning": "Generated runtime settings. Manual edits are overwritten by Profile Overrides and Model Rules.",
       "resolvingSettingsFile": "Resolving generated settings path…",
