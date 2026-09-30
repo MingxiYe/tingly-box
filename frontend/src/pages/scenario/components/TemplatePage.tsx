@@ -50,8 +50,11 @@ const TemplatePage: React.FC<TemplatePageProps> = (props) => {
     const { t } = useTranslation();
     const { showTokenModal, setShowTokenModal, token, copyToClipboard } = useScenarioPageModal();
 
-    // Internal mode: fetch all data internally (excluding modal - that's from context)
-    const internalData = useScenarioPageInternal(props.scenario);
+    // Internal mode: fetch all data internally (excluding modal - that's from context).
+    // When the parent passes `rules` it owns them: don't fetch a second copy,
+    // which would also drift from the parent's (e.g. a rule added from a
+    // page's config dialog showing up in one list but not the other).
+    const internalData = useScenarioPageInternal(props.scenario, { skipRules: props.rules !== undefined });
 
     const {
         title = t('scenarioPage.modelRules'),
@@ -79,7 +82,7 @@ const TemplatePage: React.FC<TemplatePageProps> = (props) => {
     const onProvidersLoad = props.onProvidersLoad ?? internalData.loadProviders;
     const loadRules = props.loadRules ?? internalData.loadRules;
     const onRuleDelete = props.onRuleDelete ?? internalData.handleRuleDelete;
-    const newlyCreatedRuleUuids = internalData.newlyCreatedRuleUuids;
+    const newlyCreatedRuleUuids = props.newlyCreatedRuleUuids ?? internalData.newlyCreatedRuleUuids;
     const isLoading = internalData.isLoading;
 
     const navigate = useNavigate();

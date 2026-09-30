@@ -137,6 +137,9 @@ export const ScenarioPage: React.FC<ScenarioPageProps> = ({
         baseUrl,
         rules,
         loadRules,
+        handleRulesChange,
+        handleRuleDelete,
+        newlyCreatedRuleUuids,
     } = useScenarioPageInternal(scenario);
 
     const [configModalOpen, setConfigModalOpen] = useState(false);
@@ -187,6 +190,13 @@ export const ScenarioPage: React.FC<ScenarioPageProps> = ({
                 {typeof children === 'function' ? children(slot) : children}
                 <TemplatePage
                     scenario={scenario}
+                    // One copy of the rules for the whole page: the rule list
+                    // and the config dialogs (slot.rules) read and reload the same state.
+                    rules={rules}
+                    loadRules={loadRules}
+                    onRulesChange={handleRulesChange}
+                    onRuleDelete={handleRuleDelete}
+                    newlyCreatedRuleUuids={newlyCreatedRuleUuids}
                     {...(templateTitle !== undefined ? { title: templateTitle } : {})}
                     collapsible={true}
                     allowDeleteRule={true}

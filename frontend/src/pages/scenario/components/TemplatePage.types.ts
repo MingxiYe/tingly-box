@@ -41,5 +41,7 @@ export interface TemplatePageProps {
     onRulesChange?: (updatedRules: Rule[]) => void;
     onProvidersLoad?: () => Promise<void>;
     onRuleDelete?: (ruleUuid: string) => void;
+    /** Rules created in this session (highlighted); pass with `rules` when the parent owns them. */
+    newlyCreatedRuleUuids?: Set<string>;
     loadRules?: (scenario: string) => Promise<void>;
 }
