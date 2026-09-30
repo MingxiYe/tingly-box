@@ -2,7 +2,7 @@ import { Visibility as VisibilityIcon, ContentCopy as CopyIcon } from '@/compone
 import { IconButton, Tooltip, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ConfigRow, type TabKey } from './ConfigRow';
+import { ConfigRow } from './ConfigRow';
 import { EnvironmentModeSwitcher, type EnvironmentMode } from './EnvironmentModeSwitcher';
 import { useScenarioPageModal } from '@/pages/scenario/context/ScenarioPageContext';
 import { copyableTextStyle } from '@/styles/textStyles';
@@ -36,7 +36,7 @@ interface CompactConfigCardProps {
 // ============================================================================
 
 /**
- * Compact configuration card with horizontal text tab switching.
+ * Compact configuration card: a Base URL row and an API Key row.
  * Uses ConfigRow component internally.
  *
  * Modal state (token, showTokenModal, setShowTokenModal) is obtained from
@@ -44,8 +44,8 @@ interface CompactConfigCardProps {
  *
  * Layout:
  * ┌─────────────────────────────────────────────────────────────────┐
- * │ Base URL | API Key    http://localhost:8080/tingly/anthropic  │
- * │                       [💻][🐳]                                 │
+ * │ Base URL    http://localhost:8080/tingly/anthropic   [⧉][💻][🐳] │
+ * │ API Key     tingly-••••••                            [⧉][👁]    │
  * └─────────────────────────────────────────────────────────────────┘
  *
  * Features:
@@ -65,7 +65,6 @@ export const CompactConfigCard: React.FC<CompactConfigCardProps> = ({
     const { t } = useTranslation();
     // Get modal state from context
     const { token, setShowTokenModal } = useScenarioPageModal();
-    const [activeTab, setActiveTab] = useState<TabKey>('baseUrl');
     const [envMode, setEnvMode] = useState<EnvironmentMode>('local');
 
     // Build full URL based on environment mode
@@ -136,12 +135,14 @@ export const CompactConfigCard: React.FC<CompactConfigCardProps> = ({
         },
     ];
 
+    // Both values the user copies into their tool are shown as rows of their
+    // own — the key used to sit behind a "Base URL | API Key" tab switch.
     return (
-        <ConfigRow
-            tabs={tabs}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-        />
+        <>
+            {tabs.map((tab) => (
+                <ConfigRow key={tab.key} tabs={[tab]} activeTab={tab.key} onTabChange={() => {}} />
+            ))}
+        </>
     );
 };
 
