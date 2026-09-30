@@ -1,4 +1,4 @@
-import { Box, Drawer, IconButton, Tooltip, Stack } from '@mui/material';
+import { Box, ClickAwayListener, Drawer, IconButton, Tooltip, Stack } from '@mui/material';
 import { Menu as IconMenu, Create as IconPencil, tablerMui } from '@/components/icons';
 import { IconLayoutSidebarLeftCollapse } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -91,11 +91,17 @@ const LayoutInner = ({ children }: LayoutProps) => {
     // Navigation itself now happens via ActivityBar's own <RouterLink> (so
     // right-click "copy link"/"open in new tab" work on level-1 items), so
     // this only handles the side effects the click triggers alongside it.
+    // With the sidebar collapsed, clicking a rail item that has pages to
+    // choose between shows its sidebar as a flyout over the content, so the
+    // pages stay one click away; picking one (or clicking elsewhere) closes it.
+    const [flyoutOpen, setFlyoutOpen] = useState(false);
+
     const handleActivityClick = (item: ActivityItem) => {
         const hasSidebarItems = (item.children?.filter(child => child.type !== 'divider').length ?? 0) > 1;
         if (!hasSidebarItems) {
             setMobileOpen(false);
         }
+        setFlyoutOpen(sidebarCollapsed && hasSidebarItems);
 
         sessionStorage.setItem('layout.activeActivity', item.key);
     };
@@ -140,7 +146,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
     );
 
     const navigationContent = (
-        <Box sx={{ display: 'flex', height: '100%' }}>
+        <Box data-nav-rail sx={{ display: 'flex', height: '100%', position: 'relative' }}>
             <ActivityBar
                 activityItems={activityItems}
                 activeActivity={activeActivity}
@@ -154,6 +160,24 @@ const LayoutInner = ({ children }: LayoutProps) => {
                     onClose={() => setMobileOpen(false)}
                     headerAction={sidebarHeaderAction}
                 />
+            )}
+            {hasSidebar && sidebarCollapsed && flyoutOpen && (
+                <ClickAwayListener
+                    onClickAway={(e) => {
+                        // The rail's own clicks decide open/closed themselves.
+                        if ((e.target as Element | null)?.closest?.('[data-nav-rail]')) return;
+                        setFlyoutOpen(false);
+                    }}
+                >
+                    <Box sx={{ position: 'absolute', left: '100%', top: 0, bottom: 0, zIndex: Z_INDEX.drawer + 2, boxShadow: 8, bgcolor: 'background.paper' }}>
+                        <Sidebar
+                            sidebarItems={sidebarItems}
+                            activeActivityLabel={activeActivityLabel}
+                            onClose={() => { setFlyoutOpen(false); setMobileOpen(false); }}
+                            headerAction={sidebarHeaderAction}
+                        />
+                    </Box>
+                </ClickAwayListener>
             )}
         </Box>
     );
