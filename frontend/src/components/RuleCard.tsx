@@ -14,11 +14,12 @@ import UnifiedRoutingGraph from '@/components/UnifiedRoutingGraph';
 import SmartRuleCatalogDialog from '@/components/rule-card/SmartRuleCatalogDialog';
 import GraphSettingsMenu from '@/components/GraphSettingsMenu';
 import { QuickProbeButton } from '@/components/probe';
-import { Box } from '@mui/material';
+import { Box, Button, Tooltip } from '@mui/material';
+import { Add as AddIcon } from '@/components/icons';
 import RulePluginsCard from '@/components/rule-card/RulePluginsCard';
 import FlagCatalogDialog from '@/components/rule-card/FlagCatalogDialog';
 import { formatRuleFlags, parseRuleFlags } from '@/components/rule-card/utils';
-import { flagDefault, setFlagValue } from '@/components/rule-card/flagHelpers';
+import { flagDefault, isFlagActive, setFlagValue } from '@/components/rule-card/flagHelpers';
 import { formatModelNameWithContext1M } from '@/components/rule-card/modelNameUtils';
 import { useProviderEditDialog } from '@/hooks/useProviderEditDialog';
 
@@ -293,7 +294,11 @@ export const RuleCard: React.FC<RuleCardProps> = ({
 
     if (!configRecord) return null;
 
-    const extensionsCard = (
+    // A rule with no plugins doesn't reserve the pinned Plugins column (it
+    // took ~240px of every rule card and pushed the route graph off the right
+    // edge); an "+ Plugins" button in the header opens the same catalog.
+    const hasPlugins = (flagRegistry || []).some((spec) => isFlagActive(spec, configRecord.flags ?? {}));
+    const extensionsCard = hasPlugins && (
         <RulePluginsCard
             flags={configRecord.flags}
             registry={flagRegistry}
@@ -310,6 +315,21 @@ export const RuleCard: React.FC<RuleCardProps> = ({
     // RoutingGraph and SmartRoutingGraph
     const extraActions = (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+            {!hasPlugins && (
+                <Tooltip title="Add plugins to this rule" arrow>
+                    <Button
+                        size="small"
+                        startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />}
+                        onClick={() => {
+                            setCatalogFocusKey(undefined);
+                            setCatalogOpen(true);
+                        }}
+                        sx={{ minWidth: 0, px: 1, py: 0.25, fontSize: '0.75rem', fontWeight: 500, color: 'text.secondary', textTransform: 'none' }}
+                    >
+                        Plugins
+                    </Button>
+                </Tooltip>
+            )}
             {rule.uuid && (
                 <QuickProbeButton
                     ruleUuid={rule.uuid}
@@ -351,7 +371,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({
                 expanded={expanded}
                 onToggleExpanded={handleToggleExpanded}
                 extraActions={extraActions}
-                extensionsCard={extensionsCard}
+                extensionsCard={extensionsCard || undefined}
                 onUpdateRecord={(field, value) => updateField(configRecord, setConfigRecord, field, value)}
                 onServiceNodeClick={handleServiceNodeClick}
                 onEditProvider={editProvider}
