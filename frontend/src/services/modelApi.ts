@@ -9,7 +9,7 @@
 // control-plane client. getOpenAIClient still needs the current model token,
 // which the backend manages behind /api/v1/token — read straight from
 // openapi.ts's generated client (not api.ts) to avoid a circular import.
-import TinglyService from '@/bindings';
+import { host } from '@/host';
 import {getApiBaseUrl} from '@/utils/protocol';
 import OpenAI from 'openai';
 import {controlApi} from './openapi';
@@ -24,17 +24,14 @@ async function modelAPI(path: string, options: RequestInit = {}): Promise<any> {
     let token = getModelToken();
 
     // Try to get model token from GUI if available
-    if (!token && import.meta.env.VITE_PKG_MODE === "gui") {
-        const svc = TinglyService;
-        if (svc) {
-            try {
-                const guiToken = await svc.GetUserAuthToken();
-                if (guiToken) {
-                    token = guiToken;
-                }
-            } catch (err) {
-                console.error('Failed to get GUI token for modelAPI:', err);
+    if (!token) {
+        try {
+            const shellToken = await host.shellAuthToken();
+            if (shellToken) {
+                token = shellToken;
             }
+        } catch (err) {
+            console.error('Failed to get GUI token for modelAPI:', err);
         }
     }
 

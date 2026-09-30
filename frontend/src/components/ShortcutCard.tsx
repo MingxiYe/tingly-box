@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { CopyIconButton } from '@/components/CopyIconButton';
 import { useNotify } from '@/hooks/useNotify.ts';
 import { api } from '@/services/api.ts';
-import { isGuiMode } from '@/utils/protocol.ts';
+import { host } from '@/host';
 import { fontMono } from '@/theme/fonts';
 
 /**
@@ -15,7 +15,7 @@ import { fontMono } from '@/theme/fonts';
  * (HelpPage) checks this before rendering ShortcutCard inside its own
  * accordion header.
  */
-export const shouldShowShortcutCard = () => !isGuiMode();
+export const shouldShowShortcutCard = () => host.kind !== 'desktop';
 
 /**
  * ShortcutCard — content for the "create a desktop / start-menu shortcut"

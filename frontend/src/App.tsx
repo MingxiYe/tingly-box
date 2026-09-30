@@ -1,4 +1,4 @@
-import { Events } from '@/bindings';
+import { host } from '@/host';
 import { Error as ErrorIcon, Refresh } from '@/components/icons';
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Paper, Stack, Typography } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -80,17 +80,8 @@ const AppDialogs = () => {
 function AppContent() {
     const navigate = useNavigate();
 
-    // Listen for systray navigation events
-    useEffect(() => {
-        const off = Events.On('systray-navigate', (event: any) => {
-            const path = event.data || event;
-            navigate(path);
-        });
-
-        return () => {
-            off?.();
-        };
-    }, [navigate]);
+    // The desktop shell's tray menu asks for pages by path.
+    useEffect(() => host.onShellNavigate(path => navigate(path)), [navigate]);
 
     return (
         <Suspense fallback={<RouteFallback />}>

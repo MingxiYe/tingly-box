@@ -1,4 +1,5 @@
 import { GitHub, AppRegistration as NPM, Refresh } from '@/components/icons';
+import { host } from '@/host';
 import { Box, Button, Dialog, DialogActions, DialogContent, Divider, Stack, ToggleButton, ToggleButtonGroup, Typography, useTheme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { fontMono } from '@/theme/fonts';
@@ -311,7 +312,7 @@ export const UpdatePanelDialog: React.FC<UpdatePanelDialogProps> = ({ open, onCl
             </DialogContent>
             <DialogActions sx={{ px: 3, py: 2, bgcolor: 'action.hover', justifyContent: 'space-between' }}>
                 <Button
-                    onClick={() => window.open(releaseURL || 'https://github.com/tingly-dev/tingly-box/releases', '_blank')}
+                    onClick={() => host.openExternal(releaseURL || 'https://github.com/tingly-dev/tingly-box/releases')}
                     startIcon={<GitHub />}
                     sx={{
                         color: 'text.secondary',
