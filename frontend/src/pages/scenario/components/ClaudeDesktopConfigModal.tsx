@@ -14,10 +14,9 @@ import {
     Tooltip,
 } from '@mui/material';
 import React, { useState } from 'react';
-import { Delete as DeleteIcon } from '@/components/icons';
-import { Add as AddIcon } from '@/components/icons';
 import { ContentCopy as ContentCopyIcon } from '@/components/icons';
 import { useScenarioPageModal } from '@/pages/scenario/context/ScenarioPageContext';
+import { scrollToModelsCard } from './AgentSetupCard';
 import Context1MChangeBanner from './Context1MChangeBanner';
 import { CopyUrlKeyButtons } from './config/CopyUrlKeyButtons';
 import api from '@/services/api';
@@ -32,10 +31,13 @@ interface ClaudeDesktopConfigModalProps {
     pendingContext1MChange?: boolean | null;
 }
 
-const MODEL_PREFIX = 'claude-';
+const LABEL_PREFIX = 'label:';
+const labelOf = (rule: any): string =>
+    rule.description?.startsWith(LABEL_PREFIX) ? rule.description.slice(LABEL_PREFIX.length) : '';
+
 const buildInferenceModelsJson = (modelRules: any[]): string => {
     const entries = modelRules.map(r => {
-        const label = r.description?.startsWith('label:') ? r.description.slice(6) : '';
+        const label = labelOf(r);
         if (label) {
             return `    {\n      "name": "${r.request_model}",\n      "labelOverride": "${label}"\n    }`;
         }
@@ -56,74 +58,36 @@ const ClaudeDesktopConfigModal: React.FC<ClaudeDesktopConfigModalProps> = ({
     pendingContext1MChange,
 }) => {
     const { token } = useScenarioPageModal();
-    const [newModelName, setNewModelName] = useState('');
-    const [newLabelOverride, setNewLabelOverride] = useState('');
-    const [adding, setAdding] = useState(false);
-    const [deletingUuid, setDeletingUuid] = useState<string | null>(null);
-    const [error, setError] = useState('');
-    const [warning, setWarning] = useState('');
+    // Label edits in progress, by rule uuid; saved on blur / Enter.
+    const [labelDrafts, setLabelDrafts] = useState<Record<string, string>>({});
+    const [savingUuid, setSavingUuid] = useState<string | null>(null);
 
     const modelRules = rules.filter(r => r.request_model && r.request_model !== '*');
     const inferenceModelsJson = buildInferenceModelsJson(modelRules);
 
-    const validateModelName = (name: string): { error: string; warning: string } => {
-        if (!name.trim()) return { error: 'Model name is required', warning: '' };
-        if (modelRules.some(r => r.request_model === name.trim())) return { error: 'Already exists', warning: '' };
-        if (!name.startsWith(MODEL_PREFIX)) return { error: '', warning: 'Custom names may not work in Claude Desktop' };
-        return { error: '', warning: '' };
-    };
-
-    const handleAdd = async () => {
-        const trimmed = newModelName.trim();
-        const { error: ve, warning: vw } = validateModelName(trimmed);
-        if (ve) {
-            setError(ve);
-            return;
-        }
-        setWarning(vw);
-        setAdding(true);
-        setError('');
-        try {
-            const label = newLabelOverride.trim();
-            const result = await api.createRule('', {
-                scenario: 'claude_desktop',
-                request_model: trimmed,
-                description: label ? `label:${label}` : '',
-                active: true,
-                services: [],
-            });
-            if (result?.success) {
-                setNewModelName('');
-                setNewLabelOverride('');
+    // The models are the rules in Model Rules; this dialog only adds the
+    // Claude-Desktop-specific display label (labelOverride), which is stored
+    // in the rule's description. Rule updates replace the whole record, so
+    // the fetched rule is sent back with only the description changed.
+    const saveLabel = async (rule: any) => {
+        const draft = labelDrafts[rule.uuid];
+        if (draft === undefined) return;
+        const label = draft.trim();
+        if (label !== labelOf(rule)) {
+            setSavingUuid(rule.uuid);
+            try {
+                await api.updateRule(rule.uuid, { ...rule, description: label ? `${LABEL_PREFIX}${label}` : '' });
                 onRulesRefresh?.();
-            } else {
-                setError(result?.error || 'Failed to add model');
+            } finally {
+                setSavingUuid(null);
             }
-        } finally {
-            setAdding(false);
         }
+        setLabelDrafts(({ [rule.uuid]: _, ...rest }) => rest);
     };
 
-    const handleDelete = async (uuid: string) => {
-        setDeletingUuid(uuid);
-        try {
-            await api.deleteRule(uuid);
-            onRulesRefresh?.();
-        } finally {
-            setDeletingUuid(null);
-        }
-    };
-
-    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        setNewModelName(val);
-        if (error) setError('');
-        const { warning: vw } = validateModelName(val);
-        setWarning(vw);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') void handleAdd();
+    const editModelsInRules = () => {
+        onClose();
+        scrollToModelsCard();
     };
 
     return (
@@ -265,92 +229,42 @@ const ClaudeDesktopConfigModal: React.FC<ClaudeDesktopConfigModalProps> = ({
                                 : inferenceModelsJson}
                         </Box>
 
-                        {/* Per-row delete */}
+                        {/* One row per model rule: its name, and the label Claude
+                            Desktop shows for it. Models themselves are added and
+                            removed in Model Rules, the one place rules are edited. */}
                         <Stack spacing={0.5} sx={{ mb: 1.5 }}>
-                            {modelRules.map(rule => {
-                                const label = rule.description?.startsWith('label:')
-                                    ? rule.description.slice(6)
-                                    : '';
-                                return (
-                                    <Stack
-                                        key={rule.uuid}
-                                        direction="row"
-                                        spacing={1}
-                                        sx={{
-                                            alignItems: "center",
-                                            bgcolor: 'background.default',
-                                            borderRadius: 1,
-                                            px: 1.5,
-                                            py: 0.5
-                                        }}>
-                                        <Typography
-                                            sx={{ fontFamily: 'monospace', fontSize: '0.82rem', flex: 1 }}
-                                        >
-                                            {rule.request_model}
-                                        </Typography>
-                                        {label && (
-                                            <Typography
-                                                variant="caption"
-                                                sx={{
-                                                    color: "text.secondary",
-                                                    fontFamily: 'monospace'
-                                                }}>
-                                                {label}
-                                            </Typography>
-                                        )}
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleDelete(rule.uuid)}
-                                            disabled={deletingUuid === rule.uuid}
-                                        >
-                                            {deletingUuid === rule.uuid
-                                                ? <CircularProgress size={14} />
-                                                : <DeleteIcon fontSize="small" />
-                                            }
-                                        </IconButton>
-                                    </Stack>
-                                );
-                            })}
+                            {modelRules.map(rule => (
+                                <Stack
+                                    key={rule.uuid}
+                                    direction="row"
+                                    spacing={1}
+                                    sx={{ alignItems: 'center', bgcolor: 'background.default', borderRadius: 1, px: 1.5, py: 0.5 }}>
+                                    <Typography sx={{ fontFamily: 'monospace', fontSize: '0.82rem', flex: 2, minWidth: 0 }}>
+                                        {rule.request_model}
+                                    </Typography>
+                                    <TextField
+                                        size="small"
+                                        variant="standard"
+                                        placeholder="label (optional)"
+                                        value={labelDrafts[rule.uuid] ?? labelOf(rule)}
+                                        onChange={e => setLabelDrafts(d => ({ ...d, [rule.uuid]: e.target.value }))}
+                                        onBlur={() => void saveLabel(rule)}
+                                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                                        disabled={savingUuid === rule.uuid}
+                                        sx={{ flex: 1 }}
+                                        slotProps={{ htmlInput: { style: { fontSize: '0.82rem' }, 'aria-label': `Label for ${rule.request_model}` } }}
+                                    />
+                                    {savingUuid === rule.uuid && <CircularProgress size={14} />}
+                                </Stack>
+                            ))}
                         </Stack>
-
-                        {/* Add row */}
-                        <Stack direction="row" spacing={1} sx={{
-                            alignItems: "flex-start"
-                        }}>
-                            <TextField
-                                size="small"
-                                placeholder="claude-sonnet-4-6"
-                                value={newModelName}
-                                onChange={handleNameChange}
-                                onKeyDown={handleKeyDown}
-                                error={Boolean(error)}
-                                helperText={error || warning}
-                                disabled={adding}
-                                sx={{ flex: 2 }}
-                                slotProps={{
-                                    htmlInput: { style: { fontFamily: 'monospace', fontSize: '0.82rem' } },
-                                    formHelperText: { sx: error ? {} : { color: 'warning.main' } }
-                                }} />
-                            <TextField
-                                size="small"
-                                placeholder="label (optional)"
-                                value={newLabelOverride}
-                                onChange={e => setNewLabelOverride(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                disabled={adding}
-                                sx={{ flex: 1 }}
-                                slotProps={{
-                                    htmlInput: { style: { fontSize: '0.82rem' } }
-                                }}
-                            />
-                            <IconButton
-                                color="primary"
-                                onClick={() => void handleAdd()}
-                                disabled={adding || !newModelName.trim()}
-                                sx={{ mt: error ? 0 : 0.5 }}
-                            >
-                                {adding ? <CircularProgress size={20} /> : <AddIcon />}
-                            </IconButton>
+                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', flex: 1 }}>
+                                Models come from the rules on this page — add or remove them in Model Rules.
+                            </Typography>
+                            <Button size="small" onClick={editModelsInRules} sx={{ flexShrink: 0 }}>
+                                Edit in Model Rules
+                            </Button>
                         </Stack>
                     </Box>
                 </Stack>

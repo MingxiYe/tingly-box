@@ -1,55 +1,28 @@
-import AgentSetupCard, { hasModelOnAnyRule, scrollToModelsCard } from './components/AgentSetupCard';
 import PiConfigModal from './components/PiConfigModal';
-import { useTranslation } from 'react-i18next';
-import { ScenarioConfigButton, ScenarioPage } from './ScenarioPage';
-import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { AgentPage, type AgentPageDescriptor } from './AgentPage';
 
-const scenario = "pi";
 const PI_REPO_URL = 'https://github.com/earendil-works/pi';
 
-const UsePiPage: React.FC = () => {
-    const { t } = useTranslation();
-    return (
-        <ScenarioPageModalProvider>
-            <ScenarioPage
-                scenario={scenario}
-                title="Pi"
-                tooltipKey="scenarioPage.tooltip.pi"
-                providerCard={{ compact: true, showApiKeyRow: true }}
-                withConnectAI
-                renderRightAction={(slot) => (
-                    <ScenarioConfigButton
-                        onClick={slot.openConfigModal}
-                        label={t('scenarioPage.setupGuide')}
-                    />
-                )}
-                renderConfigModal={(slot) => (
-                    <PiConfigModal
-                        open={slot.configModalOpen}
-                        onClose={slot.closeConfigModal}
-                    />
-                )}
-            >
-                {(slot) => (
-                    <AgentSetupCard
-                        agentKey={scenario}
-                        agentName="Pi"
-                        installCommand=""
-                        installStepDescription={t('scenarioPage.pi.installDescription')}
-                        installActions={[
-                            { label: t('scenarioPage.pi.viewRepo'), href: PI_REPO_URL, variant: 'outlined', external: true },
-                        ]}
-                        onViewConfig={slot.openConfigModal}
-                        applyStepLabel={t('scenarioPage.pi.applyStepLabel')}
-                        applyStepDescription={t('scenarioPage.pi.applyStepDescription')}
-                        viewConfigButtonLabel={t('scenarioPage.pi.openGuide')}
-                        hasModelSelected={hasModelOnAnyRule(slot.rules)}
-                        onSelectModel={scrollToModelsCard}
-                        onConnectProvider={slot.connectAI.handleConnectAIClick}
-                    />
-                )}
-            </ScenarioPage>
-        </ScenarioPageModalProvider>
-    );
+const pi: AgentPageDescriptor = {
+    scenario: 'pi',
+    title: 'Pi',
+    tooltipKey: 'scenarioPage.tooltip.pi',
+    connection: { compact: true, apiKeyRow: true },
+    setup: {
+        kind: 'guide',
+        renderDialog: (slot) => <PiConfigModal open={slot.dialogOpen} onClose={slot.closeDialog} />,
+    },
+    quickStart: {
+        installDescriptionKey: 'scenarioPage.pi.installDescription',
+        installActions: (t) => [
+            { label: t('scenarioPage.pi.viewRepo'), href: PI_REPO_URL, variant: 'outlined', external: true },
+        ],
+        applyStepLabelKey: 'scenarioPage.pi.applyStepLabel',
+        applyStepDescriptionKey: 'scenarioPage.pi.applyStepDescription',
+        openDialogLabelKey: 'scenarioPage.pi.openGuide',
+    },
 };
+
+const UsePiPage: React.FC = () => <AgentPage agent={pi} />;
+
 export default UsePiPage;

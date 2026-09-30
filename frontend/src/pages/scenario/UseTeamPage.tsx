@@ -13,7 +13,7 @@ import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router-dom';
 import PageLayout from '@/components/PageLayout';
 import ScenarioPageSkeleton from './components/ScenarioPageSkeleton';
-import { SCENARIO_HEADER_CONTENT_MAX_WIDTH } from './ScenarioPage';
+import { SCENARIO_HEADER_CONTENT_MAX_WIDTH } from './components/ScenarioCardHeader';
 import TemplatePage from './components/TemplatePage.tsx';
 import SharingKeysDialog from './components/SharingKeysDialog.tsx';
 import TeamGuideDialog from '@/components/TeamGuideDialog';

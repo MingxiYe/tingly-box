@@ -1,33 +1,24 @@
-import { useTranslation } from 'react-i18next';
 import CursorConfigModal from './components/CursorConfigModal';
-import { ScenarioConfigButton, ScenarioPage } from './ScenarioPage';
-import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { AgentPage, type AgentPageDescriptor } from './AgentPage';
 
-const UseCursorPage: React.FC = () => {
-    const { t } = useTranslation();
-    return (
-        <ScenarioPageModalProvider>
-            <ScenarioPage
-                scenario="cursor"
-                title="Cursor"
-                tooltipKey="scenarioPage.tooltip.cursor"
-                providerCard={{ compact: true, showApiKeyRow: true, showBaseUrlRow: true }}
-                renderRightAction={(slot) => (
-                    <ScenarioConfigButton
-                        onClick={slot.openConfigModal}
-                        label={t('scenarioPage.setupGuide')}
-                    />
-                )}
-                renderConfigModal={(slot) => (
-                    <CursorConfigModal
-                        open={slot.configModalOpen}
-                        onClose={slot.closeConfigModal}
-                        baseUrl={slot.baseUrl}
-                        copyToClipboard={slot.copyToClipboard}
-                    />
-                )}
+const cursor: AgentPageDescriptor = {
+    scenario: 'cursor',
+    title: 'Cursor',
+    tooltipKey: 'scenarioPage.tooltip.cursor',
+    connection: { compact: true, apiKeyRow: true, baseUrlRow: true },
+    setup: {
+        kind: 'guide',
+        renderDialog: (slot) => (
+            <CursorConfigModal
+                open={slot.dialogOpen}
+                onClose={slot.closeDialog}
+                baseUrl={slot.baseUrl}
+                copyToClipboard={slot.copyToClipboard}
             />
-        </ScenarioPageModalProvider>
-    );
+        ),
+    },
 };
+
+const UseCursorPage: React.FC = () => <AgentPage agent={cursor} />;
+
 export default UseCursorPage;

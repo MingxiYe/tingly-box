@@ -10,10 +10,10 @@
 | 项 | 状态 | 说明 |
 |---|---|---|
 | A 不改布局的修复 | ✅ | 没插件的规则不再占 Plugins 列（改为标题行「+ Plugins」）；API Key 单独一行；Local / Docker 与 profile 的 npx / Global 统一为带文字的 `ChoiceToggle`；手动类 Agent 按钮改为「Setup Guide」；ScenarioPage 与 TemplatePage 共用一份规则；Quick Start 进度存服务端（见 ui-redesign P1） |
-| B 客户端配置状态 | ✅ Claude Code / Codex / DSH | `GET /api/v1/config/{claude,codex,dsh}/status` + 标题旁状态 chip（`useClientConfigStatus`、`ScenarioPage.clientConfigTool`）；旧 toast / 确认框暂留一个版本 |
-| C 验证 | ✅（轻量版） | 安装步骤检测到真实请求即完成，手动确认保留；3 步重排未做 |
-| D 模板 + descriptor | 未开始 | 结构改动，逐页开关 |
-| E 分区调整 | 未开始 | 模式切换移入路由区、插件默认值行 |
+| B 客户端配置状态 | ✅ Claude Code / Codex / DSH | `GET /api/v1/config/{claude,codex,dsh}/status` + 标题旁状态 chip（`useClientConfigStatus`、`AgentPageDescriptor.clientConfigTool`）；旧 toast / 确认框暂留一个版本 |
+| C 验证 | ✅（轻量版）；3 步重排不做 | 安装步骤检测到真实请求即完成，手动确认保留。§3.4 的"4 步改 3 步、第 3 步等待首个请求"曾经实现过，评审后决定不需要（2026-09-30），已 revert，Quick Start 保持 4 步 |
+| D 模板 + descriptor | ✅ 13 个 Agent 页 | `AgentPage` + `AgentPageDescriptor`（`pages/scenario/AgentPage.tsx`）：SDK 4 页 → 手动类 5 页 → OpenCode / DSH → Codex → Claude Code，每步一个 commit，渲染出的 DOM 与迁移前一致（Claude Code 标题行改用共用的 `ScenarioCardHeader`，状态 chip 左移 4px）。回退手段是 revert 对应 commit，不做运行时开关。迁移完成后 `ScenarioPage` 并入 `AgentPage`，它的 render-prop 接口随之删除；`ScenarioCardHeader` 和宽度常量移到 `components/ScenarioCardHeader.tsx`，供 Team / Profile / Image API 引用而不必加载 Agent 页。Team、Profile 未迁移（Team 面向团队、有自己的成员 / key 管理；Profile 合并暂缓） |
+| E 分区调整 | 部分：插件与模式切换的挪位评审后撤回 | 场景级插件移到 Model Rules 顶部、改名「Rule defaults」，以及 Unified / Separate 移进 Model Rules，都实现过一版，评审后撤回（2026-09-30）：场景插件是 Agent 级设置而非规则默认值（Smart Compact 根本没有规则级对应项），改名造成一物两名（规则卡片里仍叫 Plugins），常用设置被压到 Quick Start 之下。两者留在标题 / 接入卡片；模式切换的更好形态另议。依赖挪位的"规则覆盖默认值"标记一并撤回。Claude Desktop 的弹窗只生成 JSON：不再增删规则，只保留它特有的 labelOverride 标签编辑，并指向 Model Rules（§3.8）。接入区"走完三步后折叠为一行摘要"未做：Quick Start 完成后本身会折叠，接入区只剩 Base URL / Key 两行 |
 | Profile 合并 | 暂缓 | 见 §3.6 |
 
 ---
@@ -149,6 +149,8 @@ Profile 本质上是"Claude Code 的一个变体"，页面结构却不同：`Sta
 
 ### 3.4 验证 = 收到真实请求
 
+> **不做（2026-09-30 评审决定）**：下面的"改为 3 步 + 等待首个请求"实现过一版，评审认为多余，已 revert。保留的只有轻量版：安装步骤检测到真实请求即算完成。
+
 - Quick Start 由 4 步改为 3 步：安装 → 应用配置（或按指南配置）→ 验证。原第 1 步"连接 AI 服务"、第 2 步"选择模型"是路由区的事，空状态由路由区自己引导（现有的 spotlight 保留）。
 - 验证步骤显示"等待第一个请求…"，收到该 scenario 的第一条请求后自动完成（数据来自用量记录）。"我已完成"作为手动跳过保留。
 - 步骤状态存到服务端，浏览器和 Wails 窗口一致。
@@ -197,6 +199,14 @@ interface AgentCapabilities {
 | Team | — | none（分发 Team Keys） | 否 | free | teams |
 
 有了这张表，5 个自己排版的页面都可以收敛到模板 + descriptor。现有的 `ScenarioPage` 骨架和 slot 机制已经完成了一半。
+
+**已落地的形态**（2026-09-30，与上面的草案有出入的地方）：
+
+- descriptor 与导航用的 `ScenarioDescriptor`（`scenarioRegistry.tsx`）分开放。后者被 nav 静态引用，必须轻；页面 descriptor 会引用各自的配置弹窗，所以每个 descriptor 写在自己的 `Use*Page.tsx` 里，跟着页面一起懒加载（见 `frontend/CLAUDE.md` 的 code-splitting 规则）。
+- `setup.kind`：`none` / `guide` / `auto`，对应草案的 `apply.kind`。标题栏按钮文案由它决定（Setup Guide / Auto Config），页面不再自己选。`auto` 的 `apply(t, ctx)` 是一键写配置，`ctx` 带当前规则和槽位模式；加载状态由 `AgentPage` 统一管理，弹窗里的自定义写入走 `slot.runApply` 共用同一个状态。
+- 弹窗仍是每个 Agent 自己的组件，通过 `renderDialog(slot)` 接入；关闭时统一清掉待处理的 1M 变更。
+- `slotRouting`（草案的 `routing.kind: 'fixed-slots'`）：目前只有 Claude Code。Unified / Separate 的切换、确认框和按模式加载规则都在 `hooks/useSlotRouting.tsx`；这类规则不能增删、不能停用。
+- `headerLinks`：DSH 的 Open Web UI；有链接时配置按钮退为 outlined。
 
 ### 3.8 顺手修掉的小问题
 

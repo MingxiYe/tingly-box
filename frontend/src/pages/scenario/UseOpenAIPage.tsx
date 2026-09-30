@@ -1,10 +1,11 @@
-import { ScenarioPage } from './ScenarioPage';
-import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { AgentPage, type AgentPageDescriptor } from './AgentPage';
 
-const UseOpenAIPage: React.FC = () => (
-    <ScenarioPageModalProvider>
-        <ScenarioPage scenario="openai" title="OpenAI SDK" />
-    </ScenarioPageModalProvider>
-);
+const openai: AgentPageDescriptor = {
+    scenario: 'openai',
+    title: 'OpenAI SDK',
+    setup: { kind: 'none' },
+};
+
+const UseOpenAIPage: React.FC = () => <AgentPage agent={openai} />;
 
 export default UseOpenAIPage;

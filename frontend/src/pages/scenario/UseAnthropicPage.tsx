@@ -1,10 +1,11 @@
-import { ScenarioPage } from './ScenarioPage';
-import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { AgentPage, type AgentPageDescriptor } from './AgentPage';
 
-const UseAnthropicPage: React.FC = () => (
-    <ScenarioPageModalProvider>
-        <ScenarioPage scenario="anthropic" title="Anthropic SDK" />
-    </ScenarioPageModalProvider>
-);
+const anthropic: AgentPageDescriptor = {
+    scenario: 'anthropic',
+    title: 'Anthropic SDK',
+    setup: { kind: 'none' },
+};
+
+const UseAnthropicPage: React.FC = () => <AgentPage agent={anthropic} />;
 
 export default UseAnthropicPage;

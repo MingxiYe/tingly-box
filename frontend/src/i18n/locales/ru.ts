@@ -1194,10 +1194,6 @@ export default {
       "separate": {
         "label": "Раздельные модели",
         "description": "Разные модели под задачи Claude Code: субагент, сводка, основная и другие"
-      },
-      "smart": {
-        "label": "Умный режим",
-        "description": "(В разработке) Умная маршрутизация по полям запроса, содержимому, возможностям модели, намерению пользователя и т. д."
       }
     },
     "modeChange": {
@@ -1221,7 +1217,6 @@ export default {
     "separateConfig": "Раздельная конфигурация",
     "switchToSeparate": "Переключить на раздельный",
     "switchToUnified": "Переключить на единый",
-    "configButton": "Автонастройка",
     "quickApply": "Автонастройка",
     "quickApplyWithStatusLine": "Автонастройка и строка состояния",
     "statusLine": {

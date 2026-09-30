@@ -1,41 +1,28 @@
-import { useTranslation } from 'react-i18next';
 import ClaudeDesktopConfigModal from './components/ClaudeDesktopConfigModal';
-import { ScenarioConfigButton, ScenarioPage } from './ScenarioPage';
-import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { AgentPage, type AgentPageDescriptor } from './AgentPage';
 
-const scenario = "claude_desktop";
-const UseClaudeDesktopPage: React.FC = () => {
-    const { t } = useTranslation();
-    return (
-        <ScenarioPageModalProvider>
-            <ScenarioPage
-                scenario={scenario}
-                title="Claude Desktop"
-                tooltipKey="scenarioPage.tooltip.claude_desktop"
-                providerCard={{ compact: true, showApiKeyRow: true, showBaseUrlRow: true }}
-                context1M
-                renderRightAction={(slot) => (
-                    <ScenarioConfigButton
-                        onClick={slot.openConfigModal}
-                        label={t('scenarioPage.setupGuide')}
-                    />
-                )}
-                renderConfigModal={(slot) => (
-                    <ClaudeDesktopConfigModal
-                        open={slot.configModalOpen}
-                        onClose={() => {
-                            slot.closeConfigModal();
-                            slot.clearPendingContext1MChange();
-                        }}
-                        baseUrl={slot.baseUrl}
-                        copyToClipboard={slot.copyToClipboard}
-                        rules={slot.rules}
-                        onRulesRefresh={() => slot.loadRules(scenario)}
-                        pendingContext1MChange={slot.pendingContext1MChange}
-                    />
-                )}
+const claudeDesktop: AgentPageDescriptor = {
+    scenario: 'claude_desktop',
+    title: 'Claude Desktop',
+    tooltipKey: 'scenarioPage.tooltip.claude_desktop',
+    connection: { compact: true, apiKeyRow: true, baseUrlRow: true },
+    context1M: true,
+    setup: {
+        kind: 'guide',
+        renderDialog: (slot) => (
+            <ClaudeDesktopConfigModal
+                open={slot.dialogOpen}
+                onClose={slot.closeDialog}
+                baseUrl={slot.baseUrl}
+                copyToClipboard={slot.copyToClipboard}
+                rules={slot.rules}
+                onRulesRefresh={() => slot.loadRules(slot.scenario)}
+                pendingContext1MChange={slot.pendingContext1MChange}
             />
-        </ScenarioPageModalProvider>
-    );
+        ),
+    },
 };
+
+const UseClaudeDesktopPage: React.FC = () => <AgentPage agent={claudeDesktop} />;
+
 export default UseClaudeDesktopPage;

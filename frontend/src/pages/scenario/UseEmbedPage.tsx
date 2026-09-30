@@ -1,18 +1,12 @@
-import { useTranslation } from 'react-i18next';
-import { ScenarioPage } from './ScenarioPage';
-import { ScenarioPageModalProvider } from '@/pages/scenario/context/ScenarioPageContext';
+import { AgentPage, type AgentPageDescriptor } from './AgentPage';
 
-const UseEmbedPage: React.FC = () => {
-    const { t } = useTranslation();
-    return (
-        <ScenarioPageModalProvider>
-            <ScenarioPage
-                scenario="embed"
-                title="Embed API"
-                templateTitle={t('scenarioPage.embedModelRules')}
-            />
-        </ScenarioPageModalProvider>
-    );
+const embed: AgentPageDescriptor = {
+    scenario: 'embed',
+    title: 'Embed API',
+    rulesTitleKey: 'scenarioPage.embedModelRules',
+    setup: { kind: 'none' },
 };
+
+const UseEmbedPage: React.FC = () => <AgentPage agent={embed} />;
 
 export default UseEmbedPage;
