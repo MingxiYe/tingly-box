@@ -258,8 +258,9 @@ return w != nil && !w.Unknown && !w.Unlimited && w.Limit > 0
   所以最多 2 行额度 + 1 行钱）：纯余额 `Balance 81.41 CNY`（无环）；有上限的钱包
   `Balance $37.50 left`（带环）；无上限的花费 `30d $8.10 used`（无环，没有可耗尽的东西）。
   无读数显示 `—`（§3.6，不造占位文案）。
-  全部窗口、重置时间、cost、更新时间放 tooltip（最紧窗口加粗），tooltip 底部带
-  **Refresh** 和 **Details**（原始响应，仅在有 `raw_response` 时出现）两个按钮——
+  Hover 是两列清单：小圆环 + 窗口全名在左、数值右对齐，重置时间作为次行；cost 只在没有
+  「钱」窗口时才单列（否则与钱包重复），写作 `X left of Y`。底部分隔线下左侧是更新时间，
+  右侧是 **Refresh** 和 **Details**（原始响应，仅在有 `raw_response` 时出现）——
   入口必须在 hover 里，放进行的 ⋮ 菜单没人会发现。点击单元格本身也会刷新
   （取代原 Actions 里的 Quota 按钮）。
 

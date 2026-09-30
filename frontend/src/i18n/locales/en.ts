@@ -392,11 +392,12 @@ export default {
     "quota": {
       "used": "{{value}} used",
       "balance": "Balance",
+      "leftOf": "{{value}} left of {{limit}}",
       "cost": "Cost",
       "readFailed": "Couldn't read quota — Details below has the raw response",
       "noLimits": "No quota limits reported",
       "none": "No quota reading yet",
-      "refresh": "Refresh quota",
+      "refresh": "Refresh",
       "rawResponse": "Details"
     },
     "columns": {

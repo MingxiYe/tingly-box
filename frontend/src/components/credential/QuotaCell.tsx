@@ -46,9 +46,13 @@ function isMoney(window: QuotaWindow): boolean {
     return window.unit === 'currency';
 }
 
-function formatMoney(value: number, window: QuotaWindow): string {
+function formatMoneyCode(value: number, currencyCode?: string): string {
     const amount = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return window.currency_code ? `${amount} ${window.currency_code}` : `$${amount}`;
+    return currencyCode ? `${amount} ${currencyCode}` : `$${amount}`;
+}
+
+function formatMoney(value: number, window: QuotaWindow): string {
+    return formatMoneyCode(value, window.currency_code);
 }
 
 interface CellLine {
@@ -128,65 +132,90 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
     const lastError = quota?.last_error;
     const hasRaw = quota?.raw_response != null;
 
+    // A cost that restates a money window (e.g. Kimi's booster wallet) would
+    // show the same amount twice; it only earns a row when nothing else does.
+    const hasMoneyLine = described.some(line => isMoney(line.item.window));
+    const cost = quota?.cost && !hasMoneyLine ? quota.cost : undefined;
+    const costText = cost && (cost.limit > 0
+        ? t('providerTable.quota.leftOf', {
+            value: formatMoneyCode(Math.max(0, cost.limit - cost.used), cost.currency_code),
+            limit: formatMoneyCode(cost.limit, cost.currency_code),
+        })
+        : t('providerTable.quota.used', { value: formatMoneyCode(cost.used, cost.currency_code) }));
+
     const tooltip = (
-        <Box sx={{ minWidth: 160 }}>
-            {windows.map((item) => {
-                const { key, label, window } = item;
-                const value = isMoney(window)
-                    ? describe(item)?.text
-                    : isCountable(window)
-                        ? t('rule.service.quota.left', { value: formatQuotaRemaining(window, formatNumber) })
-                        : formatQuotaAvailable(window, formatNumber);
-                if (!value) return null;
-                const resetsAt = window.resets_at ? new Date(window.resets_at).getTime() : NaN;
-                return (
-                    <Box key={key} sx={{ mb: 0.25, fontWeight: window === tightest ? 700 : 400 }}>
-                        {label}: {value}
-                        {Number.isFinite(resetsAt) && resetsAt > now && (
-                            <> · {t('rule.service.quota.resetsIn', { duration: formatQuotaDuration(resetsAt - now) })}</>
-                        )}
-                    </Box>
-                );
-            })}
-            {resourceItems.map(item => (
-                <Box key={item.key} sx={{ mb: 0.25 }}>{item.window.label}: {item.countLabel}</Box>
-            ))}
-            {quota?.cost && (
-                <Box sx={{ mb: 0.25 }}>
-                    {t('providerTable.quota.cost')}: {quota.cost.limit > 0
-                        ? `${quota.cost.currency_code || '$'}${Math.max(0, quota.cost.limit - quota.cost.used).toFixed(2)} / ${quota.cost.currency_code || '$'}${quota.cost.limit.toFixed(2)}`
-                        : `${quota.cost.currency_code || '$'}${quota.cost.used.toFixed(2)}`}
-                </Box>
-            )}
-            {described.length === 0 && (
-                <Box sx={{ mb: 0.25, color: lastError ? QUOTA_COLORS.error : undefined }}>
-                    {lastError
-                        ? t('providerTable.quota.readFailed')
-                        : quota ? t('providerTable.quota.noLimits') : t('providerTable.quota.none')}
-                </Box>
-            )}
-            <Box sx={{ mt: 0.5, opacity: 0.7 }}>
-                {refreshing
-                    ? t('rule.service.quota.refreshing')
-                    : Number.isFinite(fetchedAt) && t('rule.service.quota.updated', { duration: formatQuotaDuration(now - fetchedAt) })}
+        <Box sx={{ minWidth: 240, py: 0.25 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                {windows.map((item) => {
+                    const { key, label, window } = item;
+                    const line = describe(item);
+                    const value = isMoney(window)
+                        ? line?.text
+                        : isCountable(window)
+                            ? t('rule.service.quota.left', { value: formatQuotaRemaining(window, formatNumber) })
+                            : formatQuotaAvailable(window, formatNumber);
+                    if (!value) return null;
+                    const resetsAt = window.resets_at ? new Date(window.resets_at).getTime() : NaN;
+                    return (
+                        <TooltipRow
+                            key={key}
+                            remaining={line?.remaining}
+                            label={label}
+                            value={value}
+                            detail={Number.isFinite(resetsAt) && resetsAt > now
+                                ? t('rule.service.quota.resetsIn', { duration: formatQuotaDuration(resetsAt - now) })
+                                : undefined}
+                        />
+                    );
+                })}
+                {resourceItems.map(item => (
+                    <TooltipRow key={item.key} label={item.window.label ?? item.key} value={item.countLabel} />
+                ))}
+                {cost && costText && (
+                    <TooltipRow label={cost.label || t('providerTable.quota.cost')} value={costText} />
+                )}
+                {described.length === 0 && (
+                    <Typography variant="caption" sx={{ color: lastError ? QUOTA_COLORS.error : 'text.secondary' }}>
+                        {lastError
+                            ? t('providerTable.quota.readFailed')
+                            : quota ? t('providerTable.quota.noLimits') : t('providerTable.quota.none')}
+                    </Typography>
+                )}
             </Box>
             {/* Actions live in the hover itself — a row menu is where nobody
                 looks. React events bubble through the tooltip's portal, so each
                 button stops propagation to keep row-level handlers out of it. */}
-            <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, mx: -0.75 }}>
-                <TooltipAction
-                    icon={<Refresh sx={{ fontSize: 14 }} />}
-                    label={t('providerTable.quota.refresh')}
-                    disabled={refreshing}
-                    onClick={onRefresh}
-                />
-                {hasRaw && (
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    mt: 1,
+                    pt: 0.75,
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                }}
+            >
+                <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1, whiteSpace: 'nowrap' }}>
+                    {refreshing
+                        ? t('rule.service.quota.refreshing')
+                        : Number.isFinite(fetchedAt) && t('rule.service.quota.updated', { duration: formatQuotaDuration(now - fetchedAt) })}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 0.25, mr: -0.75 }}>
                     <TooltipAction
-                        icon={<Code sx={{ fontSize: 14 }} />}
-                        label={t('providerTable.quota.rawResponse')}
-                        onClick={() => setRawOpen(true)}
+                        icon={<Refresh sx={{ fontSize: 14 }} />}
+                        label={t('providerTable.quota.refresh')}
+                        disabled={refreshing}
+                        onClick={onRefresh}
                     />
-                )}
+                    {hasRaw && (
+                        <TooltipAction
+                            icon={<Code sx={{ fontSize: 14 }} />}
+                            label={t('providerTable.quota.rawResponse')}
+                            onClick={() => setRawOpen(true)}
+                        />
+                    )}
+                </Box>
             </Box>
         </Box>
     );
@@ -253,7 +282,7 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
     const tightestRemaining = tightest ? Math.round(quotaRemainingPercent(tightest)) : undefined;
     return (
         <>
-        <Tooltip title={tooltip} arrow placement="top">
+        <Tooltip title={tooltip} arrow placement="top" slotProps={{ tooltip: { sx: { maxWidth: 380 } } }}>
             <Box
                 component="span"
                 role="button"
@@ -317,13 +346,48 @@ function TooltipAction({ icon, label, disabled, onClick }: {
                 minWidth: 0,
                 px: 0.75,
                 py: 0.25,
-                fontSize: '0.7rem',
+                fontSize: '0.65rem',
                 fontWeight: 500,
+                lineHeight: 1.4,
+                color: 'text.secondary',
                 textTransform: 'none',
-                '& .MuiButton-startIcon': { mr: 0.5 },
+                '&:hover': { color: 'primary.main', bgcolor: 'action.hover' },
+                // MUI sizes a small button's start icon to 18px; match the caption text instead.
+                '& .MuiButton-startIcon': { mr: 0.5, '& > *:nth-of-type(1)': { fontSize: 14 } },
             }}
         >
             {label}
         </Button>
+    );
+}
+
+/**
+ * One window in the hover: a small ring when the window has a share left,
+ * its full name, and the figure right-aligned so a column of figures lines up;
+ * the reset time sits underneath in the secondary color.
+ */
+function TooltipRow({ remaining, label, value, detail }: {
+    remaining?: number;
+    label: ReactNode;
+    value: ReactNode;
+    detail?: ReactNode;
+}) {
+    return (
+        <Box sx={{ display: 'grid', gridTemplateColumns: '12px 1fr auto', columnGap: 1, alignItems: 'center' }}>
+            <Box sx={{ display: 'inline-flex' }}>
+                {remaining != null && <QuotaRing remaining={remaining} color={quotaRingColor(remaining)} size={12} />}
+            </Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {label}
+            </Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textAlign: 'right', pl: 1.5 }}>
+                {value}
+            </Typography>
+            {detail && (
+                <Typography variant="caption" sx={{ gridColumn: '2 / 4', color: 'text.disabled', fontSize: '0.68rem', lineHeight: 1.3 }}>
+                    {detail}
+                </Typography>
+            )}
+        </Box>
     );
 }
