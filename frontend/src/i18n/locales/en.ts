@@ -90,7 +90,9 @@ export default {
       "createTeamTooltip": "Create an isolated Team workspace",
       "sloganTooltip": "For all Solo Builders, Dev Teams and Agents.",
       "collapse": "Collapse sidebar",
-      "doneEditing": "Done",
+      "hiddenCount": "{{n}} hidden",
+      "collapseHidden": "Collapse hidden",
+      "visibilityTip": "Hover an agent and click the eye to hide it. Hidden agents wait at the bottom of this list.",
       "expand": "Expand sidebar"
     },
     "activityBar": {

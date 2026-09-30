@@ -1,5 +1,5 @@
 import { Box, ClickAwayListener, Drawer, IconButton, Tooltip, Stack } from '@mui/material';
-import { Menu as IconMenu, Create as IconPencil, Check as IconCheck, tablerMui } from '@/components/icons';
+import { Menu as IconMenu, VisibilityOff as IconVisibilityOff, ExpandLess as IconExpandLess, tablerMui } from '@/components/icons';
 import { IconLayoutSidebarLeftCollapse } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,13 +13,24 @@ import { useActivityItems } from './useActivityItems.tsx';
 import { SidebarCollapsedProvider, useSidebarCollapsed } from './useSidebarCollapsed';
 import type { ActivityItem, LayoutProps } from './types';
 import { FloatingStatusIndicators } from '../components/FloatingStatusIndicators';
-import { syncUiPrefs } from '../services/uiPrefs';
+import { setSyncedItem, syncUiPrefs } from '../services/uiPrefs';
 import { useHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
 import { rememberAgentPath } from '@/pages/scenario/lastAgent';
 import type { NavItem } from './types';
 
 // Outside edit mode hidden rows go, and so does any divider they leave
 // leading, trailing or doubled.
+// Shown once in the Agent sidebar until closed: how hiding works, since
+// its control only appears on hover. Synced so closing it counts everywhere.
+export const AGENT_VISIBILITY_TIP_KEY = 'layout.agentVisibilityTip.dismissed';
+const readTipDismissed = () => {
+    try {
+        return localStorage.getItem(AGENT_VISIBILITY_TIP_KEY) === '1';
+    } catch {
+        return false;
+    }
+};
+
 const withoutHidden = (items: NavItem[]): NavItem[] => {
     const kept = items.filter(item => item.type === 'divider' || !item.hidden);
     return kept.filter((item, i) => item.type !== 'divider'
@@ -87,19 +98,46 @@ const LayoutInner = ({ children }: LayoutProps) => {
         rememberAgentPath(location.pathname);
     }, [location.pathname]);
 
-    // Edit mode of the Agent sidebar: every agent, hidden ones included,
-    // each with its visibility toggle. It replaced the /agent card page.
-    const [editingAgents, setEditingAgents] = useState(false);
+    // Hiding agents happens in the Agent sidebar itself (it replaced the
+    // /agent card page): each row reveals an eye on hover, and hidden agents
+    // collapse into one "N hidden" row at the bottom that expands them in
+    // place, dimmed, to bring one back. No separate edit mode to find.
+    const [showHiddenAgents, setShowHiddenAgents] = useState(false);
+    const [tipDismissed, setTipDismissed] = useState(readTipDismissed);
     const { toggleHidden } = useHiddenScenarios();
     useEffect(() => {
-        if (activeActivity !== 'scenario') setEditingAgents(false);
+        if (activeActivity !== 'scenario') setShowHiddenAgents(false);
     }, [activeActivity]);
 
     const sidebarItems = useMemo(() => {
         const activity = activityItems.find(item => item.key === activeActivity);
         const children = activity?.children || [];
-        return editingAgents ? children : withoutHidden(children);
-    }, [activityItems, activeActivity, editingAgents]);
+        if (activeActivity !== 'scenario') return withoutHidden(children);
+        const hiddenCount = children.filter(item => item.type !== 'divider' && item.hidden).length;
+        const items = showHiddenAgents ? [...children] : withoutHidden(children);
+        if (hiddenCount > 0) {
+            items.push({
+                path: '#toggle-hidden',
+                label: showHiddenAgents
+                    ? t('layout.sidebar.collapseHidden')
+                    : t('layout.sidebar.hiddenCount', { n: hiddenCount }),
+                icon: showHiddenAgents ? <IconExpandLess sx={{ fontSize: 20 }} /> : <IconVisibilityOff sx={{ fontSize: 20 }} />,
+            });
+        }
+        return items;
+    }, [activityItems, activeActivity, showHiddenAgents, t]);
+
+    const agentSidebarExtras = activeActivity === 'scenario' ? {
+        onToggleHidden: toggleHidden,
+        onToggleShowHidden: () => setShowHiddenAgents(v => !v),
+        tip: tipDismissed ? undefined : {
+            text: t('layout.sidebar.visibilityTip'),
+            onDismiss: () => {
+                setTipDismissed(true);
+                setSyncedItem(AGENT_VISIBILITY_TIP_KEY, '1');
+            },
+        },
+    } : {};
 
     // A sidebar is a choice between pages; an activity with a single page
     // (Bench, or Prompt with one of its two flags on) has nothing to choose,
@@ -130,8 +168,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
     };
 
     // Sidebar header actions: the collapse toggle always sits in the header
-    // (it owns the Sidebar, so it lives on it). The scenario activity also
-    // exposes a quick link to manage which agents are visible.
+    // (it owns the Sidebar, so it lives on it).
     const collapseButton = (
         <Tooltip title={t('layout.sidebar.collapse')} arrow placement="bottom">
             <IconButton
@@ -150,25 +187,6 @@ const LayoutInner = ({ children }: LayoutProps) => {
 
     const sidebarHeaderAction = (
         <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-            {activeActivity === 'scenario' && (
-                <Tooltip
-                    title={editingAgents ? t('layout.sidebar.doneEditing') : t('scenarioOverview.editTooltip')}
-                    arrow
-                    placement="bottom"
-                >
-                    <IconButton
-                        size="small"
-                        onClick={() => setEditingAgents(v => !v)}
-                        aria-pressed={editingAgents}
-                        sx={{
-                            color: editingAgents ? 'primary.main' : 'text.secondary',
-                            '&:hover': { color: 'primary.main' },
-                        }}
-                    >
-                        {editingAgents ? <IconCheck sx={{ fontSize: 16 }} /> : <IconPencil sx={{ fontSize: 16 }} />}
-                    </IconButton>
-                </Tooltip>
-            )}
             {collapseButton}
         </Stack>
     );
@@ -187,8 +205,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
                     activeActivityLabel={activeActivityLabel}
                     onClose={() => setMobileOpen(false)}
                     headerAction={sidebarHeaderAction}
-                    editing={editingAgents}
-                    onToggleHidden={toggleHidden}
+                    {...agentSidebarExtras}
                 />
             )}
             {hasSidebar && sidebarCollapsed && flyoutOpen && (
@@ -205,8 +222,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
                             activeActivityLabel={activeActivityLabel}
                             onClose={() => { setFlyoutOpen(false); setMobileOpen(false); }}
                             headerAction={sidebarHeaderAction}
-                            editing={editingAgents}
-                            onToggleHidden={toggleHidden}
+                            {...agentSidebarExtras}
                         />
                     </Box>
                 </ClickAwayListener>

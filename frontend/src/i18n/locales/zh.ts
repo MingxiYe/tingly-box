@@ -90,7 +90,9 @@ export default {
       "createTeamTooltip": "创建一个独立鉴权的 Team 工作区",
       "sloganTooltip": "致，所有独立开发者、开发团队和智能应用。",
       "collapse": "收起侧边栏",
-      "doneEditing": "完成",
+      "hiddenCount": "已隐藏 {{n}} 个",
+      "collapseHidden": "收起已隐藏",
+      "visibilityTip": "鼠标移到 Agent 上点眼睛即可隐藏；隐藏的收在列表底部，随时可恢复。",
       "expand": "展开侧边栏"
     },
     "activityBar": {
