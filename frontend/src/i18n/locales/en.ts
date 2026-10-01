@@ -2395,8 +2395,6 @@ export default {
       "deleted": "Chat deleted"
     },
     "emptyDescription": "Connect a bot on the Bots page first, then come back here to send it notifications.",
-    "emptyPlatformDescription": "Pick another platform above, or add one on the Bots page.",
-    "emptyPlatformTitle": "No {{platform}} bots",
     "emptyTitle": "No bots connected yet",
     "group": {
       "allowAndTest": "Allow Notify & Test",
@@ -2408,18 +2406,22 @@ export default {
       "deleteChatTitle": "Delete this chat?",
       "disableChat": "Disable — silently drop its messages",
       "disableHint": "Disable Notify for this bot",
-      "disabledBody": "Bot is off — enable it to see and send to its reachable chats.",
       "disabledChat": "disabled",
       "empty": "No chats yet. Send any message to this bot on {{platform}} and its Chat ID appears here.",
       "emptyPairFirst": "No chats yet. Pair this bot, then send it a message on {{platform}} — its Chat ID appears here.",
       "enableChat": "Enable — accept its messages again",
       "enableHint": "Enable Notify. The bot starts automatically if needed.",
       "hideDisabled": "Hide disabled",
-      "noTargets": "No observed targets",
       "paired": "paired",
       "refresh": "Refresh reachable chats",
       "showDisabled": "Show disabled ({{count}})",
-      "targetCount": "{{direct}} direct · {{groups}} groups"
+      "statusChecking": "Checking targets…",
+      "statusError": "Couldn't load targets",
+      "statusNoChats": "No chats yet",
+      "statusNotAllowed": "No target allowed yet",
+      "statusOff": "Notify off",
+      "statusReceivers_one": "{{count}} target can receive",
+      "statusReceivers_other": "{{count}} targets can receive"
     },
     "guide": {
       "action": "API guide",
@@ -2450,8 +2452,6 @@ export default {
       "group": "Group",
       "unblocked": "Target unblocked"
     },
-    "targetsSubtitle": "Direct Chats and Groups observed by your connected bots.",
-    "targetsTitle": "Delivery targets",
     "test": {
       "bodyField": "Body (markdown)",
       "level": "Level",
