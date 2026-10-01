@@ -1,8 +1,9 @@
-import { Info as IconInfoCircle } from '@/components/icons';
+import { Info as IconInfoCircle, Star as IconStar, Visibility as IconVisibility, VisibilityOff as IconVisibilityOff } from '@/components/icons';
 import {
     Box,
     Button,
     Divider,
+    IconButton,
     List,
     ListItem,
     ListItemButton,
@@ -33,8 +34,10 @@ import {
     sidebarListScrollSx,
 } from './styles';
 import type { NavItem } from './types';
-import { VersionDisplay } from '@/components/VersionDisplay';
+import { IndicatorBadge, VersionDisplay, useVersionBadgeColor } from '@/components/VersionDisplay';
+import { REPO_URL } from './GitHubStarBanner';
 import { UpdatePanelDialog } from '@/components/UpdatePanelDialog';
+
 
 // Shared sizing for the sidebar's nav-style rows now lives in ./styles
 // (NAV_ROW_SX / navRowTextSlotProps), so every row is the same height whether
@@ -45,9 +48,12 @@ interface SidebarProps {
     activeActivityLabel: string;
     onClose: () => void;
     headerAction?: React.ReactNode;
+    /** Edit mode: hidden rows are listed (dimmed) and every hideable row gets a visibility toggle. */
+    editing?: boolean;
+    onToggleHidden?: (id: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLabel, onClose, headerAction }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLabel, onClose, headerAction, editing = false, onToggleHidden }) => {
     const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
@@ -55,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
     const { refresh } = useProfileContext();
     const { refresh: refreshTeams } = useTeamContext();
     const { currentVersion } = useVersion();
+    const badgeColor = useVersionBadgeColor();
 
     const [addProfileAnchorEl, setAddProfileAnchorEl] = useState<HTMLElement | null>(null);
     const [newProfileName, setNewProfileName] = useState('');
@@ -148,8 +155,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     const isAddAction = isAddProfile || isAddTeam;
                     const active = !isAddAction && (item.match ? item.match(location.pathname) : isActive(item.path));
 
+                    const toggleable = editing && item.hideId && onToggleHidden;
                     const button = (
-                        <ListItem disablePadding>
+                        <ListItem
+                            disablePadding
+                            sx={{ opacity: editing && item.hidden ? 0.5 : 1 }}
+                            secondaryAction={toggleable ? (
+                                <Tooltip title={item.hidden ? t('scenarioOverview.showInSidebar') : t('scenarioOverview.hideFromSidebar')} placement="right" arrow>
+                                    <IconButton
+                                        size="small"
+                                        edge="end"
+                                        onClick={() => onToggleHidden(item.hideId!)}
+                                        aria-label={item.hidden ? t('scenarioOverview.showInSidebar') : t('scenarioOverview.hideFromSidebar')}
+                                        sx={{ color: active ? 'primary.contrastText' : 'text.secondary', mr: 0.5 }}
+                                    >
+                                        {item.hidden ? <IconVisibilityOff sx={{ fontSize: 18 }} /> : <IconVisibility sx={{ fontSize: 18 }} />}
+                                    </IconButton>
+                                </Tooltip>
+                            ) : undefined}
+                        >
                             <ListItemButton
                                 {...(isAddAction
                                     ? { onClick: isAddProfile ? handleAddProfileClick : handleAddTeamClick }
@@ -229,6 +253,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                                 <Tooltip title={t('layout.sidebar.createTeamTooltip')} arrow placement="right">
                                     {button}
                                 </Tooltip>
+                            ) : item.hint && !editing ? (
+                                <Tooltip
+                                    title={item.hint}
+                                    arrow
+                                    placement="right"
+                                    enterDelay={800}
+                                    enterNextDelay={800}
+                                    slotProps={{ tooltip: { sx: { maxWidth: 280 } } }}
+                                >
+                                    {button}
+                                </Tooltip>
                             ) : item.tooltip ? (
                                 <Tooltip
                                     title={item.tooltip}
@@ -245,7 +280,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     );
                 })}
             </List>
-            {/* Footer top row: version */}
+            {/* Footer: version, and the GitHub star request — one quiet,
+                always-there link instead of a banner over every agent page. */}
             <Box
                 sx={{
                     py: 1.5, px: 2,
@@ -253,11 +289,45 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    gap: 1.5,
                     flexShrink: 0,
                     height: footerHeight,
                 }}
             >
                 <VersionDisplay onClick={() => setUpdatePanelOpen(true)} />
+                <Tooltip title={t('layout.githubStar.text')} arrow placement="top">
+                    {/* Built from the version's own pieces (same flex row,
+                        caption style and IndicatorBadge, in the badge's
+                        current colour), so the two never differ in height
+                        or hue. */}
+                    <Box
+                        component="a"
+                        href={REPO_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.75,
+                            textDecoration: 'none',
+                            '&:hover': {
+                                opacity: 0.8,
+                                '& .indicator-badge': { transform: 'scale(1.1)' },
+                                '& .MuiTypography-root': { color: 'primary.main' },
+                            },
+                        }}
+                    >
+                        <Typography
+                            variant="caption"
+                            sx={{ color: 'text.secondary', display: 'block', fontStyle: 'italic', whiteSpace: 'nowrap', transition: 'color 0.2s ease' }}
+                        >
+                            {t('layout.githubStar.label')}
+                        </Typography>
+                        <IndicatorBadge color={badgeColor}>
+                            <IconStar sx={{ fontSize: 10 }} />
+                        </IndicatorBadge>
+                    </Box>
+                </Tooltip>
             </Box>
             {/* Add Profile Popover */}
             <Popover

@@ -29,7 +29,7 @@ const UseClaudeDesktopPage = lazy(() => import('@/pages/scenario/UseClaudeDeskto
 const UseCustomPage = lazy(() => import('@/pages/scenario/UseCustomPage'));
 const UseTeamPage = lazy(() => import('@/pages/scenario/UseTeamPage'));
 const TeamKeysPage = lazy(() => import('@/pages/scenario/TeamKeysPage'));
-const AgentOverviewPage = lazy(() => import('@/pages/scenario/AgentOverviewPage'));
+const AgentLanding = lazy(() => import('@/pages/scenario/AgentLanding'));
 const UseOpenCodePage = lazy(() => import('@/pages/scenario/UseOpenCodePage'));
 const UsePiPage = lazy(() => import('@/pages/scenario/UsePiPage'));
 const UseDshPage = lazy(() => import('@/pages/scenario/UseDshPage'));
@@ -51,7 +51,6 @@ const GuardrailsCredentialsPage = lazy(() => import('@/pages/guardrails/Credenti
 const GuardrailsGroupsPage = lazy(() => import('@/pages/guardrails/GroupsPage'));
 const GuardrailsHistoryPage = lazy(() => import('@/pages/guardrails/HistoryPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-const StatusOverviewPage = lazy(() => import('@/pages/overview/StatusOverviewPage'));
 const UserUsagePage = lazy(() => import('@/pages/UserUsagePage'));
 const QuotaHistoryPage = lazy(() => import('@/pages/QuotaHistoryPage'));
 const ModelTestPage = lazy(() => import('@/pages/ModelTestPage'));
@@ -77,8 +76,8 @@ const ServerToolPage = lazy(() => import('@/pages/servertool/ServerToolPage'));
 // installs (no provider configured) get sent to /help — the lightbulb Help
 // page, whose ProvidersCard is the browsable "add your first provider"
 // experience (the old standalone Onboarding page's content, now a card
-// there instead of a page of its own); everyone else lands on the agent
-// overview at /agent. We hit /api/v2/providers once on mount; while in
+// there instead of a page of its own); everyone else lands on /agent, which
+// opens the agent page they were last on. We hit /api/v2/providers once on mount; while in
 // flight we render nothing to avoid a flash of the default agent page.
 const OnboardingGate: React.FC = () => {
     const [target, setTarget] = useState<string | null>(null);
@@ -100,7 +99,7 @@ const OnboardingGate: React.FC = () => {
                 // Swallow the error and fall through to the default agent —
                 // failing the gate should never lock the user out of the app.
             }
-            // Clear stale activity state and navigate to agent overview
+            // Clear stale activity state and open the last agent
             localStorage.removeItem('layout.activeActivity');
             sessionStorage.removeItem('layout.activeActivity');
             if (!cancelled) setTarget('/agent');
@@ -148,7 +147,7 @@ export const appRoutes = (
                 Help as ProvidersCard — keep old bookmarks/links working. */}
             <Route path="/onboarding" element={<Navigate to="/help" replace />} />
             {/* Function panel routes */}
-            <Route path="/agent" element={<AgentOverviewPage />} />
+            <Route path="/agent" element={<AgentLanding />} />
             <Route path="/agent/openai" element={<UseOpenAIPage />} />
             <Route path="/agent/anthropic" element={<UseAnthropicPage />} />
             <Route path="/agent/codex" element={<UseCodexPage />} />
@@ -190,8 +189,9 @@ export const appRoutes = (
             <Route path="/system/logs" element={<LogsPage />} />
             <Route path="/system/experimental" element={<ExperimentalPage />} />
             {/* Dashboard routes with time range */}
-            <Route path="/dashboard" element={<Navigate to="/dashboard/overview" replace />} />
-            <Route path="/dashboard/overview" element={<StatusOverviewPage />} />
+            <Route path="/dashboard" element={<Navigate to="/dashboard/today" replace />} />
+            {/* The Overview page was removed; keep its bookmarks working. */}
+            <Route path="/dashboard/overview" element={<Navigate to="/dashboard/today" replace />} />
         <Route path="/dashboard/users" element={<UserUsagePage />} />
             <Route path="/dashboard/quota-history" element={<QuotaHistoryPage />} />
             <Route path="/dashboard/:timeRange" element={<DashboardPage />} />

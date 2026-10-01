@@ -1,9 +1,9 @@
 import { Box, ClickAwayListener, Drawer, IconButton, Tooltip, Stack } from '@mui/material';
-import { Menu as IconMenu, Create as IconPencil, tablerMui } from '@/components/icons';
+import { Menu as IconMenu, Visibility as IconVisibility, Check as IconCheck, tablerMui } from '@/components/icons';
 import { IconLayoutSidebarLeftCollapse } from '@tabler/icons-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Z_INDEX } from '../constants/zIndex';
 import { activityBarWidth, sidebarWidth } from './constants';
 import { mobileContentSx, mobileMenuButtonSx, mobileNavigationBarSx } from './styles';
@@ -15,6 +15,23 @@ import type { ActivityItem, LayoutProps } from './types';
 import { FloatingStatusIndicators } from '../components/FloatingStatusIndicators';
 import { GitHubStarBanner } from './GitHubStarBanner';
 import { syncUiPrefs } from '../services/uiPrefs';
+import { useHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
+import { rememberAgentPath } from '@/pages/scenario/lastAgent';
+import { CoachMark } from '@/components/CoachMark';
+import { useOneTimeTip } from '@/hooks/useOneTimeTip';
+import type { NavItem } from './types';
+
+// The eye in the Agent sidebar header introduces itself once: a callout
+// pointing at it until the user closes it (or uses the eye).
+export const AGENT_VISIBILITY_TIP_KEY = 'layout.agentVisibilityTip.dismissed';
+
+// Outside edit mode hidden rows go, and so does any divider they leave
+// leading, trailing or doubled.
+const withoutHidden = (items: NavItem[]): NavItem[] => {
+    const kept = items.filter(item => item.type === 'divider' || !item.hidden);
+    return kept.filter((item, i) => item.type !== 'divider'
+        || (i > 0 && i < kept.length - 1 && kept[i + 1].type !== 'divider'));
+};
 
 const IconCollapseSidebar = tablerMui(IconLayoutSidebarLeftCollapse);
 
@@ -36,7 +53,6 @@ const MobileNavigationBar = ({ onMenuClick }: { onMenuClick: () => void }) => (
 const LayoutInner = ({ children }: LayoutProps) => {
     const { t } = useTranslation();
     const location = useLocation();
-    const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
 
     // Layout only renders after sign-in: bring this surface's UI prefs in
@@ -73,10 +89,37 @@ const LayoutInner = ({ children }: LayoutProps) => {
         localStorage.setItem('layout.activeActivity', activeActivity);
     }, [activeActivity, location.pathname]);
 
+    // Agent pages are what /agent (the rail item and the landing) reopens.
+    useEffect(() => {
+        rememberAgentPath(location.pathname);
+    }, [location.pathname]);
+
+    // Edit mode of the Agent sidebar: every agent, hidden ones included,
+    // each with its visibility toggle. It replaced the /agent card page.
+    const [editingAgents, setEditingAgents] = useState(false);
+    const { toggleHidden } = useHiddenScenarios();
+    const { dismissed: tipDismissed, dismiss: dismissTip } = useOneTimeTip(AGENT_VISIBILITY_TIP_KEY);
+    // The header renders in both the desktop nav and the (kept-mounted)
+    // mobile drawer; anchor the callout to whichever eye is on screen.
+    const [eyeEl, setEyeEl] = useState<HTMLElement | null>(null);
+    const eyeRef = useCallback((el: HTMLElement | null) => {
+        if (el && el.offsetParent !== null) setEyeEl(el);
+    }, []);
+    useEffect(() => {
+        if (activeActivity !== 'scenario') setEditingAgents(false);
+    }, [activeActivity]);
+
     const sidebarItems = useMemo(() => {
         const activity = activityItems.find(item => item.key === activeActivity);
-        return activity?.children || [];
-    }, [activityItems, activeActivity]);
+        const children = activity?.children || [];
+        const visible = withoutHidden(children);
+        if (!editingAgents) return visible;
+        // Edit mode lists hidden agents too, but after the visible ones
+        // (behind a divider) rather than interleaved, so the shown list
+        // still reads as the sidebar the user will get.
+        const hidden = children.filter(item => item.type !== 'divider' && item.hidden);
+        return hidden.length > 0 ? [...visible, { type: 'divider' as const }, ...hidden] : visible;
+    }, [activityItems, activeActivity, editingAgents]);
 
     // A sidebar is a choice between pages; an activity with a single page
     // (Bench, or Prompt with one of its two flags on) has nothing to choose,
@@ -128,21 +171,42 @@ const LayoutInner = ({ children }: LayoutProps) => {
     const sidebarHeaderAction = (
         <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
             {activeActivity === 'scenario' && (
-                <Tooltip title={t('scenarioOverview.editTooltip', { defaultValue: 'Manage visible agents' })} arrow placement="bottom">
+                <Tooltip
+                    title={editingAgents ? t('layout.sidebar.doneEditing') : t('scenarioOverview.editTooltip')}
+                    arrow
+                    placement="bottom"
+                >
                     <IconButton
+                        ref={eyeRef}
                         size="small"
-                        onClick={() => navigate('/agent')}
+                        onClick={() => {
+                            setEditingAgents(v => !v);
+                            dismissTip();
+                        }}
+                        aria-pressed={editingAgents}
+                        aria-label={t('scenarioOverview.editTooltip')}
                         sx={{
-                            color: 'text.secondary',
+                            color: editingAgents ? 'primary.main' : 'text.secondary',
                             '&:hover': { color: 'primary.main' },
                         }}
                     >
-                        <IconPencil sx={{ fontSize: 16 }} />
+                        {editingAgents ? <IconCheck sx={{ fontSize: 16 }} /> : <IconVisibility sx={{ fontSize: 16 }} />}
                     </IconButton>
                 </Tooltip>
             )}
             {collapseButton}
         </Stack>
+    );
+
+    const showTip = !tipDismissed && activeActivity === 'scenario' && hasSidebar && !sidebarCollapsed && !!eyeEl && eyeEl.isConnected;
+    const visibilityTip = (
+        <CoachMark
+            open={showTip}
+            anchorEl={eyeEl}
+            title={t('layout.coachMarks.agentVisibility.title')}
+            text={t('layout.coachMarks.agentVisibility.text')}
+            onDismiss={dismissTip}
+        />
     );
 
     const navigationContent = (
@@ -152,6 +216,8 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 activeActivity={activeActivity}
                 onActivityClick={handleActivityClick}
                 onStandaloneNavigate={() => setMobileOpen(false)}
+                // One callout at a time: the rail's waits for this one.
+                tipsBlocked={showTip}
             />
             {hasSidebar && !sidebarCollapsed && (
                 <Sidebar
@@ -159,6 +225,8 @@ const LayoutInner = ({ children }: LayoutProps) => {
                     activeActivityLabel={activeActivityLabel}
                     onClose={() => setMobileOpen(false)}
                     headerAction={sidebarHeaderAction}
+                    editing={editingAgents}
+                    onToggleHidden={toggleHidden}
                 />
             )}
             {hasSidebar && sidebarCollapsed && flyoutOpen && (
@@ -175,6 +243,8 @@ const LayoutInner = ({ children }: LayoutProps) => {
                             activeActivityLabel={activeActivityLabel}
                             onClose={() => { setFlyoutOpen(false); setMobileOpen(false); }}
                             headerAction={sidebarHeaderAction}
+                            editing={editingAgents}
+                            onToggleHidden={toggleHidden}
                         />
                     </Box>
                 </ClickAwayListener>
@@ -185,6 +255,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
     return (
         <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative', zIndex: Z_INDEX.main }}>
             <FloatingStatusIndicators />
+            {visibilityTip}
 
             {/* Desktop nav */}
             <Box component="nav" sx={{ display: { xs: 'none', md: 'flex' }, height: '100%', position: 'relative', zIndex: Z_INDEX.drawer + 1 }}>
@@ -217,9 +288,10 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden', position: 'relative', zIndex: 1 }}
             >
                 <Box sx={mobileContentSx}>
-                    {/* Agent pages carry the (closable) star request; Overview
-                        shows its own always-on copy. See GitHubStarBanner. */}
-                    {location.pathname.startsWith('/agent') && (
+                    {/* The closable star request shows on agent pages only
+                        (Team pages, also under /agent/team, belong to the
+                        Team rail item). See GitHubStarBanner. */}
+                    {location.pathname.startsWith('/agent/') && !location.pathname.startsWith('/agent/team') && (
                         <Box sx={{ mb: 2 }}>
                             <GitHubStarBanner />
                         </Box>

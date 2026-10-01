@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
+import { SCENARIOS, getHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
 import { OpenAI, Anthropic, Claude, Cursor, DeepSeek, OpenCode, Pi, Xcode, VSCode, Codex, ClaudeDesktop } from '../components/BrandIcons';
 import {
     SettingsApplications,
@@ -35,7 +35,6 @@ import {
     Extension as IconExtension,
     Code as IconCode,
     TestPipe as IconTestPipe,
-    Home as IconHome,
 } from '@/components/icons';
 import { useFeatureFlags } from '../contexts/FeatureFlagsContext';
 import { useProfileContext } from '@/contexts/ProfileContext';
@@ -137,9 +136,16 @@ export function useActivityItems(): ActivityItem[] {
             },
         ];
 
-        type HideableScenario = { id: string; nav: NavItem };
-        const visible = (group: HideableScenario[]): NavItem[] =>
-            group.filter(s => !hiddenScenarios.has(s.id)).map(s => s.nav);
+        // Hidden agents stay in the list, flagged: the sidebar's edit mode
+        // shows them (to un-hide), and drops them otherwise (see
+        // withoutHidden in Layout).
+        type HideableScenario = { id: string; nav: NavItemBase };
+        const hintOf = (id: string) => {
+            const s = SCENARIOS.find(x => x.id === id);
+            return s ? t(s.descKey) : undefined;
+        };
+        const flagged = (group: HideableScenario[]): NavItem[] =>
+            group.map(s => ({ ...s.nav, hideId: s.id, hidden: hiddenScenarios.has(s.id), hint: hintOf(s.id) }));
 
         const teamActivityItem: ActivityItem = {
             key: 'team',
@@ -149,7 +155,7 @@ export function useActivityItems(): ActivityItem[] {
             children: teamNavItems,
         };
 
-        const codingTools = visible([
+        const codingTools = flagged([
             // Claude Desktop leads so all Claude-branded scenarios stay grouped
             // at the front, right after the Claude Code block.
             { id: 'claude_desktop', nav: { path: '/agent/claude_desktop', label: t('layout.nav.useClaudeDesktop', { defaultValue: 'Claude Desktop' }), icon: <ClaudeDesktop size={20} /> } },
@@ -164,21 +170,26 @@ export function useActivityItems(): ActivityItem[] {
             // tools group, right after the named integrations it's a fallback for.
             { id: 'custom', nav: { path: '/agent/custom', label: t('layout.nav.useCustom', { defaultValue: 'Custom' }), icon: <IconExtension sx={{ fontSize: 20 }} /> } },
         ]);
-        const sdkTools = visible([
+        const sdkTools = flagged([
             { id: 'openai', nav: { path: '/agent/openai', label: t('layout.nav.useOpenAI', { defaultValue: 'OpenAI' }), icon: <OpenAI size={20} /> } },
             { id: 'anthropic', nav: { path: '/agent/anthropic', label: t('layout.nav.useAnthropic', { defaultValue: 'Anthropic' }), icon: <Anthropic size={20} /> } },
             { id: 'embed', nav: { path: '/agent/embed', label: t('layout.nav.useEmbed', { defaultValue: 'Embedding' }), icon: <IconVector sx={{ fontSize: 20 }} /> } },
         ]);
 
         const scenarioChildren: NavItem[] = [];
-        if (!hiddenScenarios.has('claude_code')) {
+        const claudeCodeHidden = hiddenScenarios.has('claude_code');
+        scenarioChildren.push({
+            path: '/agent/claude_code',
+            subtitle: t('layout.default'),
+            label: t('layout.nav.useClaudeCode', { defaultValue: 'Claude Code' }),
+            icon: <Claude size={20} />,
+            hideId: 'claude_code',
+            hidden: claudeCodeHidden,
+            hint: hintOf('claude_code'),
+        });
+        // Profiles and "Add Profile" belong to Claude Code: hidden with it.
+        if (!claudeCodeHidden) {
             scenarioChildren.push(
-                {
-                    path: '/agent/claude_code',
-                    subtitle: t('layout.default'),
-                    label: t('layout.nav.useClaudeCode', { defaultValue: 'Claude Code' }),
-                    icon: <Claude size={20} />,
-                },
                 ...profileNavItems,
                 { path: '#add-profile', label: t('layout.addProfile'), icon: <IconPlus sx={{ fontSize: 20 }} /> },
             );
@@ -191,9 +202,8 @@ export function useActivityItems(): ActivityItem[] {
         pushGroup(codingTools);
         pushGroup(sdkTools);
 
-        // Rail order, top to bottom: overview → use → power-ups → verify →
-        // configuration. Dashboard leads as the "what's happening" glance,
-        // but it is not the landing page — OnboardingGate still opens /agent,
+        // Rail order, top to bottom: usage → use → power-ups → verify →
+        // configuration. Dashboard leads, but it is not the landing page — OnboardingGate still opens /agent,
         // and Layout falls back to the 'scenario' activity, independent of
         // this order.
         const items: ActivityItem[] = [
@@ -201,11 +211,8 @@ export function useActivityItems(): ActivityItem[] {
                 key: 'dashboard',
                 icon: <IconChartBar sx={{ fontSize: 22 }} />,
                 label: t('layout.dashboard', { defaultValue: 'Dashboard' }),
-                // Opens on Overview ("is it working, what needs me"); the
-                // usage charts are one row below it.
-                defaultPath: '/dashboard/overview',
+                defaultPath: '/dashboard/today',
                 children: [
-                    { path: '/dashboard/overview', label: t('layout.overview', { defaultValue: 'Overview' }), icon: <IconHome sx={{ fontSize: 20 }} /> },
                     // One row for the usage charts; the time range is a filter
                     // on that page (every /dashboard/<range> URL still works).
                     { path: '/dashboard/today', label: t('layout.usage', { defaultValue: 'Usage' }), icon: <IconChartBar sx={{ fontSize: 20 }} />, match: (p) => DASHBOARD_RANGE_PATH.test(p) },
@@ -221,8 +228,8 @@ export function useActivityItems(): ActivityItem[] {
                 defaultPath: '/agent',
                 children: scenarioChildren,
             },
-            // Shown/hidden together with the team scenario card on /agent, the
-            // same single switch Image uses (see the Image item below).
+            // Shown/hidden by its switch in the rail's Power-ups menu (the
+            // 'team' entry of the hidden-scenario set), like Image below.
             ...(!hiddenScenarios.has('team') ? [teamActivityItem] : []),
             // Image — the playground outgrew a card on the scenario page
             // (.design/image-layout.md). Shown/hidden together with the
@@ -246,7 +253,7 @@ export function useActivityItems(): ActivityItem[] {
             // as new rows — the rail icon never grows. Desk (no bot, browser
             // only) closes the list behind its own divider. See bot-arch.md §10.
             // (key stays 'bots' — internal id, not user-visible.)
-            // Hidden via the Remote power-up switch on /agent (same hidden set as
+            // Hidden via the Remote switch in the rail's Power-ups menu (same hidden set as
             // Team/Image) — hides the rail item only, bots keep running.
             ...(isFullEdition && !hiddenScenarios.has('remote') ? [{
                 key: 'bots' as const,

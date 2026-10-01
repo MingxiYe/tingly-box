@@ -27,9 +27,11 @@ interface VisionProxyControlProps {
     providers: Provider[];
     disabled?: boolean;
     onChange: (service: VisionService | null) => void;
+    /** Drop the "Vision Proxy:" prefix where a row label already names it. */
+    hideName?: boolean;
 }
 
-const VisionProxyControl: React.FC<VisionProxyControlProps> = ({ value, providers, disabled, onChange }) => {
+const VisionProxyControl: React.FC<VisionProxyControlProps> = ({ value, providers, disabled, onChange, hideName = false }) => {
     const [anchor, setAnchor] = useState<HTMLElement | null>(null);
     const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -60,7 +62,7 @@ const VisionProxyControl: React.FC<VisionProxyControlProps> = ({ value, provider
                     })}
                 >
                     <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        Vision Proxy: {label}
+                        {hideName ? label : `Vision Proxy: ${label}`}
                     </Box>
                 </Button>
             </Tooltip>

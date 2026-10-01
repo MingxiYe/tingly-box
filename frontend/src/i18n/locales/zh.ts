@@ -9,36 +9,6 @@ export default {
     "reapply": "重新应用",
     "apply": "Auto Config"
   },
-  "statusOverview": {
-    "title": "概览",
-    "subtitle": "网关是否在运行、有什么需要你处理、各个 Agent 最近做了什么。",
-    "gateway": {
-      "running": "网关运行中",
-      "unreachable": "无法连接网关",
-      "version": "版本 {{version}}",
-      "today_other": "今日：{{count}} 次请求 · 错误率 {{errorRate}}%"
-    },
-    "attention": {
-      "title": "需要你处理",
-      "titleCount": "需要你处理（{{count}}）",
-      "none": "没有需要处理的事项。",
-      "checking": "检查中…",
-      "disconnected": "界面连不上网关，Agent 的请求可能正在失败。",
-      "oauthExpired": "{{provider}}：OAuth 登录已过期。",
-      "quotaLow": "{{provider}} · {{window}}：剩余 {{percent}}%。",
-      "update": "Tingly Box 有新版本可用。",
-      "openCredentials": "打开凭证",
-      "viewQuota": "查看额度",
-      "viewUpdate": "查看更新"
-    },
-    "agents": {
-      "title": "你的 Agent",
-      "subtitle": "最近 {{days}} 天",
-      "noRequests": "还没有请求",
-      "viewUsage": "查看用量",
-      "requests_other": "{{count}} 次请求"
-    }
-  },
   "common": {
     "back": "返回",
     "add": "添加",
@@ -120,7 +90,19 @@ export default {
       "createTeamTooltip": "创建一个独立鉴权的 Team 工作区",
       "sloganTooltip": "致，所有独立开发者、开发团队和智能应用。",
       "collapse": "收起侧边栏",
+      "doneEditing": "完成",
       "expand": "展开侧边栏"
+    },
+    "coachMarks": {
+      "gotIt": "知道了",
+      "agentVisibility": {
+        "title": "选择显示哪些 Agent",
+        "text": "点这个眼睛，就能显示或隐藏列表里的 Agent。隐藏的不会丢，随时可以在这里恢复。"
+      },
+      "powerUps": {
+        "title": "扩展功能的开关移到了这里",
+        "text": "Team、Image、Remote、Bench 等可选项，现在在这个菜单的「扩展」里开启或关闭。"
+      }
     },
     "activityBar": {
       "disconnected": "已断开",
@@ -147,8 +129,9 @@ export default {
       "theme": "主题："
     },
     "easterEgg": "Hi，我是 Tingly-Box，为您掌控智能",
-    "githubStarBanner": {
+    "githubStar": {
       "text": "喜欢 Tingly-Box 吗？点个 GitHub Star 让更多人发现它吧～",
+      "label": "star",
       "cta": "去 GitHub 点 Star"
     },
     "dashboard": "仪表盘",
@@ -206,6 +189,7 @@ export default {
     "default": "默认",
     "help": "帮助与技巧",
     "helpShort": "帮助",
+    "powerUps": "扩展",
     "tools": "工具",
     "servertool": "服务端工具",
     "botsRunning": "{{total}} 个 bot 中 {{active}} 个在运行"
@@ -2268,10 +2252,10 @@ export default {
     "notConfigured": "未配置",
     "ruleCountOne": "1 条规则",
     "ruleCount": "{{count}} 条规则",
-    "editTooltip": "管理可见的智能应用",
+    "editTooltip": "显示或隐藏 Agent",
     "powerUps": {
       "title": "增强能力",
-      "subtitle": "扩展智能应用的可选能力。开启后会出现在侧边栏中。",
+      "subtitle": "可选能力。开启后出现在左侧导航栏，关闭则隐藏。",
       "experimental": "实验",
       "experimentalTooltip": "实验性功能",
       "beta": "Beta",

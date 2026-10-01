@@ -10,38 +10,6 @@ export default {
     "reapply": "Reapply",
     "apply": "Auto Config"
   },
-  "statusOverview": {
-    "title": "Overview",
-    "subtitle": "Is the gateway up, does anything need you, and what your agents did lately.",
-    "gateway": {
-      "running": "Gateway running",
-      "unreachable": "Gateway unreachable",
-      "version": "Version {{version}}",
-      "today_one": "Today: {{count}} request · {{errorRate}}% errors",
-      "today_other": "Today: {{count}} requests · {{errorRate}}% errors"
-    },
-    "attention": {
-      "title": "Needs attention",
-      "titleCount": "Needs attention ({{count}})",
-      "none": "Nothing needs attention.",
-      "checking": "Checking…",
-      "disconnected": "The UI can't reach the gateway. Requests from your agents may be failing.",
-      "oauthExpired": "{{provider}}: the OAuth sign-in has expired.",
-      "quotaLow": "{{provider}} · {{window}}: {{percent}}% left.",
-      "update": "A new version of Tingly Box is available.",
-      "openCredentials": "Open credentials",
-      "viewQuota": "View quota",
-      "viewUpdate": "View update"
-    },
-    "agents": {
-      "title": "Your agents",
-      "subtitle": "Last {{days}} days",
-      "noRequests": "No requests yet",
-      "viewUsage": "View usage",
-      "requests_one": "{{count}} request",
-      "requests_other": "{{count}} requests"
-    }
-  },
   "common": {
     "back": "Back",
     "add": "Add",
@@ -122,7 +90,20 @@ export default {
       "createTeamTooltip": "Create an isolated Team workspace",
       "sloganTooltip": "For all Solo Builders, Dev Teams and Agents.",
       "collapse": "Collapse sidebar",
+      "doneEditing": "Done",
       "expand": "Expand sidebar"
+    },
+    // One-time callouts pointing at a control (components/CoachMark).
+    "coachMarks": {
+      "gotIt": "Got it",
+      "agentVisibility": {
+        "title": "Choose which agents show",
+        "text": "Click the eye to show or hide agents in this list. Hidden ones stay here, one click away."
+      },
+      "powerUps": {
+        "title": "Power-ups moved here",
+        "text": "Team, Image, Remote, Bench and the other optional items are now switched on and off from this menu, under Power-ups."
+      }
     },
     "activityBar": {
       "disconnected": "Disconnected",
@@ -149,8 +130,9 @@ export default {
       "theme": "Theme:"
     },
     "easterEgg": "Hi, I'm Tingly-Box, Your Smart AI Orchestrator",
-    "githubStarBanner": {
+    "githubStar": {
       "text": "Enjoying Tingly-Box? A star on GitHub helps others find it.",
+      "label": "star",
       "cta": "Star on GitHub"
     },
     "dashboard": "Dashboard",
@@ -208,6 +190,7 @@ export default {
     "default": "default",
     "help": "Tips & Help",
     "helpShort": "Help",
+    "powerUps": "Power-ups",
     "tools": "Tools",
     "servertool": "Servertool",
     "botsRunning": "{{active}} of {{total}} bots running"
@@ -2275,10 +2258,10 @@ export default {
     "notConfigured": "Not configured",
     "ruleCountOne": "1 rule",
     "ruleCount": "{{count}} rules",
-    "editTooltip": "Manage visible agents",
+    "editTooltip": "Show or hide agents",
     "powerUps": {
       "title": "Power-ups",
-      "subtitle": "Optional capabilities that extend your agents. Turn one on to add it to the sidebar.",
+      "subtitle": "Optional capabilities. Turn one on to add it to the navigation bar on the left; turn it off to hide it.",
       "experimental": "Exp.",
       "experimentalTooltip": "Experimental feature",
       "beta": "Beta",

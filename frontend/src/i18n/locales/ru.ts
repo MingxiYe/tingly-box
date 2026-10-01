@@ -12,42 +12,6 @@ export default {
     "reapply": "Применить снова",
     "apply": "Auto Config"
   },
-  "statusOverview": {
-    "title": "Обзор",
-    "subtitle": "Работает ли шлюз, что требует внимания и что недавно делали ваши агенты.",
-    "gateway": {
-      "running": "Шлюз работает",
-      "unreachable": "Шлюз недоступен",
-      "version": "Версия {{version}}",
-      "today_one": "Сегодня: {{count}} запрос · ошибок {{errorRate}}%",
-      "today_few": "Сегодня: {{count}} запроса · ошибок {{errorRate}}%",
-      "today_many": "Сегодня: {{count}} запросов · ошибок {{errorRate}}%",
-      "today_other": "Сегодня: {{count}} запроса · ошибок {{errorRate}}%"
-    },
-    "attention": {
-      "title": "Требует внимания",
-      "titleCount": "Требует внимания ({{count}})",
-      "none": "Всё в порядке.",
-      "checking": "Проверка…",
-      "disconnected": "Интерфейс не может связаться со шлюзом. Запросы агентов могут завершаться ошибкой.",
-      "oauthExpired": "{{provider}}: срок входа OAuth истёк.",
-      "quotaLow": "{{provider}} · {{window}}: осталось {{percent}}%.",
-      "update": "Доступна новая версия Tingly Box.",
-      "openCredentials": "Открыть ключи",
-      "viewQuota": "Посмотреть квоту",
-      "viewUpdate": "Посмотреть обновление"
-    },
-    "agents": {
-      "title": "Ваши агенты",
-      "subtitle": "Последние {{days}} дн.",
-      "noRequests": "Запросов пока нет",
-      "viewUsage": "Посмотреть расход",
-      "requests_one": "{{count}} запрос",
-      "requests_few": "{{count}} запроса",
-      "requests_many": "{{count}} запросов",
-      "requests_other": "{{count}} запроса"
-    }
-  },
   "common": {
     "back": "Назад",
     "add": "Добавить",
@@ -128,7 +92,19 @@ export default {
       "createTeamTooltip": "Создать изолированное рабочее пространство команды",
       "sloganTooltip": "Для соло-разработчиков, команд и агентов.",
       "collapse": "Свернуть боковую панель",
+      "doneEditing": "Готово",
       "expand": "Развернуть боковую панель"
+    },
+    "coachMarks": {
+      "gotIt": "Понятно",
+      "agentVisibility": {
+        "title": "Выберите, каких агентов показывать",
+        "text": "Нажмите на глаз, чтобы показать или скрыть агентов в этом списке. Скрытые остаются здесь и возвращаются в один клик."
+      },
+      "powerUps": {
+        "title": "Расширения переехали сюда",
+        "text": "Team, Image, Remote, Bench и другие необязательные пункты теперь включаются и выключаются в этом меню, в разделе «Расширения»."
+      }
     },
     "activityBar": {
       "disconnected": "Нет связи",
@@ -155,8 +131,9 @@ export default {
       "theme": "Тема:"
     },
     "easterEgg": "Привет, я Tingly-Box, ваш умный ИИ-оркестратор",
-    "githubStarBanner": {
+    "githubStar": {
       "text": "Нравится Tingly-Box? Поставьте звезду на GitHub, чтобы помочь другим найти проект.",
+      "label": "star",
       "cta": "Star на GitHub"
     },
     "dashboard": "Панель",
@@ -212,6 +189,7 @@ export default {
     "default": "по умолчанию",
     "help": "Советы и помощь",
     "helpShort": "Помощь",
+    "powerUps": "Расширения",
     "tools": "Утилиты",
     "servertool": "Серверные",
     "botsRunning": "Работает ботов: {{active}} из {{total}}"
@@ -2306,10 +2284,10 @@ export default {
     "notConfigured": "Не настроен",
     "ruleCountOne": "1 правило",
     "ruleCount": "Правил: {{count}}",
-    "editTooltip": "Настроить видимые агенты",
+    "editTooltip": "Показать или скрыть агентов",
     "powerUps": {
       "title": "Усиления",
-      "subtitle": "Дополнительные возможности, расширяющие ваших агентов. Включите — и они появятся в боковой панели.",
+      "subtitle": "Дополнительные возможности. Включите — и они появятся на панели навигации слева, выключите — скроются.",
       "experimental": "Эксп.",
       "experimentalTooltip": "Экспериментальная функция",
       "beta": "Бета",
