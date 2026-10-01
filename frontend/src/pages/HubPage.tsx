@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
     Box,
+    Button,
+    ButtonBase,
     Chip,
     CircularProgress,
     Divider,
@@ -12,12 +14,12 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { host } from '@/host';
-import { AiAgents, BarChart, Lock, Refresh, Settings, TextSnippet } from '@/components/icons';
+import { AiAgents, BarChart, ChevronRight, Lock, Refresh, Settings, TextSnippet } from '@/components/icons';
 import { useHealth } from '@/contexts/HealthContext';
 import { useVersion } from '@/contexts/VersionContext';
 import { useProviderQuota } from '@/hooks/useProviderQuota';
-import { QuotaBarItem } from '@/components/credential/QuotaBarItem';
-import { quotaToWindows } from '@/types/quota';
+import { QuotaCell } from '@/components/credential/QuotaCell';
+import { quotaRemainingPercent, quotaToWindows, tightestWindow, type ProviderQuota } from '@/types/quota';
 import { api, fetchUIAPI } from '@/services/api';
 import { SHELL_ROUTES } from '@/routes/shellRoutes';
 
@@ -57,15 +59,20 @@ export default function HubPage() {
         return () => { cancelled = true; };
     }, []);
 
-    const { quotaData, refreshing, refreshQuota } = useProviderQuota(providers, { fetchOnMount: true });
+    const { quotaData, refreshing, refreshQuota, refreshAllQuotas } = useProviderQuota(providers, { fetchOnMount: true });
 
-    // Force-refresh every provider's quota upstream (same per-provider
-    // endpoint the credential page uses), not just re-read the cache.
-    const refreshAll = () => providers.forEach((p) => { void refreshQuota(p.uuid); });
-
+    // The panel answers "am I about to run out?", so the provider closest to
+    // its limit comes first. Providers with nothing to count (a balance, a
+    // failed read) follow; ones with no reading at all are left out.
     const quotaRows = providers
-        .map((p) => ({ provider: p, windows: quotaToWindows(quotaData[p.uuid]) }))
-        .filter((row) => row.windows.length > 0);
+        .map((provider) => ({ provider, quota: quotaData[provider.uuid] }))
+        .filter((row): row is { provider: HubProvider; quota: ProviderQuota } =>
+            !!row.quota && (quotaToWindows(row.quota).length > 0 || !!row.quota.last_error))
+        .map((row) => {
+            const tightest = tightestWindow(row.quota);
+            return { ...row, remaining: tightest ? quotaRemainingPercent(tightest) : Infinity };
+        })
+        .sort((a, b) => a.remaining - b.remaining);
 
     // Opens the separate main app window at the given path. HTTP-first: the
     // same-origin /api/v1/gui/open route reaches the exact same Go handler
@@ -175,13 +182,13 @@ export default function HubPage() {
                     <IconButton
                         size="small"
                         aria-label={t('hub.quota.refresh')}
-                        onClick={refreshAll}
+                        onClick={() => void refreshAllQuotas()}
                         disabled={providers.length === 0 || refreshing.size > 0}
                     >
                         <Refresh sx={{ fontSize: 16 }} />
                     </IconButton>
                 </Stack>
-                <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0, px: 1.5, pb: 1.25 }}>
+                <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0, px: 1.5 }}>
                     {loadingProviders ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
                             <CircularProgress size={20} />
@@ -191,27 +198,52 @@ export default function HubPage() {
                             {t('hub.quota.empty')}
                         </Typography>
                     ) : (
-                        <Stack spacing={1.5} divider={<Divider flexItem />}>
-                            {quotaRows.map(({ provider, windows }) => (
-                                <Box key={provider.uuid}>
-                                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mb: 0.25 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }} noWrap>
+                        <Stack divider={<Divider flexItem />}>
+                            {quotaRows.map(({ provider, quota }) => (
+                                <Stack
+                                    key={provider.uuid}
+                                    direction="row"
+                                    spacing={1}
+                                    sx={{ alignItems: 'flex-start', justifyContent: 'space-between', py: 1 }}
+                                >
+                                    {/* The name is the anchor and leads to the provider's
+                                        credentials; the cell beside it refreshes on click. */}
+                                    <ButtonBase
+                                        onClick={() => openMainWindow(SHELL_ROUTES.credentials)}
+                                        sx={{
+                                            minWidth: 0,
+                                            justifyContent: 'flex-start',
+                                            borderRadius: 1,
+                                            '&:hover .hub-provider-name': { color: 'primary.main' },
+                                        }}
+                                    >
+                                        <Typography className="hub-provider-name" variant="body2" sx={{ fontWeight: 500 }} noWrap>
                                             {provider.name || provider.uuid}
                                         </Typography>
-                                        {refreshing.has(provider.uuid) && <CircularProgress size={10} />}
-                                    </Stack>
-                                    {/* A narrow strip has no room for side-by-side bars:
-                                        stack the name above the bars, wrapping onto a
-                                        second line if there's more than one. */}
-                                    <Stack direction="row" spacing={1.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
-                                        {windows.slice(0, 2).map(({ key, window }) => (
-                                            <QuotaBarItem key={key} window={window} />
-                                        ))}
-                                    </Stack>
-                                </Box>
+                                    </ButtonBase>
+                                    {/* Fixed width so rings and figures line up down the list */}
+                                    <Box sx={{ flexShrink: 0, width: 156 }}>
+                                        <QuotaCell
+                                            quota={quota}
+                                            refreshing={refreshing.has(provider.uuid)}
+                                            onRefresh={() => void refreshQuota(provider.uuid)}
+                                        />
+                                    </Box>
+                                </Stack>
                             ))}
                         </Stack>
                     )}
+                </Box>
+                <Box sx={{ px: 1, py: 0.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <Button
+                        size="small"
+                        fullWidth
+                        endIcon={<ChevronRight sx={{ fontSize: 16 }} />}
+                        onClick={() => openMainWindow(SHELL_ROUTES.quotaHistory)}
+                        sx={{ justifyContent: 'space-between', textTransform: 'none', color: 'text.secondary' }}
+                    >
+                        {t('layout.quotaHistory')}
+                    </Button>
                 </Box>
             </Paper>
         </Box>

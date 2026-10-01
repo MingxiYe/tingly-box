@@ -151,6 +151,24 @@ export function useProviderQuota(providers: Array<{ uuid: string; name?: string 
     await batchFetchQuota(uuids);
   }, [providers, batchFetchQuota]);
 
+  // Refresh every provider upstream in one call, then re-read them in one batch.
+  // Every provider counts as refreshing meanwhile, so each row shows it.
+  const refreshAllQuotas = useCallback(async () => {
+    const uuids = providers.map(p => p.uuid);
+    if (uuids.length === 0) return;
+    setRefreshing(new Set(uuids));
+    try {
+      await fetchUIAPI('/provider-quota/refresh', { method: 'POST' });
+      await batchFetchQuota(uuids);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[useProviderQuota] Refresh all failed:', error);
+      notify.error(`Failed to refresh quota: ${errorMessage}`);
+    } finally {
+      setRefreshing(new Set());
+    }
+  }, [providers, batchFetchQuota, notify]);
+
   // Lazy load: fetch quotas when hook is initialized with providers
   useEffect(() => {
     if (!fetchOnMount || providers.length === 0) return;
@@ -167,6 +185,7 @@ export function useProviderQuota(providers: Array<{ uuid: string; name?: string 
     fetchQuota,
     refreshQuota,
     fetchAllQuotas,
+    refreshAllQuotas,
     batchFetchQuota,
   };
 }
