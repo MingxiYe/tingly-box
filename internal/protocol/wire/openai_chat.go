@@ -5,14 +5,17 @@ import "encoding/json"
 // Chat Completions stream DTOs preserve the minimal outbound JSON shape emitted by this proxy.
 // Keep these fields checked against openai-go Chat Completions stream types when updating the SDK.
 // Every SDK-required chunk key is present; optional ones (choice logprobs,
-// system_fingerprint, service_tier, obfuscation) are deliberately omitted.
+// system_fingerprint, obfuscation) are deliberately omitted. service_tier rides
+// on every chunk as the real API does; moderation only on the final one.
 type ChatStreamChunk struct {
-	ID      string             `json:"id"`
-	Object  string             `json:"object"`
-	Created int64              `json:"created"`
-	Model   string             `json:"model"`
-	Choices []ChatStreamChoice `json:"choices"`
-	Usage   *ChatStreamUsage   `json:"usage,omitempty"`
+	ID          string             `json:"id"`
+	Object      string             `json:"object"`
+	Created     int64              `json:"created"`
+	Model       string             `json:"model"`
+	Choices     []ChatStreamChoice `json:"choices"`
+	Usage       *ChatStreamUsage   `json:"usage,omitempty"`
+	ServiceTier *string            `json:"service_tier"`
+	Moderation  json.RawMessage    `json:"moderation,omitempty"`
 }
 
 type ChatStreamChoice struct {
@@ -74,15 +77,18 @@ type ChatStreamError struct {
 }
 
 // ChatCompletionWire is the OpenAI Chat Completions response wire format.
-// Optional keys (system_fingerprint, service_tier, moderation) are left out:
-// they describe the upstream OpenAI deployment and have no honest value here.
+// service_tier and moderation are always emitted, null when the upstream did
+// not report them. system_fingerprint is left out: it identifies an OpenAI
+// backend configuration and has no honest value for a converted response.
 type ChatCompletionWire struct {
-	ID      string                     `json:"id"`
-	Object  string                     `json:"object"`
-	Created int64                      `json:"created"`
-	Model   string                     `json:"model"`
-	Choices []ChatCompletionChoiceWire `json:"choices"`
-	Usage   ChatCompletionUsageWire    `json:"usage"`
+	ID          string                     `json:"id"`
+	Object      string                     `json:"object"`
+	Created     int64                      `json:"created"`
+	Model       string                     `json:"model"`
+	Choices     []ChatCompletionChoiceWire `json:"choices"`
+	Usage       ChatCompletionUsageWire    `json:"usage"`
+	ServiceTier *string                    `json:"service_tier"`
+	Moderation  json.RawMessage            `json:"moderation"`
 }
 
 // ToMap serializes to a generic map for callers that apply runtime transforms.
