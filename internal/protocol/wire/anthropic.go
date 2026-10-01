@@ -10,7 +10,7 @@ type AnthropicMsgWire struct {
 	Content      interface{}        `json:"content"`
 	Model        string             `json:"model"`
 	StopReason   string             `json:"stop_reason"`
-	StopSequence string             `json:"stop_sequence"`
+	StopSequence *string            `json:"stop_sequence"` // null unless a custom stop sequence matched
 	Usage        AnthropicUsageWire `json:"usage"`
 }
 
