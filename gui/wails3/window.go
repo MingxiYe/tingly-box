@@ -23,6 +23,11 @@ var (
 	WindowMain *application.WebviewWindow
 	WindowSlim *application.WebviewWindow
 
+	// mainWindowMu serialises showMainWindow: it runs from application-event
+	// and tray goroutines (startup, dock reopen, hub panel), and two callers
+	// must not both see WindowMain == nil and create two windows.
+	mainWindowMu sync.Mutex
+
 	// windowStatePath is <configDir>/gui-state.json; set once in Start.
 	windowStatePath string
 )
@@ -39,7 +44,13 @@ var (
 // bound method. A new window loads through /login/<token>?next=<path>
 // (Login.tsx hard-reloads after auth); a warm window navigates straight to
 // the path via SetURL, since it's already authenticated.
+//
+// Call it only once the app is running (see run.go): before app.Run(), Wails
+// defers Show() and turns Maximise() into a start state that macOS applies
+// before positioning the window.
 func showMainWindow(app *application.App, tinglyService *services.TinglyService, path string) {
+	mainWindowMu.Lock()
+	defer mainWindowMu.Unlock()
 	if WindowMain == nil {
 		target := path
 		if target == "" {
@@ -80,12 +91,11 @@ func showMainWindow(app *application.App, tinglyService *services.TinglyService,
 		persistWindowStateOnChange(WindowMain)
 
 		WindowMain.Show()
-		if saved == nil {
-			// First run ever: no saved geometry to honor.
-			WindowMain.Maximise()
-		} else if saved.Maximised {
-			WindowMain.Maximise()
-		}
+		// Always open maximised: the app's pages (rail + sidebar + rule
+		// graphs) need the room, and a smaller saved frame cut content off.
+		// The saved frame above is still applied first, so "restore down"
+		// returns to the size the user last chose.
+		WindowMain.Maximise()
 		WindowMain.Focus()
 		return
 	}
@@ -104,9 +114,10 @@ func showMainWindow(app *application.App, tinglyService *services.TinglyService,
 	WindowMain.Focus()
 }
 
-// persistWindowStateOnChange saves the window's geometry to windowStatePath,
-// debounced (move/resize fire in bursts while dragging). While maximised only
-// the flag is updated, so un-maximising returns to the last normal frame.
+// persistWindowStateOnChange saves the window's normal (un-maximised) frame to
+// windowStatePath, debounced (move/resize fire in bursts while dragging).
+// Nothing is saved while maximised, so the file keeps the last normal frame —
+// the one "restore down" returns to on the next launch.
 func persistWindowStateOnChange(w *application.WebviewWindow) {
 	var mu sync.Mutex
 	var timer *time.Timer
@@ -114,19 +125,14 @@ func persistWindowStateOnChange(w *application.WebviewWindow) {
 	save := func() {
 		mu.Lock()
 		defer mu.Unlock()
-		state := loadWindowState(windowStatePath)
-		if state == nil {
-			state = &WindowState{}
-		}
 		if w.IsMaximised() {
-			state.Maximised = true
-		} else {
-			state.Maximised = false
-			state.X, state.Y = w.Position()
-			state.Width, state.Height = w.Size()
+			return
 		}
+		var state WindowState
+		state.X, state.Y = w.Position()
+		state.Width, state.Height = w.Size()
 		if state.Width > 0 && state.Height > 0 {
-			_ = saveWindowState(windowStatePath, *state)
+			_ = saveWindowState(windowStatePath, state)
 		}
 	}
 
