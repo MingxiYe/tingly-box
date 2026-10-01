@@ -1643,11 +1643,6 @@ export default {
       "title": "Provider Quota",
       "empty": "No quota data yet",
       "refresh": "Refresh quota"
-    },
-    "actions": {
-      "home": "Home",
-      "dashboard": "Dashboard",
-      "settings": "Settings"
     }
   },
   "mcp": {

@@ -5,23 +5,21 @@ import {
     CircularProgress,
     Divider,
     IconButton,
-    List,
-    ListItemButton,
-    ListItemIcon,
-    ListItemText,
     Paper,
     Stack,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { host } from '@/host';
-import { BarChart, ChevronRight, Home, Refresh, Settings } from '@/components/icons';
+import { AiAgents, BarChart, Lock, Refresh, Settings, TextSnippet } from '@/components/icons';
 import { useHealth } from '@/contexts/HealthContext';
 import { useVersion } from '@/contexts/VersionContext';
 import { useProviderQuota } from '@/hooks/useProviderQuota';
 import { QuotaBarItem } from '@/components/credential/QuotaBarItem';
 import { quotaToWindows } from '@/types/quota';
 import { api, fetchUIAPI } from '@/services/api';
+import { SHELL_ROUTES } from '@/routes/shellRoutes';
 
 interface HubProvider {
     uuid: string;
@@ -85,6 +83,16 @@ export default function HubPage() {
 
     const versionKnown = Boolean(currentVersion) && currentVersion !== 'Unknown';
 
+    // The main window's rail, in its order and with its icons and labels, so a
+    // jump from the panel lands where the same icon would have taken you.
+    const navItems = [
+        { path: SHELL_ROUTES.agent, label: t('layout.nav.home'), icon: <AiAgents sx={{ fontSize: 20 }} /> },
+        { path: SHELL_ROUTES.dashboard, label: t('layout.dashboard'), icon: <BarChart sx={{ fontSize: 20 }} /> },
+        { path: SHELL_ROUTES.credentials, label: t('layout.nav.credential'), icon: <Lock sx={{ fontSize: 20 }} /> },
+        { path: SHELL_ROUTES.logs, label: t('layout.logs'), icon: <TextSnippet sx={{ fontSize: 20 }} /> },
+        { path: SHELL_ROUTES.system, label: t('layout.system'), icon: <Settings sx={{ fontSize: 20 }} /> },
+    ];
+
     return (
         <Box
             sx={{
@@ -124,42 +132,25 @@ export default function HubPage() {
                     dev builds report an unknown version and would otherwise
                     always flag one. */}
                 {hasUpdate && versionKnown && (
-                    <Chip size="small" label={t('hub.status.updateAvailable')} color="info" variant="outlined" />
+                    <Chip
+                        size="small"
+                        label={t('hub.status.updateAvailable')}
+                        color="info"
+                        variant="outlined"
+                        onClick={() => openMainWindow(SHELL_ROUTES.system)}
+                    />
                 )}
-                <IconButton
-                    size="small"
-                    aria-label={t('hub.actions.settings')}
-                    onClick={() => openMainWindow('/system')}
-                >
-                    <Settings sx={{ fontSize: 18 }} />
-                </IconButton>
             </Stack>
 
-            {/* Quick actions: list rows, not oversized buttons */}
-            <Paper elevation={0} sx={{ borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper' }}>
-                <List disablePadding dense>
-                    <ListItemButton onClick={() => openMainWindow('/agent')} sx={{ py: 1 }}>
-                        <ListItemIcon sx={{ minWidth: 32 }}>
-                            <Home fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={t('hub.actions.home')}
-                            slotProps={{ primary: { variant: 'body2', sx: { fontWeight: 500 } } }}
-                        />
-                        <ChevronRight fontSize="small" sx={{ color: 'text.disabled' }} />
-                    </ListItemButton>
-                    <Divider component="li" />
-                    <ListItemButton onClick={() => openMainWindow('/dashboard/today')} sx={{ py: 1 }}>
-                        <ListItemIcon sx={{ minWidth: 32 }}>
-                            <BarChart fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={t('hub.actions.dashboard')}
-                            slotProps={{ primary: { variant: 'body2', sx: { fontWeight: 500 } } }}
-                        />
-                        <ChevronRight fontSize="small" sx={{ color: 'text.disabled' }} />
-                    </ListItemButton>
-                </List>
+            {/* Jumps into the main window, mirroring its rail */}
+            <Paper elevation={0} sx={{ borderRadius: 2, bgcolor: 'background.paper', display: 'flex', justifyContent: 'space-around', py: 0.5 }}>
+                {navItems.map(({ path, label, icon }) => (
+                    <Tooltip key={path} title={label} arrow>
+                        <IconButton aria-label={label} onClick={() => openMainWindow(path)} sx={{ color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
+                            {icon}
+                        </IconButton>
+                    </Tooltip>
+                ))}
             </Paper>
 
             {/* Provider quota card */}

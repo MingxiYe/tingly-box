@@ -1635,11 +1635,8 @@ export default {
     },
     "quota": {
       "title": "服务商额度",
-      "empty": "暂无额度数据"
-    },
-    "actions": {
-      "home": "主页",
-      "dashboard": "仪表盘"
+      "empty": "暂无额度数据",
+      "refresh": "刷新额度"
     }
   },
   "mcp": {
