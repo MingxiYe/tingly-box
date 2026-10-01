@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
+	"runtime"
 
 	"github.com/tingly-dev/tingly-box/gui/wails3/services"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -12,6 +13,14 @@ import (
 //go:embed icons.icns
 var icon []byte
 
+// trayTemplateIcon is the menu-bar mark on macOS: the app icon's rounded
+// square with the T cut out, black on transparent. As a template image macOS
+// tints it for light and dark menu bars; the full-colour icon is reserved for
+// the dock and for Windows/Linux trays, where templates don't exist.
+//
+//go:embed tray-template.png
+var trayTemplateIcon []byte
+
 var SystemTray *application.SystemTray
 
 // hubWindowWidth/Height size the tray's hub panel (see
@@ -19,42 +28,37 @@ var SystemTray *application.SystemTray
 // rather than a small app window. The hub panel and the main app window
 // (WindowMain — see window.go) are two distinct windows: the panel only ever
 // renders /hub, the main window is the real app, opened on demand from the
-// panel's Home/Dashboard actions or the tray's right-click menu.
+// panel's jump row or the tray's right-click menu.
 const (
 	hubWindowWidth  = 320
 	hubWindowHeight = 560
 )
 
 func useSystray(app *application.App, tinglyService *services.TinglyService) {
-	// Create the SystemTray menu - kept minimal since the hub panel itself
-	// is the primary navigation surface now (see frontend HubPage.tsx).
+	// openMain shows the main window at path. The panel hides first: it floats
+	// above everything (needed to sit under the tray icon), so leaving it up
+	// would cover the main window and make the click look like a no-op.
+	openMain := func(path string) {
+		WindowSlim.Hide()
+		showMainWindow(app, tinglyService, path)
+	}
+
+	// Right-click menu. Left-click toggles the hub panel, which carries the
+	// full set of jumps; the menu repeats the most used ones so they are one
+	// click away without opening anything first.
 	menu := app.Menu.New()
-
-	_ = menu.
-		Add("Show Hub").
-		OnClick(func(ctx *application.Context) {
-			SystemTray.ShowWindow()
-		})
-
-	_ = menu.
-		Add("Open App").
-		OnClick(func(ctx *application.Context) {
-			showMainWindow(app, tinglyService, "")
-		})
-
+	menu.Add("Show Hub").OnClick(func(*application.Context) { SystemTray.ShowWindow() })
+	menu.Add("Open " + AppName).OnClick(func(*application.Context) { openMain("") })
 	menu.AddSeparator()
-
-	// Exit menu item
-	_ = menu.
-		Add("Exit").
-		OnClick(func(ctx *application.Context) {
-			app.Quit()
-		})
+	menu.Add("Dashboard").OnClick(func(*application.Context) { openMain(RouteDashboard) })
+	menu.Add("Credentials").OnClick(func(*application.Context) { openMain(RouteCredentials) })
+	menu.Add("Logs").OnClick(func(*application.Context) { openMain(RouteLogs) })
+	menu.AddSeparator()
+	menu.Add("Quit " + AppName).OnClick(func(*application.Context) { app.Quit() })
 
 	// Create the hub panel - a small, dedicated window that only ever shows
-	// /hub (never navigated elsewhere; "Home"/"Dashboard" on the hub page
-	// open the separate main window instead - see the OpenMainWindow handler
-	// below).
+	// /hub (never navigated elsewhere; its jump row opens the separate main
+	// window instead - see the OpenMainWindow handler below).
 	//
 	// Frameless + DisableResize are required for AttachWindow below: Wails
 	// anchors the panel under the tray icon by reading the window's *current*
@@ -117,22 +121,19 @@ func useSystray(app *application.App, tinglyService *services.TinglyService) {
 		AttachWindow(WindowSlim).
 		WindowOffset(6)
 
-	// Use custom icon
-	SystemTray.SetIcon(icon)
+	if runtime.GOOS == "darwin" {
+		SystemTray.SetTemplateIcon(trayTemplateIcon)
+	} else {
+		SystemTray.SetIcon(icon)
+	}
+	// No running/stopped variant: the server runs in this process, so a
+	// visible tray means a live server. The hub panel shows its health.
+	SystemTray.SetTooltip(fmt.Sprintf("%s · localhost:%d", AppName, tinglyService.GetPort()))
 
-	// Wire the hub panel's Home/Dashboard actions to open the main app
-	// window: a direct bound method (TinglyService.OpenMainWindow) rather
-	// than a fire-and-forget Events.Emit, so it's a single traceable call
-	// instead of a pub/sub round trip. The same handler serves the
-	// /api/v1/gui/open HTTP nudge used by the hub panel's action rows and by
-	// a second GUI launch (see run.go's notifyRunningGUI).
-	tinglyService.SetOpenMainWindowHandler(func(path string) {
-		// Hide the panel first: it's AlwaysOnTop (needed to float above the
-		// tray icon), so leaving it shown would sit visually on top of the
-		// freshly-maximised main window, making the click look like a no-op.
-		WindowSlim.Hide()
-		showMainWindow(app, tinglyService, path)
-	})
+	// The hub panel's jumps reach the same openMain: through the
+	// /api/v1/gui/open HTTP nudge (also used by a second GUI launch, see
+	// run.go's notifyRunningGUI) or the bound TinglyService.OpenMainWindow.
+	tinglyService.SetOpenMainWindowHandler(openMain)
 
 	// Prevent window from being destroyed on close - just hide it
 	WindowSlim.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
