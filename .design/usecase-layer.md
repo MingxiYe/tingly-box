@@ -1,6 +1,6 @@
 # internal/usecase
 
-Application-logic layer that sits between config storage (`internal/server/config`)
+Application-logic layer that sits between config storage (`internal/config`)
 and every caller surface (CLI, TUI, Web handler, future GUI). Collapses the
 request assembly, validation, and error semantics that today are hand-duplicated
 per surface into one implementation per domain.
@@ -19,7 +19,7 @@ place that logic lives; each caller becomes a thin adapter that does I/O
 
 ## Contract
 
-**Allowed dependencies**: `internal/server/config`, `internal/typ`,
+**Allowed dependencies**: `internal/config`, `internal/typ`,
 `internal/loadbalance`, `internal/catalog`, `internal/agent`, `internal/protocol`.
 
 **Forbidden dependencies**: `internal/command`, `internal/server` (the HTTP

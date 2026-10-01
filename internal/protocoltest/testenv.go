@@ -14,13 +14,13 @@ import (
 
 	"github.com/tingly-dev/tingly-box/ai"
 	"github.com/tingly-dev/tingly-box/internal/appconfig"
+	serverconfig "github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/constant"
 	"github.com/tingly-dev/tingly-box/internal/guardrails"
 	"github.com/tingly-dev/tingly-box/internal/protocol"
 	"github.com/tingly-dev/tingly-box/internal/protocol/sse"
 	"github.com/tingly-dev/tingly-box/internal/protocolserver/servertool"
 	"github.com/tingly-dev/tingly-box/internal/server"
-	serverconfig "github.com/tingly-dev/tingly-box/internal/server/config"
 	"github.com/tingly-dev/tingly-box/internal/typ"
 )
 
@@ -153,10 +153,10 @@ var preseedKeys = sync.OnceValues(func() (enterpriseKeyPair, error) {
 // generating its own. configDir is always a just-created os.MkdirTemp result
 // here, so the slots are never already populated — no existence check needed.
 //
-// This lives in the harness, not internal/server/config: it exists purely to
+// This lives in the harness, not internal/config: it exists purely to
 // amortize a cost the harness's "one fresh config dir per env" pattern
 // creates, and production configs never call it (they generate once and
-// reuse the key from disk). internal/server/config only exports the generic
+// reuse the key from disk). internal/config only exports the generic
 // generate/write/path primitives; the caching policy is harness-only
 // knowledge.
 func preseedEnterpriseContextKeys(configDir string) error {

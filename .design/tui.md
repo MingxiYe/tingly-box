@@ -150,7 +150,7 @@ not seeing what just happened.
 ## 7. Model lookup cascade (the gotcha)
 
 `Config.FetchAndSaveProviderModels(uuid)` (in
-`internal/server/config/config.go`) has a documented but *half-done*
+`internal/config/config.go`) has a documented but *half-done*
 fallback:
 
 1. Call the provider's `/v1/models` endpoint via the appropriate

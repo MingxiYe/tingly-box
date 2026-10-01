@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	serverconfig "github.com/tingly-dev/tingly-box/internal/server/config"
+	serverconfig "github.com/tingly-dev/tingly-box/internal/config"
 )
 
 // ClaudeCodeTierAliases are the --model aliases Claude Code maps to a tier

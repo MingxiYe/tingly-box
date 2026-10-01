@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"github.com/tingly-dev/tingly-box/internal/appconfig"
+	serverconfig "github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/constant"
 	"github.com/tingly-dev/tingly-box/internal/lock"
-	serverconfig "github.com/tingly-dev/tingly-box/internal/server/config"
 )
 
 // AppManager is the command process host: it owns AppConfig and server

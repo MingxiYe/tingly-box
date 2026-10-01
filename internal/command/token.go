@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/tingly-dev/tingly-box/internal/app"
-	serverconfig "github.com/tingly-dev/tingly-box/internal/server/config"
+	serverconfig "github.com/tingly-dev/tingly-box/internal/config"
 )
 
 // TokenKind identifies which tingly-box token a sub-command operates on.

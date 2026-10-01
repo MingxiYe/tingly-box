@@ -123,7 +123,7 @@ preserving its UUID and every config that references it.
 ### Why not delete + recreate
 
 Deleting a provider runs `removeProviderServicesFromRules`
-(`internal/server/config/provider.go`), which strips every rule service pointing at
+(`internal/config/provider.go`), which strips every rule service pointing at
 that UUID, and recreation mints a fresh, unreferenced UUID. So the old recovery path
 silently dismantled the user's routing. Re-auth keeps the UUID, so nothing downstream
 moves.
@@ -185,7 +185,7 @@ authorize(provider_uuid) ──▶ SessionState.TargetProviderUUID
 | `internal/server/module/oauth/routes.go` | route registration |
 | `internal/server/module/tokenrefresh/refresher.go` | periodic background refresh; expiry/credential guards |
 | `ai/oauth/zcode.go` | ZCode (GLM Coding Plan) server-poll login + credential resolver; `zcode-oauth.md` |
-| `internal/server/config/provider.go` | `AddProvider` / `UpdateProvider` / `DeleteProvider` + rule cleanup |
+| `internal/config/provider.go` | `AddProvider` / `UpdateProvider` / `DeleteProvider` + rule cleanup |
 | `frontend/src/components/OAuthDialog.tsx` | provider picker + direct/re-auth mode (`reauthProviderUuid`) |
 | `frontend/src/components/OAuthTable.tsx` | provider list, expiry display, Refresh / Reauthorize actions |
 | `frontend/src/pages/CredentialPage.tsx` | wiring: reauthorize, refresh-failure prompt |

@@ -13,7 +13,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { type AppLanguage, resolveLanguage } from '@/i18n';
 
-// CodexPrefs mirrors the Go struct in internal/server/config (CodexPrefs).
+// CodexPrefs mirrors the Go struct in internal/config (CodexPrefs).
 // Keys are the literal Codex config.toml keys so the object round-trips
 // through the backend without an intermediate mapping layer. All values are
 // strings; "" means "omit this key, let Codex use its own default".
@@ -63,7 +63,7 @@ type PrefsKey = keyof CodexPrefs;
 type Kind = 'enum' | 'bool';
 
 // ── Field structure (language-agnostic) ────────────────────────────────
-// Keep in sync with codexPrefSpec in internal/server/config/apply_config.go.
+// Keep in sync with codexPrefSpec in internal/config/apply_config.go.
 // Adding a key: append here AND add entries in FIELDS_TEXT_ZH / FIELDS_TEXT_EN /
 // FIELDS_TEXT_RU.
 

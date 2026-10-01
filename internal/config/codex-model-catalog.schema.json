@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/tingly-dev/tingly-box/main/internal/server/config/codex-model-catalog.schema.json",
+  "$id": "https://raw.githubusercontent.com/tingly-dev/tingly-box/main/internal/config/codex-model-catalog.schema.json",
   "title": "Tingly Box Codex Model Catalog",
   "description": "Schema for the JSON model catalog written to ~/.codex/tingly-model-catalog.json and referenced by Codex config.toml's model_catalog_json setting.",
   "type": "object",

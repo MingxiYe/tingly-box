@@ -103,7 +103,7 @@ to make that clearer is a follow-up.
 | File                                       | Role                                                                                  |
 |--------------------------------------------|---------------------------------------------------------------------------------------|
 | `internal/constant/constant.go`            | Holds `DefaultUserToken` / `DefaultModelToken` — detection-only, not fallback.        |
-| `internal/server/config/util.go`           | `GenerateUserToken`, `GenerateModelToken`, `GenerateSecureToken`, `IsDefaultToken`.   |
-| `internal/server/config/config.go`         | `NewConfig` bootstrap and `CreateDefaultConfig`. Both refuse legacy defaults.         |
+| `internal/config/util.go`           | `GenerateUserToken`, `GenerateModelToken`, `GenerateSecureToken`, `IsDefaultToken`.   |
+| `internal/config/config.go`         | `NewConfig` bootstrap and `CreateDefaultConfig`. Both refuse legacy defaults.         |
 | `internal/server/webui_auth.go`            | `GetUserToken` (exposes `is_default`), `ResetUserToken`, `ResetModelToken`.           |
 | `internal/servertest/server_test.go`      | Distinguishes real vs test tokens via the legacy default string.                      |

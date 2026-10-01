@@ -180,7 +180,7 @@ Codex 是 OAuth-only 接入路径（Web `oauth/handler.go` 和 CLI `command/oaut
 
 无需用户配置。OAuth 完成即正确。
 
-存量 Codex provider（PR #976 之前已 OAuth 完成的）由 `normalizeCodexEndpointMode`（`internal/server/config/migration.go`，已折入 baseline normalizer，原 `migrate20260518`）backfill。Idempotent。
+存量 Codex provider（PR #976 之前已 OAuth 完成的）由 `normalizeCodexEndpointMode`（`internal/config/migration.go`，已折入 baseline normalizer，原 `migrate20260518`）backfill。Idempotent。
 
 `ai.Provider.IsCodexProvider()` 方法**保留**——它仍被 client、UA pin、system message 注入等非路由代码消费。本文档讨论的 endpoint mode 只与路由相关。
 
@@ -228,7 +228,7 @@ Template 是用户实例化 provider 的预设入口。Template 里的 `openai_e
 - `internal/protocolserver/protocol_endpoint.go` —— `ResolveOpenAIEndpoint` 纯函数、`EndpointOverride` 枚举与 `ParseEndpointOverride`
 - `internal/protocolserver/attempt_plan.go` —— 唯一的路由调用点：`resolveAttemptTarget` 按 provider 风格查表、查模型级 override，再调 `ResolveOpenAIEndpoint`（Chat 客户端传 `IncomingAPIChat`，其余客户端传 `IncomingAPIResponses`）；四个入站路径的 `run*Attempt` 都经 `planAttempt` 调到这里
 - `internal/server/module/oauth/handler.go`、`internal/command/oauth.go` —— Codex OAuth 实例化打 mode
-- `internal/server/config/migration.go` —— 存量 Codex backfill 迁移（`normalizeCodexEndpointMode`）
+- `internal/config/migration.go` —— 存量 Codex backfill 迁移（`normalizeCodexEndpointMode`）
 
 ---
 

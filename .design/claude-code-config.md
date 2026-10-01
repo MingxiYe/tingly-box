@@ -206,7 +206,7 @@ not runtime discovery.
 
 ### 5.1 The well-known UUIDs
 
-`internal/server/config/init.go` seeds these rules on first boot.
+`internal/config/init.go` seeds these rules on first boot.
 `migration.go` keeps them as exported constants (`RuleUUIDCC*`):
 
 | Rule UUID | Initial `request_model` | Maps to env slot |

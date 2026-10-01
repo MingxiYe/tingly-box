@@ -102,7 +102,7 @@ func (aa *AgentApply) createOrUpdateRulesForScenario(
 }
 
 // createOrUpdateRule creates or updates a single rule
-// This follows the server's rule management pattern from internal/server/config/config.go
+// This follows the server's rule management pattern from internal/config/config.go
 func (aa *AgentApply) createOrUpdateRule(
 	scenario typ.RuleScenario,
 	requestModel string,

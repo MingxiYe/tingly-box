@@ -35,7 +35,7 @@ var codexGatewayTopLevelKeys = []string{"model", "model_provider", "model_catalo
 // tingly-served models.
 const codexModelCatalogFile = "tingly-model-catalog.json"
 
-const codexModelCatalogSchema = "https://raw.githubusercontent.com/tingly-dev/tingly-box/main/internal/server/config/codex-model-catalog.schema.json"
+const codexModelCatalogSchema = "https://raw.githubusercontent.com/tingly-dev/tingly-box/main/internal/config/codex-model-catalog.schema.json"
 
 // CodexPrefs is the typed, user-tunable surface of Codex's config.toml.
 // JSON tags map 1:1 to the config.toml keys, so the frontend round-trips the

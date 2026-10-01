@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/constant"
 	"github.com/tingly-dev/tingly-box/internal/mcp/local"
 	mcpruntime "github.com/tingly-dev/tingly-box/internal/mcp/runtime"
 	mcptools "github.com/tingly-dev/tingly-box/internal/mcp/tools"
-	"github.com/tingly-dev/tingly-box/internal/server/config"
 	"github.com/tingly-dev/tingly-box/internal/typ"
 )
 

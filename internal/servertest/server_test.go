@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	server "github.com/tingly-dev/tingly-box/internal/server"
 
-	"github.com/tingly-dev/tingly-box/internal/server/config"
+	"github.com/tingly-dev/tingly-box/internal/config"
 	typ "github.com/tingly-dev/tingly-box/internal/typ"
 )
 

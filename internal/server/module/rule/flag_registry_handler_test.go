@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/tingly-dev/tingly-box/internal/server/config"
+	"github.com/tingly-dev/tingly-box/internal/config"
 )
 
 func TestGetFlagRegistry_ReturnsCatalog(t *testing.T) {

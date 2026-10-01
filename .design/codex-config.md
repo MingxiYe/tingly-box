@@ -61,7 +61,7 @@ fields (`model`, `model_provider`, `model_catalog_json`,
 `model_providers.*`) or inject arbitrary TOML:
 
 ```go
-// internal/server/config/apply_config.go
+// internal/config/apply_config.go
 type CodexPrefs struct {
     ModelReasoningEffort            string `json:"model_reasoning_effort,omitempty"`
     ModelReasoningSummary           string `json:"model_reasoning_summary,omitempty"`
@@ -222,7 +222,7 @@ models exist); apply response adds `catalogWritten`.
 
 | Layer | File | Role |
 |---|---|---|
-| Backend | `internal/server/config/apply_config.go` | `CodexPrefs`, `DefaultCodexPrefs`, `toConfig`, `ApplyCodexConfig`, `RenderCodexConfigTOML`, `RenderCodexModelCatalog`, `mergeCodexConfig` |
+| Backend | `internal/config/apply_config.go` | `CodexPrefs`, `DefaultCodexPrefs`, `toConfig`, `ApplyCodexConfig`, `RenderCodexConfigTOML`, `RenderCodexModelCatalog`, `mergeCodexConfig` |
 | Backend | `internal/server/module/configapply/{types,handler,routes}.go` | request/response shapes, apply + preview handlers, routes |
 | Backend | `ai/agent/codex.go` | `CodexParams.{Prefs,WriteCatalog}`, `Apply()` |
 | Backend | `internal/agent/rule_bridge.go` | CLI path (defaults + `WriteCatalog: true`) |
@@ -237,7 +237,7 @@ models exist); apply response adds `catalogWritten`.
 
 | File | Covers |
 |---|---|
-| `internal/server/config/apply_config_test.go` | merge preserves user top-level keys / providers / profiles; managed fields overwritten; idempotent apply; colliding profile overwrite; catalog written + `model_catalog_json` set; reasoning presets are objects; no-models skips catalog; **`writeCatalog=false` skips catalog and drops `model_catalog_json`**; prefs applied top-level + per-profile; invalid enum / non-`true` bool dropped; prefs cannot clobber managed fields. |
+| `internal/config/apply_config_test.go` | merge preserves user top-level keys / providers / profiles; managed fields overwritten; idempotent apply; colliding profile overwrite; catalog written + `model_catalog_json` set; reasoning presets are objects; no-models skips catalog; **`writeCatalog=false` skips catalog and drops `model_catalog_json`**; prefs applied top-level + per-profile; invalid enum / non-`true` bool dropped; prefs cannot clobber managed fields. |
 
 Real-stack verification: Playwright + Chrome-for-Testing against a live
 `tingly-box start --port 12580` backend through the vite dev proxy

@@ -3,7 +3,7 @@ package dataio
 import (
 	"fmt"
 
-	"github.com/tingly-dev/tingly-box/internal/server/config"
+	"github.com/tingly-dev/tingly-box/internal/config"
 )
 
 // Import imports a rule with providers from data in the specified format

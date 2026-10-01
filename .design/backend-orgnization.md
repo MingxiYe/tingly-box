@@ -73,7 +73,7 @@ Steps are stacked as separate commits on one branch, in this order.
 | # | Step | Status |
 |---|---|---|
 | 0 | This document | done |
-| 1 | `internal/server/config` → `internal/config` (pure move, no behaviour change) | todo |
+| 1 | `internal/server/config` → `internal/config` (pure move, no behaviour change) | done |
 | 2 | Shared HTTP helpers: `apierr`, `bind`, `paginate`; remove duplicate CORS | todo |
 | 3 | `Module` interface + migrate module registration | todo |
 | 4 | Move non-HTTP modules out of `server/module/` (`tokenrefresh`, `quotawindow`, `providerquota`) | todo |
