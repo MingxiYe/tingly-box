@@ -54,7 +54,13 @@ func TestResponsesWireResponseJSONIsMinimalComparedToSDKResponse(t *testing.T) {
 	wireResponse := wireRoot["response"].(map[string]any)
 	sdkResponse := sdkRoot["response"].(map[string]any)
 
-	require.NotContains(t, wireResponse, "error")
+	// Required keys we can answer honestly are always present, even when null.
+	require.Contains(t, wireResponse, "error")
+	require.Nil(t, wireResponse["error"])
+	require.Contains(t, wireResponse, "incomplete_details")
+	require.Nil(t, wireResponse["incomplete_details"])
+
+	// Request-echo keys are not visible to the converter, so they stay out.
 	require.NotContains(t, wireResponse, "metadata")
 	require.NotContains(t, wireResponse, "parallel_tool_calls")
 	require.NotContains(t, wireResponse, "temperature")
