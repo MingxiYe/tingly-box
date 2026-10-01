@@ -1,4 +1,4 @@
-import { Person as IconUser, ChevronRight as IconChevronRight, Lightbulb as IconLightbulb, Error as IconAlertCircle, AppRegistration as IconApps } from '@/components/icons';
+import { Person as IconUser, ChevronRight as IconChevronRight, Lightbulb as IconLightbulb, Error as IconAlertCircle } from '@/components/icons';
 import { Box, Divider, IconButton, ListItemButton, ListItemIcon, Tooltip, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
@@ -22,7 +22,6 @@ import {
 import { useSidebarCollapsed } from './useSidebarCollapsed';
 import type { ActivityItem } from './types';
 import { PreferencesMenu } from './PreferencesMenu';
-import { PowerUpsMenu } from './PowerUpsMenu';
 
 interface ActivityBarProps {
     activityItems: ActivityItem[];
@@ -41,7 +40,6 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
     const location = useLocation();
     const { currentVersion } = useAppVersion();
     const [preferencesAnchorEl, setPreferencesAnchorEl] = useState<HTMLElement | null>(null);
-    const [powerUpsAnchorEl, setPowerUpsAnchorEl] = useState<HTMLElement | null>(null);
     const { isHealthy, showDisconnectDialog } = useHealth();
     const showDisconnected = !isHealthy || import.meta.env.DEV;
     const isHelpActive = location.pathname === '/help';
@@ -212,7 +210,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
                     borderTop: '1px solid',
                     borderColor: 'divider',
                     display: 'flex',
-                    flexDirection: 'row',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
@@ -220,25 +218,6 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
                     height: footerHeight,
                 }}
             >
-                {/* Power-ups — switch optional rail items (Team, Image,
-                    Remote, Bench, …) on and off from the rail they appear in.
-                    In the footer, not the icon list: the list already fills
-                    the rail at 900px tall. */}
-                <Tooltip title={t('layout.powerUps')} placement="right" arrow>
-                    <ListItemButton
-                        onClick={(e) => setPowerUpsAnchorEl(e.currentTarget)}
-                        aria-label={t('layout.powerUps')}
-                        sx={activityBottomItemSx({
-                            ...(powerUpsAnchorEl && { bgcolor: 'action.selected' }),
-                            '&:hover': { bgcolor: 'action.hover', color: 'text.primary' },
-                        })}
-                    >
-                        <ListItemIcon sx={{ minWidth: 0, color: 'inherit', justifyContent: 'center' }}>
-                            <IconApps sx={{ fontSize: 20 }} />
-                        </ListItemIcon>
-                    </ListItemButton>
-                </Tooltip>
-                <PowerUpsMenu anchorEl={powerUpsAnchorEl} onClose={() => setPowerUpsAnchorEl(null)} />
                 {/* Preferences: language, theme, feedback, version */}
                 <Tooltip title={t('layout.activityBar.preferences')} placement="right" arrow>
                     <ListItemButton

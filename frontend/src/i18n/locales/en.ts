@@ -2251,7 +2251,7 @@ export default {
     "editTooltip": "Show or hide agents",
     "powerUps": {
       "title": "Power-ups",
-      "subtitle": "Optional capabilities. Turn one on to add it to this bar; turn it off to hide it.",
+      "subtitle": "Optional capabilities. Turn one on to add it to the navigation bar on the left; turn it off to hide it.",
       "experimental": "Exp.",
       "experimentalTooltip": "Experimental feature",
       "beta": "Beta",

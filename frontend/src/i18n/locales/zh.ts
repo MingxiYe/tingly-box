@@ -2246,7 +2246,7 @@ export default {
     "editTooltip": "显示或隐藏 Agent",
     "powerUps": {
       "title": "增强能力",
-      "subtitle": "可选能力。开启后出现在这一栏，关闭则隐藏。",
+      "subtitle": "可选能力。开启后出现在左侧导航栏，关闭则隐藏。",
       "experimental": "实验",
       "experimentalTooltip": "实验性功能",
       "beta": "Beta",

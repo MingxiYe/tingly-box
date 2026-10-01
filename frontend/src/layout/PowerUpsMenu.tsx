@@ -4,7 +4,8 @@ import {
     Chip,
     Divider,
     ListItemButton,
-    Popover,
+    Paper,
+    Popper,
     Stack,
     Switch,
     Tooltip,
@@ -27,8 +28,8 @@ import { useFeatureFlags } from '@/contexts/FeatureFlagsContext';
 import { api } from '@/services/api';
 import { isFullEdition } from '@/utils/edition';
 import { useBotPlatformSummary } from './useBotPlatformSummary';
-import { activityBarWidth } from './constants';
 import { SCENARIOS, useHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
+import { Z_INDEX } from '../constants/zIndex';
 
 interface PowerUp {
     key: string;
@@ -52,17 +53,23 @@ interface PowerUp {
 }
 
 interface PowerUpsMenuProps {
+    /** The user-menu row it opens beside; null = closed. */
     anchorEl: HTMLElement | null;
     onClose: () => void;
+    /** Called after a row opens its page, so the parent menu can close too. */
+    onNavigate?: () => void;
+    /** Hover bookkeeping, so the parent keeps it open while the pointer is on it. */
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
 }
 
 // Power-ups — optional rail items (Team, Image, Remote, Bench, …), switched
-// on and off from the rail itself: what they control is which rail items
-// exist, so the switch lives where its effect shows. Flag-backed ones use
+// on and off from a submenu of the user menu (PreferencesMenu), next to the
+// other set-once choices about how the app looks. Flag-backed ones use
 // the same `_global` flags as System → Experimental (which stays as the full
 // list and the ExperimentalFeatureGate landing spot). An enabled row opens
 // its page.
-export const PowerUpsMenu: React.FC<PowerUpsMenuProps> = ({ anchorEl, onClose }) => {
+export const PowerUpsMenu: React.FC<PowerUpsMenuProps> = ({ anchorEl, onClose, onNavigate, onMouseEnter, onMouseLeave }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { skillUser, skillIde, enableGuardrails, enableMCP, enableBench, enableDesk, loading, refresh } = useFeatureFlags();
@@ -191,16 +198,21 @@ export const PowerUpsMenu: React.FC<PowerUpsMenuProps> = ({ anchorEl, onClose })
     };
 
     return (
-        <Popover
+        // A non-modal Popper (not a Popover): a hover submenu needs the
+        // pointer to reach it without a backdrop in between.
+        <Popper
             open={Boolean(anchorEl)}
-            onClose={onClose}
-            // Opens beside the rail (not over it), bottom-aligned with the
-            // footer button that opened it.
-            anchorReference="anchorPosition"
-            anchorPosition={anchorEl ? { top: anchorEl.getBoundingClientRect().bottom, left: activityBarWidth + 8 } : undefined}
-            transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            slotProps={{ paper: { sx: { width: 380, maxHeight: '80vh' } } }}
+            anchorEl={anchorEl}
+            placement="right-end"
+            modifiers={[{ name: 'offset', options: { offset: [8, 4] } }]}
+            sx={{ zIndex: Z_INDEX.popover + 1 }}
         >
+            <Paper
+                elevation={8}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                sx={{ width: 380, maxHeight: '80vh', overflowY: 'auto', borderRadius: 2 }}
+            >
             <Box sx={{ px: 2, pt: 1.5, pb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     {t('scenarioOverview.powerUps.title')}
@@ -220,7 +232,7 @@ export const PowerUpsMenu: React.FC<PowerUpsMenuProps> = ({ anchorEl, onClose })
                     <Stack key={p.key} direction="row" sx={{ alignItems: 'flex-start', pr: 1 }}>
                         <ListItemButton
                             disabled={!p.enabled}
-                            onClick={() => { navigate(p.path); onClose(); }}
+                            onClick={() => { navigate(p.path); onClose(); onNavigate?.(); }}
                             // A disabled row still reads: only the click is off.
                             sx={{ flex: 1, minWidth: 0, py: 1, px: 2, alignItems: 'flex-start', gap: 1.5, '&.Mui-disabled': { opacity: 1 } }}
                         >
@@ -276,6 +288,7 @@ export const PowerUpsMenu: React.FC<PowerUpsMenuProps> = ({ anchorEl, onClose })
                     <strong>{p.name}</strong> — {p.enabledNotice}
                 </Alert>
             ))}
-        </Popover>
+            </Paper>
+        </Popper>
     );
 };
