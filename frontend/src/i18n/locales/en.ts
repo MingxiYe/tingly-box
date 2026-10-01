@@ -1632,6 +1632,19 @@ export default {
       "noDataHint": "Select a different time range or check back later"
     }
   },
+  "hub": {
+    "title": "Tingly Box",
+    "status": {
+      "healthy": "Running",
+      "unhealthy": "Disconnected",
+      "updateAvailable": "Update available"
+    },
+    "quota": {
+      "title": "Provider Quota",
+      "empty": "No quota data yet",
+      "refresh": "Refresh quota"
+    }
+  },
   "mcp": {
     "pageTitle": "MCP Tools",
     "info": "Configure MCP (Model Context Protocol) tools to enable web search and web fetch capabilities. The MCP server runs as a local stdio subprocess or connects to a remote HTTP endpoint.",

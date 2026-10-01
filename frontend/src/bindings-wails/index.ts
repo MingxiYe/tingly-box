@@ -21,6 +21,7 @@ export const host: HostBridge = {
         });
         return () => off?.();
     },
+    openMainWindow: (path) => TinglyService.OpenMainWindow(path),
     // A WebView has no tab strip to open `_blank` into; hand the URL to the
     // OS browser instead.
     openExternal: (url) => {

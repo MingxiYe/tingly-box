@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -33,6 +32,12 @@ type TinglyService struct {
 	appManager    *app.AppManager
 	serverManager *app.ServerManager
 	app           *application.App
+
+	// openMainWindowFn is set by main (systray.go's useSystray) so the hub
+	// panel and the /api/v1/gui/open nudge can open the main app window.
+	// TinglyService lives in this package and can't import main (main
+	// already imports this package), hence the callback.
+	openMainWindowFn func(path string)
 }
 
 // NewTinglyServiceWithServerManager creates a new UI service instance with a pre-configured ServerManager
@@ -70,24 +75,27 @@ func (s *TinglyService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServiceStartup is called when the service starts
 func (s *TinglyService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	// GUI-only route: lets the tray hub panel and a second GUI launch nudge
+	// this instance to show its main window over plain HTTP — see run.go's
+	// notifyRunningGUI and frontend HubPage.tsx. Registered before Start so
+	// the route exists by the time the listener serves. A CLI server never
+	// registers this route, so the nudge 404s there. Registered directly on
+	// the engine (not the /api/v1 group) to skip that group's middleware;
+	// the /api/v1 prefix keeps it reachable from the webview, whose asset
+	// middleware only forwards /api and /tingly to Gin (see app.go).
+	s.GetGinEngine().POST("/api/v1/gui/open", func(c *gin.Context) {
+		if c.GetHeader("Authorization") != "Bearer "+s.GetUserAuthToken() {
+			c.Status(http.StatusForbidden)
+			return
+		}
+		s.OpenMainWindow(c.Query("path"))
+		c.JSON(http.StatusOK, gin.H{"success": true})
+	})
+
 	s.Start(ctx)
 
 	// Store the application instance for later use
 	s.app = application.Get()
-
-	// Register an event handler that can be triggered from the frontend
-	s.app.Event.On("gin-api-event", func(event *application.CustomEvent) {
-		// Log the event data
-		s.app.Logger.Info("Received event from frontend", "data", event.Data)
-
-		// Emit an event back to the frontend
-		s.app.Event.Emit("gin-api-response",
-			map[string]interface{}{
-				"message": "Response from Gin API Service",
-				"time":    time.Now().Format(time.RFC3339),
-			},
-		)
-	})
 
 	return nil
 }
@@ -115,6 +123,20 @@ func (s *TinglyService) GetPort() int {
 	port := s.appManager.GetGlobalConfig().GetServerPort()
 	logrus.Debugf("Getting port %d\n", port)
 	return port
+}
+
+// SetOpenMainWindowHandler wires "open the main app window" to main's window
+// management. Called once from useSystray after the windows exist.
+func (s *TinglyService) SetOpenMainWindowHandler(fn func(path string)) {
+	s.openMainWindowFn = fn
+}
+
+// OpenMainWindow shows the main app window at path, creating it on first use.
+// Bound for the hub panel as the fallback to its /api/v1/gui/open request.
+func (s *TinglyService) OpenMainWindow(path string) {
+	if s.openMainWindowFn != nil {
+		s.openMainWindowFn(path)
+	}
 }
 
 // ChoosePath opens a native file dialog and returns a selected file or directory path.

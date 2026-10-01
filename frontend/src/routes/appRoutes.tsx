@@ -71,6 +71,7 @@ const DeskPage = lazy(() => import('@/pages/desk/DeskPage'));
 const MCPLocalMode = lazy(() => import('@/pages/mcp/MCPLocalMode'));
 const MCPRegisteredServers = lazy(() => import('@/pages/mcp/MCPRegisteredServers'));
 const ServerToolPage = lazy(() => import('@/pages/servertool/ServerToolPage'));
+const HubPage = lazy(() => import('@/pages/HubPage'));
 
 // OnboardingGate decides where a freshly-authenticated user lands. Brand-new
 // installs (no provider configured) get sent to /help — the lightbulb Help
@@ -146,6 +147,8 @@ export const appRoutes = (
             {/* Back-compat: the old standalone Onboarding page was folded into
                 Help as ProvidersCard — keep old bookmarks/links working. */}
             <Route path="/onboarding" element={<Navigate to="/help" replace />} />
+            {/* Tray hub: compact landing page shown by the tray-mode window */}
+            <Route path="/hub" element={<HubPage />} />
             {/* Function panel routes */}
             <Route path="/agent" element={<AgentLanding />} />
             <Route path="/agent/openai" element={<UseOpenAIPage />} />

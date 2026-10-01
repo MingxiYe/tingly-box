@@ -12,6 +12,8 @@ export interface HostBridge {
     shellAuthToken(): Promise<string | null>;
     /** Subscribe to navigation requests from the shell (tray menu). Returns an unsubscribe. */
     onShellNavigate(handler: (path: string) => void): () => void;
+    /** Show the desktop main window at path (tray hub panel); no-op in a browser. */
+    openMainWindow(path: string): Promise<void>;
     /** Open a URL outside the app, in the user's browser. */
     openExternal(url: string): void;
     /** Save a blob to the user's disk under the given file name. */

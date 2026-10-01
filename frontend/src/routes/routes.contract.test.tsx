@@ -1,19 +1,23 @@
 // Route contract: every path another surface hands to the router must land
 // on a real page, not fall through to the `*` catch-all (which silently
 // redirects to /agent). Surfaces checked here:
-//   - the Wails tray menus (gui/wails3/routes.go), which navigate by string
-//     and have no compiler to tell them a route moved;
+//   - the Wails tray and app menus (gui/wails3/routes.go), which navigate by
+//     string and have no compiler to tell them a route moved;
+//   - the tray hub panel's jumps into the main window (shellRoutes.ts);
 //   - every <Navigate to=...> inside the route table itself, so a legacy
 //     redirect can't point at a path that no longer exists.
 import { isValidElement, type ReactNode } from 'react';
 import { createRoutesFromElements, matchRoutes, Navigate, type RouteObject } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { appRoutes } from './appRoutes';
+import { SHELL_ROUTES } from './shellRoutes';
 // Read through Vite (?raw) rather than node:fs so the suite needs no
 // @types/node, same as i18n/locales/tKeyCoverage.test.ts.
+import appMenuGo from '../../../gui/wails3/appmenu.go?raw';
 import routesGo from '../../../gui/wails3/routes.go?raw';
 import runGo from '../../../gui/wails3/run.go?raw';
 import systrayGo from '../../../gui/wails3/systray.go?raw';
+import windowGo from '../../../gui/wails3/window.go?raw';
 
 const routes = createRoutesFromElements(appRoutes);
 
@@ -48,12 +52,17 @@ describe('route contract', () => {
     });
 
     it('keeps tray navigation on the shared route constants', () => {
-        // A raw "/..." literal passed to the tray navigation helpers would
-        // bypass routes.go and therefore this contract.
-        for (const src of [systrayGo, runGo]) {
-            expect(src).not.toMatch(/navigateToPath\("\//);
-            expect(src).not.toMatch(/"systray-navigate",\s*"\//);
+        // A raw "/..." literal passed to the main-window navigation helpers
+        // would bypass routes.go and therefore this contract.
+        for (const src of [systrayGo, runGo, windowGo, appMenuGo]) {
+            expect(src).not.toMatch(/showMainWindow\([^)]*"\//);
+            expect(src).not.toMatch(/openMain\("\//);
         }
+    });
+
+    it('resolves the paths the tray hub panel jumps to', () => {
+        const paths = Object.values(SHELL_ROUTES);
+        expect(paths.filter(p => !resolvesToPage(p))).toEqual([]);
     });
 
     it('points every redirect at a real page', () => {

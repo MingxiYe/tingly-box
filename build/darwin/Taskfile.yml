@@ -42,7 +42,11 @@ tasks:
         cd {{.WAILS_PACKAGE_PATH}}
         go build {{.BUILD_FLAGS}} -o "${cwd}/{{.OUTPUT}}" ./
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production -trimpath -buildvcs=false -ldflags="-w -s {{.VERSION_LDFLAGS}}"{{else}}-buildvcs=false -gcflags=all="-l"{{end}}'
+      # private_mac_apis: since wails v3 beta.26 the transparent webview behind
+      # MacBackdropTranslucent (hub panel, main window) is a private WebKit
+      # API, compiled in only with this tag. Fine for Developer ID builds;
+      # the Mac App Store would reject it.
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,private_mac_apis -trimpath -buildvcs=false -ldflags="-w -s {{.VERSION_LDFLAGS}}"{{else}}-tags private_mac_apis -buildvcs=false -gcflags=all="-l"{{end}}'
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.BIN_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
       PRODUCTION: '{{.PRODUCTION | default "false"}}'
@@ -136,6 +140,16 @@ tasks:
       - cp "{{.BIN_DIR}}/{{.BIN_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS"
       - chmod +x "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS/{{.BIN_NAME}}"
       - cp build/darwin/Info.plist "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents"
+      # Stamp the release version into the bundle (Finder / About show it).
+      # Only numeric versions qualify for CFBundleVersion: a release tag like
+      # v1.6.2 becomes 1.6.2; dev builds (git describe output) keep the
+      # plist's placeholder. Before signing — the signature covers the plist.
+      - cmd: |
+          V="{{.VERSION}}"; V="${V#v}"
+          if printf '%s' "$V" | grep -Eq '^[0-9]+(\.[0-9]+)*$'; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $V" -c "Set :CFBundleVersion $V" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Info.plist"
+          fi
+        platforms: [darwin]
       - task: '{{if eq OS "darwin"}}codesign:adhoc{{else}}codesign:skip{{end}}'
 
   codesign:adhoc:
@@ -151,6 +165,10 @@ tasks:
       - 'echo "Skipping codesign (not available on {{OS}}). Sign the .app on macOS before distribution."'
 
   run:
+    vars:
+      # Passed by Taskfile.wails.yml's wails:run (e.g. --config-dir/--port
+      # for a second debug instance); empty when run directly.
+      RUN_ARGS: '{{.RUN_ARGS | default ""}}'
     cmds:
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS"
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/Resources"
@@ -159,7 +177,7 @@ tasks:
       - chmod +x "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS/{{.BIN_NAME}}"
       - cp "build/darwin/Info.dev.plist" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/Info.plist"
       - codesign --force --deep --sign - "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
-      - '"{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS/{{.BIN_NAME}}"'
+      - '"{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS/{{.BIN_NAME}}" {{.RUN_ARGS}}'
 
   sign:
     summary: Signs the application bundle with Developer ID

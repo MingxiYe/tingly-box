@@ -21,21 +21,20 @@ replace github.com/tingly-dev/tingly-box/swagger => ../../swagger
 replace github.com/tingly-dev/tingly-box/afk => ../../afk
 
 require (
+	github.com/alecthomas/kong v1.15.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/sirupsen/logrus v1.9.4
-	github.com/spf13/cobra v1.10.2
 	github.com/tingly-dev/tingly-box v0.260423.0
 )
 
 // wails
-require github.com/wailsapp/wails/v3 v3.0.0-beta.12
+require github.com/wailsapp/wails/v3 v3.0.0-beta.26
 
 require (
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
@@ -156,6 +155,7 @@ require (
 	github.com/sergeymakinen/go-ico v1.0.0 // indirect
 	github.com/slack-go/slack v0.27.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
+	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/standard-webhooks/standard-webhooks/libraries v0.0.1 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect

@@ -292,136 +292,14 @@ jobs:
           path: ./dist/tingly-box${{ matrix.exe }}
           retention-days: 7
 
+  # Unsigned desktop packages (macOS arm64/amd64, Windows amd64); the asset
+  # names are the contract tingly-box-gui's npm shim downloads by.
   build-gui:
     needs: setup
     if: needs.setup.outputs.build_gui == 'true'
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          # macOS builds
-          - os: macos-latest
-            platform: macos
-            arch: arm64
-            goos: darwin
-            goarch: arm64
-          # Windows builds
-          - os: windows-latest
-            platform: windows
-            arch: amd64
-            goos: windows
-            goarch: amd64
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          submodules: true
-
-      - name: Set up tag environment
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "RELEASE_TAG=${{ github.event.inputs.release_tag }}" >> $GITHUB_ENV
-            echo "TAG_EXISTS=$(git tag -l "${{ github.event.inputs.release_tag }}" | wc -l)" >> $GITHUB_ENV
-          else
-            echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-            echo "TAG_EXISTS=1" >> $GITHUB_ENV
-          fi
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ matrix.goarch }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ matrix.goarch }}-
-            ${{ runner.os }}-go-
-
-      - name: Cache pnpm modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pnpm-store
-            frontend/node_modules
-          key: ${{ runner.os }}-pnpm-${{ matrix.goarch }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-${{ matrix.goarch }}-
-            ${{ runner.os }}-pnpm-
-
-      - name: Install go-task
-        run: go install github.com/go-task/task/v3/cmd/task@latest
-
-      - name: Install wails3
-        # Keep in lockstep with the library version in gui/wails3/go.mod
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.12
-
-      - name: Install pnpm
-        run: corepack enable
-
-      - name: Install frontend dependencies
-        shell: bash
-        run: |
-          pnpm approve-builds --all
-          pnpm install --frozen-lockfile
-        working-directory: ./frontend
-
-      - name: Run codegen
-        run: task codegen
-
-      - name: Install NSIS (Windows only)
-        if: matrix.platform == 'windows'
-        run: choco install nsis -y
-
-      - name: Build Go binary (macOS)
-        if: matrix.platform == 'macos'
-        run: |
-          task darwin:package VERSION="${RELEASE_TAG}"
-
-          mkdir -p dist
-
-          cd bin
-          ls -la .
-          zip -r ../dist/tingly-box-gui-macos-arm64.zip TinglyBox.app
-          cd ..
-
-          cd dist
-          ls -la .
-
-      - name: Build Go binary (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          task windows:build PRODUCTION=true VERSION="$env:RELEASE_TAG"
-
-          New-Item -ItemType Directory -Force -Path dist
-
-          cd bin
-          Get-ChildItem
-          Compress-Archive -Path tingly-box.exe -DestinationPath ../dist/tingly-box-gui-windows-amd64.zip
-          cd ..
-
-          cd dist
-          Get-ChildItem
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: gui-${{ matrix.platform }}-${{ matrix.arch }}
-          path: ./dist/
-          retention-days: 7
+    uses: ./.github/workflows/gui.yml
+    with:
+      release_tag: ${{ needs.setup.outputs.release_tag }}
 
   # Gate releases on a green harness. We call the shared template directly
   # (same definition harness-matrix.yml uses) and run the full matrix
@@ -505,6 +383,26 @@ jobs:
             find dist/gui -maxdepth 1 -name "*.zip" -exec cp {} "$RELEASE_DIR/" \; 2>/dev/null || true
           fi
 
+          # Release notes lead with how to open the unsigned desktop app.
+          : > "$ORIGINAL_DIR/release-notes.md"
+          if ls "$RELEASE_DIR"/tingly-box-gui-*.zip 1> /dev/null 2>&1; then
+            cat > "$ORIGINAL_DIR/release-notes.md" <<'NOTES'
+          ## Desktop app (unsigned)
+
+          | Platform | Download |
+          | --- | --- |
+          | macOS Apple Silicon | `tingly-box-gui-macos-arm64.zip` |
+          | macOS Intel | `tingly-box-gui-macos-amd64.zip` |
+          | Windows x64 | `tingly-box-gui-windows-amd64.zip` |
+
+          The desktop builds are not signed by Apple or Microsoft.
+
+          - **macOS**: easiest is `npx tingly-box-gui`, which skips Gatekeeper. For a browser download, unzip and open `TinglyBox.app`; when macOS blocks it, go to **System Settings → Privacy & Security → Open Anyway**, or run `xattr -dr com.apple.quarantine TinglyBox.app`.
+          - **Windows**: if SmartScreen appears, choose **More info → Run anyway**.
+
+          NOTES
+          fi
+
           # Create checksums for all files (only if we have zip files)
           if ls "$RELEASE_DIR"/*.zip 1> /dev/null 2>&1; then
             (cd "$RELEASE_DIR" && sha256sum *.zip > checksums.txt)
@@ -519,6 +417,7 @@ jobs:
           files: |
             release/*.zip
             release/checksums.txt
+          body_path: release-notes.md
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -546,6 +445,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.setup.outputs.release_tag }}
+          # The GUI npm package downloads this release's GUI zips, so it is
+          # published exactly when this release built them.
+          PUBLISH_GUI: ${{ needs.setup.outputs.build_gui == 'true' }}
         run: |
           # Same inference npm.yml applies on a release event: stable → latest,
           # pre-release (v1.2.3-rc1) → rc.
@@ -563,7 +465,7 @@ jobs:
             -f tag="$RELEASE_TAG" \
             -f npm_tag="$NPM_TAG" \
             -f publish_cli=true \
-            -f publish_gui=false \
+            -f publish_gui="$PUBLISH_GUI" \
             -f build_docker=true
 
           # Best effort: link the dispatched run so approvers can find it from here.
@@ -583,7 +485,7 @@ jobs:
             echo "| --- | --- |"
             echo "| Release | \`$RELEASE_TAG\` |"
             echo "| npm dist-tag | \`$NPM_TAG\` |"
-            echo "| Publish | cli=true, gui=false, docker=true |"
+            echo "| Publish | cli=true, gui=$PUBLISH_GUI, docker=true |"
             if [ -n "$RUN_URL" ]; then
               echo "| Run | $RUN_URL |"
             else
