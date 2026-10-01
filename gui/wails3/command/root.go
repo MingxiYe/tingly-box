@@ -1,27 +1,13 @@
 package command
 
 import (
-	"github.com/spf13/cobra"
-
 	"github.com/tingly-dev/tingly-box/internal/app"
+	"github.com/tingly-dev/tingly-box/internal/command/options"
 )
 
-// RootCommand creates the root command for the GUI binary
-func RootCommand(appManager *app.AppManager, launcher AppLauncher) *cobra.Command {
-	rootCmd := &cobra.Command{
-		Use:   "tingly-box-gui",
-		Short: "Tingly Box - GUI Mode (Wails)",
-		Long: `Tingly Box GUI mode provides a desktop application interface
-for managing the AI model proxy server. Supports both full GUI mode
-(window + systray) and slim mode (systray only).`,
-	}
-
-	rootCmd.AddCommand(GUICommand(appManager, launcher))
-	rootCmd.AddCommand(SlimCommand(appManager, launcher))
-	rootCmd.AddCommand(TrayCommand(appManager, launcher))
-	// Note: start/stop/restart server lifecycle subcommands were removed when
-	// internal/command migrated from cobra to Kong. The GUI binary does not need
-	// them — the server is started implicitly by TinglyService.ServiceStartup()
-	// when the Wails app runs.
-	return rootCmd
+// AppLauncher defines the interface for launching the GUI application.
+// There is a single unified mode: server + tray (with hub panel) + main
+// window. The former gui/slim/tray subcommand split is gone.
+type AppLauncher interface {
+	Start(appManager *app.AppManager, opts options.StartServerOptions) error
 }

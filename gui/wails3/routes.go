@@ -7,8 +7,10 @@ package main
 // never a raw "/..." literal (the same test enforces that).
 const (
 	RouteLanding    = "/"
+	RouteAgent      = "/agent"
 	RouteDashboard  = "/dashboard"
 	RouteOpenAI     = "/agent/openai"
 	RouteAnthropic  = "/agent/anthropic"
 	RouteClaudeCode = "/agent/claude_code"
+	RouteHub        = "/hub"
 )
