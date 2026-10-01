@@ -120,7 +120,7 @@ const PluginFeatures: React.FC<PluginFeaturesProps> = ({ scenario }) => {
     }, [scenario]);
 
     // One strip summarizing every scenario plugin; clicking it opens a panel
-    // to change them. Thinking and Vision — the ones people actually use —
+    // to change them. Thinking and Vision Proxy — the ones people actually use —
     // always show in the summary; Record only once it is on.
     const recordPoints = normalizePoints(recordV2Mode);
     const offeredRecordPoints = recordPoints.filter(p => RECORDING_POINTS.some(o => o.value === p));
@@ -133,7 +133,9 @@ const PluginFeatures: React.FC<PluginFeaturesProps> = ({ scenario }) => {
             value: EFFORT_LEVELS.find(l => l.value === effort)?.label ?? effort, active: effort !== '',
         });
         summary.push({
-            key: 'vision', label: 'Vision',
+            // Full name: "Vision" alone reads as "can the model see", not
+            // "describe images through another model".
+            key: 'vision', label: 'Vision Proxy',
             value: visionService?.model ?? 'Off', active: visionService !== null,
         });
     }
@@ -155,7 +157,7 @@ const PluginFeatures: React.FC<PluginFeaturesProps> = ({ scenario }) => {
     };
 
     const panelRow = (label: string, control: React.ReactNode) => (
-        <Box sx={{ display: 'grid', gridTemplateColumns: '96px 1fr', alignItems: 'center', columnGap: 1.5 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '104px 1fr', alignItems: 'center', columnGap: 1.5 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>{label}</Typography>
             <Box sx={{ minWidth: 0 }}>{control}</Box>
         </Box>
@@ -223,12 +225,13 @@ const PluginFeatures: React.FC<PluginFeaturesProps> = ({ scenario }) => {
                                             ))}
                                         </ToggleButtonGroup>
                                     ))}
-                                    {isChatShaped && panelRow('Vision', (
+                                    {isChatShaped && panelRow('Vision Proxy', (
                                         <VisionProxyControl
                                             value={visionService}
                                             providers={providers}
                                             disabled={updating.vision_proxy_service || false}
                                             onChange={handleVisionChange}
+                                            hideName
                                         />
                                     ))}
                                     {panelRow('Record', (
