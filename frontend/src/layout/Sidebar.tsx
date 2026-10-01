@@ -34,7 +34,7 @@ import {
     sidebarListScrollSx,
 } from './styles';
 import type { NavItem } from './types';
-import { IndicatorBadge, VersionDisplay, useVersionBadgeColor } from '@/components/VersionDisplay';
+import { VersionDisplay } from '@/components/VersionDisplay';
 import { REPO_URL } from './GitHubStarBanner';
 import { UpdatePanelDialog } from '@/components/UpdatePanelDialog';
 
@@ -61,7 +61,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
     const { refresh } = useProfileContext();
     const { refresh: refreshTeams } = useTeamContext();
     const { currentVersion } = useVersion();
-    const badgeColor = useVersionBadgeColor();
 
     const [addProfileAnchorEl, setAddProfileAnchorEl] = useState<HTMLElement | null>(null);
     const [newProfileName, setNewProfileName] = useState('');
@@ -280,54 +279,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     );
                 })}
             </List>
-            {/* Footer: version, and the GitHub star request — one quiet,
-                always-there link instead of a banner over every agent page. */}
+            {/* Footer: the running version and its update badge — app state,
+                one row. A dev build's long version ellipsizes, the badge stays.
+                The GitHub star link lives under the slogan below instead:
+                side by side it was pushed out, and stacked here it read as a
+                second status line. */}
             <Box
                 sx={{
                     py: 1.5, px: 2,
-                    borderColor: 'divider',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 1.5,
                     flexShrink: 0,
                     height: footerHeight,
+                    minWidth: 0,
                 }}
             >
                 <VersionDisplay onClick={() => setUpdatePanelOpen(true)} />
-                <Tooltip title={t('layout.githubStar.text')} arrow placement="top">
-                    {/* Built from the version's own pieces (same flex row,
-                        caption style and IndicatorBadge, in the badge's
-                        current colour), so the two never differ in height
-                        or hue. */}
-                    <Box
-                        component="a"
-                        href={REPO_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.75,
-                            textDecoration: 'none',
-                            '&:hover': {
-                                opacity: 0.8,
-                                '& .indicator-badge': { transform: 'scale(1.1)' },
-                                '& .MuiTypography-root': { color: 'primary.main' },
-                            },
-                        }}
-                    >
-                        <Typography
-                            variant="caption"
-                            sx={{ color: 'text.secondary', display: 'block', fontStyle: 'italic', whiteSpace: 'nowrap', transition: 'color 0.2s ease' }}
-                        >
-                            {t('layout.githubStar.label')}
-                        </Typography>
-                        <IndicatorBadge color={badgeColor}>
-                            <IconStar sx={{ fontSize: 10 }} />
-                        </IndicatorBadge>
-                    </Box>
-                </Tooltip>
             </Box>
             {/* Add Profile Popover */}
             <Popover
@@ -412,26 +380,52 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     </Button>
                 </Box>
             </Popover>
-            {/* Footer bottom row: slogan */}
+            {/* Footer bottom row: the slogan, ending in the GitHub star —
+                brand and community together, apart from the version's app
+                state above. One quiet, always-there link instead of a banner
+                over every agent page. The star is part of the sentence, like a
+                sign-off: no break opportunity between it and the last word, so
+                a slogan that wraps carries the star along instead of leaving it
+                alone on a line. Still footerHeight tall, so its bottom lines up
+                with the activity bar's footer. */}
             <Box
                 sx={{
-                   height: footerHeight, py: 1.5, px: 2, borderTop: '1px solid', borderColor: 'divider'
+                    height: footerHeight, py: 1, px: 2, borderTop: '1px solid', borderColor: 'divider',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
             >
-                <Tooltip title={t('layout.sidebar.sloganTooltip')} placement="top" arrow>
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: 'text.secondary',
-                            textAlign: 'center',
-                            display: 'block',
-                            fontStyle: 'italic',
-                            cursor: 'default',
-                        }}
-                    >
-                        {t('layout.slogan')}
-                    </Typography>
-                </Tooltip>
+                <Typography
+                    variant="caption"
+                    component="div"
+                    sx={{ color: 'text.secondary', textAlign: 'center', fontStyle: 'italic' }}
+                >
+                    <Tooltip title={t('layout.sidebar.sloganTooltip')} placement="top" arrow>
+                        <Box component="span" sx={{ cursor: 'default' }}>{t('layout.slogan')}</Box>
+                    </Tooltip>
+                    <Tooltip title={t('layout.githubStar.text')} placement="top" arrow>
+                        {/* Just the star: the icon says it in every language, and
+                            the tooltip explains it. Neutral like the activity
+                            bar's icons — not the update badge's orange, which
+                            would make it read as a status asking for action. */}
+                        <Box
+                            component="a"
+                            href={REPO_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={t('layout.githubStar.cta')}
+                            sx={{
+                                display: 'inline-flex',
+                                verticalAlign: '-2px',
+                                ml: 0.75,
+                                color: 'text.secondary',
+                                transition: 'color 0.2s ease',
+                                '&:hover': { color: 'primary.main' },
+                            }}
+                        >
+                            <IconStar sx={{ fontSize: 14 }} />
+                        </Box>
+                    </Tooltip>
+                </Typography>
             </Box>
             {/* Update Panel Dialog */}
             <UpdatePanelDialog
