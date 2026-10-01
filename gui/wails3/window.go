@@ -30,7 +30,7 @@ var (
 // showMainWindow shows the main app window (the real app, as opposed to the
 // hub panel), creating it on first use. path is where it should land; an
 // empty path means "just show it" — the window is brought forward without
-// navigating (dock reopen / "Open App" shouldn't yank the user off the page
+// navigating (dock reopen / "Open Tingly Box" shouldn't yank the user off the page
 // they were on).
 //
 // Navigation deliberately avoids the EmitEvent-based SPA hop: events ride

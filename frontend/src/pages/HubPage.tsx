@@ -30,8 +30,8 @@ interface HubProvider {
 
 // HubPage is the tray's compact panel — a dedicated small window (see
 // gui/wails3/systray.go's useSystray) separate from the main app window. It
-// never navigates itself; the action rows below open the main window
-// instead, so this page only ever renders /hub. Content is scoped to what's
+// never navigates itself; its jumps open the main window instead, so this
+// page only ever renders /hub. Content is scoped to what's
 // not already obvious the moment you open the full app: server health,
 // update availability, and provider quota.
 export default function HubPage() {

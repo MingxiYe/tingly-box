@@ -72,7 +72,7 @@ func useSystray(app *application.App, tinglyService *services.TinglyService) (op
 	// (MacWindowClassPanel + NonActivating): showing it never activates our
 	// app or deactivates the frontmost one, exactly like 1Password/Bartender
 	// dropdowns. That also makes HideOnFocusLost safe to use again - the old
-	// spurious focus-loss (clicks on Home/Dashboard silently landing on a
+	// spurious focus-loss (clicks on the panel's buttons silently landing on a
 	// window already mid-hide) was activation churn from showing a regular
 	// AlwaysOnTop window, which a non-activating panel doesn't cause. So:
 	// click outside → panel resigns key → hides, like a native dropdown.

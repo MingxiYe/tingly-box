@@ -33,11 +33,10 @@ type TinglyService struct {
 	serverManager *app.ServerManager
 	app           *application.App
 
-	// openMainWindowFn is set by main (see run.go's useWebSystray) so the
-	// frontend's tray hub panel can open the main app window via a direct
-	// bound method call (OpenMainWindow) instead of a fire-and-forget
-	// Events.Emit round trip. TinglyService lives in this package and can't
-	// import main (main already imports this package), hence the callback.
+	// openMainWindowFn is set by main (systray.go's useSystray) so the hub
+	// panel and the /api/v1/gui/open nudge can open the main app window.
+	// TinglyService lives in this package and can't import main (main
+	// already imports this package), hence the callback.
 	openMainWindowFn func(path string)
 }
 
@@ -126,17 +125,14 @@ func (s *TinglyService) GetPort() int {
 	return port
 }
 
-// SetOpenMainWindowHandler wires the tray hub panel's "open the main app
-// window" action to main's window management. Called once from
-// useWebSystray after both the service and the windows exist.
+// SetOpenMainWindowHandler wires "open the main app window" to main's window
+// management. Called once from useSystray after the windows exist.
 func (s *TinglyService) SetOpenMainWindowHandler(fn func(path string)) {
 	s.openMainWindowFn = fn
 }
 
-// OpenMainWindow shows/maximises the main app window at path, creating it on
-// first use. Exposed as a bound method (rather than an Events.Emit) so the
-// tray hub panel gets a direct, awaitable call instead of a fire-and-forget
-// event - simpler to reason about and to debug than a pub/sub round trip.
+// OpenMainWindow shows the main app window at path, creating it on first use.
+// Bound for the hub panel as the fallback to its /api/v1/gui/open request.
 func (s *TinglyService) OpenMainWindow(path string) {
 	if s.openMainWindowFn != nil {
 		s.openMainWindowFn(path)

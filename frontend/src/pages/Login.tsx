@@ -16,9 +16,9 @@ const Login: React.FC = () => {
     const { login } = useAuth();
 
     // Get the redirect path: a `?next=` query param takes priority (used by
-    // the tray hub window, whose /login/:token URL is built with it — see
-    // gui/wails3/run.go's showHubWindow — so the post-login hard reload below
-    // lands on /hub instead of the default landing page), then router state,
+    // the desktop shell's windows, whose /login/:token URL is built with it —
+    // see gui/wails3/systray.go and window.go — so the post-login hard reload
+    // below lands on /hub or the requested page), then router state,
     // then sessionStorage, default to '/'.
     // Avoid redirect loops by checking if the target is a login page
     const nextParam = new URLSearchParams(location.search).get('next');
