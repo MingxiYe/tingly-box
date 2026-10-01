@@ -4,6 +4,8 @@ import "encoding/json"
 
 // Chat Completions stream DTOs preserve the minimal outbound JSON shape emitted by this proxy.
 // Keep these fields checked against openai-go Chat Completions stream types when updating the SDK.
+// Every SDK-required chunk key is present; optional ones (choice logprobs,
+// system_fingerprint, service_tier, obfuscation) are deliberately omitted.
 type ChatStreamChunk struct {
 	ID      string             `json:"id"`
 	Object  string             `json:"object"`
@@ -72,6 +74,8 @@ type ChatStreamError struct {
 }
 
 // ChatCompletionWire is the OpenAI Chat Completions response wire format.
+// Optional keys (system_fingerprint, service_tier, moderation) are left out:
+// they describe the upstream OpenAI deployment and have no honest value here.
 type ChatCompletionWire struct {
 	ID      string                     `json:"id"`
 	Object  string                     `json:"object"`
@@ -90,19 +94,42 @@ func (r ChatCompletionWire) ToMap() map[string]any {
 }
 
 // ChatCompletionChoiceWire is a single choice in the OpenAI Chat Completions response.
+// Logprobs is always null: the proxy never requests or translates logprobs.
 type ChatCompletionChoiceWire struct {
 	Index        int                       `json:"index"`
 	Message      ChatCompletionMessageWire `json:"message"`
 	FinishReason string                    `json:"finish_reason"`
+	Logprobs     interface{}               `json:"logprobs"`
 }
 
 // ChatCompletionMessageWire is the message inside a choice.
+// content and refusal are required-but-nullable; see MarshalJSON. The optional
+// annotations/audio keys are left out — nothing upstream maps to them.
 type ChatCompletionMessageWire struct {
 	Role             string                       `json:"role"`
-	Content          string                       `json:"content,omitempty"`
-	Refusal          string                       `json:"refusal,omitempty"`
+	Content          string                       `json:"content"`
+	Refusal          string                       `json:"refusal"`
 	ToolCalls        []ChatCompletionToolCallWire `json:"tool_calls,omitempty"`
 	ReasoningContent string                       `json:"reasoning_content,omitempty"`
+}
+
+// MarshalJSON always emits content and refusal, as the real API does: refusal
+// is null unless set, and content is null only when the turn is tool calls or a
+// refusal (an empty text answer stays "").
+func (m ChatCompletionMessageWire) MarshalJSON() ([]byte, error) {
+	type alias ChatCompletionMessageWire
+	var content, refusal *string
+	if m.Content != "" || (len(m.ToolCalls) == 0 && m.Refusal == "") {
+		content = &m.Content
+	}
+	if m.Refusal != "" {
+		refusal = &m.Refusal
+	}
+	return json.Marshal(struct {
+		alias
+		Content *string `json:"content"`
+		Refusal *string `json:"refusal"`
+	}{alias(m), content, refusal})
 }
 
 // ChatCompletionToolCallWire is a single tool call inside a message.
