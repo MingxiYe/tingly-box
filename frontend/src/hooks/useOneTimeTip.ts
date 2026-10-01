@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { setSyncedItem } from '@/services/uiPrefs';
 
-// A one-time tip (a CoachMark) that stays dismissed once closed. The flag is
-// a synced UI pref (services/uiPrefs), so closing it in the browser also
-// counts in the desktop window. Components showing different tips share one
-// event, so a tip queued behind another one appears as soon as it closes.
+// A one-time tip (a CoachMark) that stays dismissed once closed, remembered
+// in this browser's / window's localStorage only. Components showing
+// different tips share one event, so a tip queued behind another one
+// appears as soon as it closes.
 const TIP_EVENT = 'one-time-tip-change';
 
 const read = (key: string): boolean => {
@@ -30,7 +29,11 @@ export function useOneTimeTip(key: string) {
 
     const dismiss = useCallback(() => {
         if (read(key)) return;
-        setSyncedItem(key, '1');
+        try {
+            localStorage.setItem(key, '1');
+        } catch {
+            // Storage blocked: it just closes for this page view.
+        }
         setDismissed(true);
         window.dispatchEvent(new Event(TIP_EVENT));
     }, [key]);
