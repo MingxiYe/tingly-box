@@ -230,7 +230,8 @@ export default {
       },
       "npm": {
         "title": "全局安装（npm）",
-        "description": "更新已安装的 CLI，然后重启服务以生效"
+        "description": "更新已安装的 CLI，然后重启服务以生效",
+        "aliasNote": "tb 是 tingly-box 的缩写，`tingly-box restart` 同样可用"
       },
       "docker": {
         "title": "Docker 镜像",
