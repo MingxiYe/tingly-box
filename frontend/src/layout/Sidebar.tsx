@@ -296,16 +296,45 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
             >
                 <VersionDisplay onClick={() => setUpdatePanelOpen(true)} />
                 <Tooltip title={t('layout.githubStar.text')} arrow placement="top">
+                    {/* Same shape as the version beside it: italic caption,
+                        then a 14px round badge carrying the icon. */}
                     <Link
                         href={REPO_URL}
                         target="_blank"
                         rel="noopener noreferrer"
                         underline="none"
                         variant="caption"
-                        sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, color: 'text.secondary', '&:hover': { color: 'warning.main' } }}
+                        sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.75,
+                            color: 'text.secondary',
+                            fontStyle: 'italic',
+                            transition: 'color 0.2s ease',
+                            '&:hover': { color: 'primary.main' },
+                            '&:hover .star-badge': { transform: 'scale(1.1)' },
+                        }}
                     >
-                        <IconStar sx={{ fontSize: 14 }} />
                         {t('layout.githubStar.label')}
+                        <Box
+                            component="span"
+                            className="star-badge"
+                            sx={{
+                                height: 14,
+                                width: 14,
+                                borderRadius: 7,
+                                bgcolor: 'warning.main',
+                                color: 'common.white',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                flexShrink: 0,
+                                transition: 'transform 0.2s ease',
+                            }}
+                        >
+                            <IconStar sx={{ fontSize: 10 }} />
+                        </Box>
                     </Link>
                 </Tooltip>
             </Box>
