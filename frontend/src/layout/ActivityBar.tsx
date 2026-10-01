@@ -1,6 +1,6 @@
 import { Person as IconUser, ChevronRight as IconChevronRight, Lightbulb as IconLightbulb, Error as IconAlertCircle } from '@/components/icons';
 import { Box, Divider, IconButton, ListItemButton, ListItemIcon, Tooltip, Typography } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useVersion as useAppVersion } from '../contexts/VersionContext';
@@ -22,12 +22,20 @@ import {
 import { useSidebarCollapsed } from './useSidebarCollapsed';
 import type { ActivityItem } from './types';
 import { PreferencesMenu } from './PreferencesMenu';
+import { CoachMark } from '@/components/CoachMark';
+import { useOneTimeTip } from '@/hooks/useOneTimeTip';
+
+// Power-ups moved off the /agent page into the user menu's submenu; a
+// one-time callout on the user button says where they went.
+export const POWER_UPS_TIP_KEY = 'layout.powerUpsTip.dismissed';
 
 interface ActivityBarProps {
     activityItems: ActivityItem[];
     activeActivity: string;
     onActivityClick: (item: ActivityItem) => void;
     onStandaloneNavigate?: () => void;
+    /** Another callout is showing; hold this one back until it closes. */
+    tipsBlocked?: boolean;
 }
 
 export const ActivityBar: React.FC<ActivityBarProps> = ({
@@ -35,6 +43,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
     activeActivity,
     onActivityClick,
     onStandaloneNavigate,
+    tipsBlocked = false,
 }) => {
     const { t } = useTranslation();
     const location = useLocation();
@@ -44,6 +53,13 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
     const showDisconnected = !isHealthy || import.meta.env.DEV;
     const isHelpActive = location.pathname === '/help';
     const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed();
+    const { dismissed: powerUpsTipDismissed, dismiss: dismissPowerUpsTip } = useOneTimeTip(POWER_UPS_TIP_KEY);
+    // The rail renders in both the desktop nav and the (kept-mounted) mobile
+    // drawer; only the copy on screen anchors the callout.
+    const [userButtonEl, setUserButtonEl] = useState<HTMLElement | null>(null);
+    const userButtonRef = useCallback((el: HTMLElement | null) => {
+        if (el && el.offsetParent !== null) setUserButtonEl(el);
+    }, []);
 
     return (
         <Box
@@ -218,10 +234,14 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
                     height: footerHeight,
                 }}
             >
-                {/* Preferences: language, theme, feedback, version */}
+                {/* Preferences: language, theme, Power-ups, feedback, version */}
                 <Tooltip title={t('layout.activityBar.preferences')} placement="right" arrow>
                     <ListItemButton
-                        onClick={(e) => setPreferencesAnchorEl(e.currentTarget)}
+                        ref={userButtonRef}
+                        onClick={(e) => {
+                            setPreferencesAnchorEl(e.currentTarget);
+                            dismissPowerUpsTip();
+                        }}
                         aria-label={t('layout.activityBar.preferences')}
                         sx={activityBottomItemSx({
                             '&:hover': { bgcolor: 'action.hover', color: 'text.primary' },
@@ -233,6 +253,14 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
                     </ListItemButton>
                 </Tooltip>
                 <PreferencesMenu anchorEl={preferencesAnchorEl} onClose={() => setPreferencesAnchorEl(null)} />
+                <CoachMark
+                    open={!powerUpsTipDismissed && !tipsBlocked && !preferencesAnchorEl && !!userButtonEl?.isConnected}
+                    anchorEl={userButtonEl}
+                    align="bottom"
+                    title={t('layout.coachMarks.powerUps.title')}
+                    text={t('layout.coachMarks.powerUps.text')}
+                    onDismiss={dismissPowerUpsTip}
+                />
             </Box>
         </Box>
     );

@@ -19,8 +19,9 @@ const SYNCED: Array<string | RegExp> = [
     'scenario.hiddenDefaultsVersion',
     // Quick Start progress per agent (AgentSetupCard).
     /^setup-card-/,
-    // The Agent sidebar's visibility callout, once closed (layout/Layout).
+    // One-time callouts, once closed (hooks/useOneTimeTip).
     'layout.agentVisibilityTip.dismissed',
+    'layout.powerUpsTip.dismissed',
 ];
 
 export const isSyncedKey = (key: string): boolean =>

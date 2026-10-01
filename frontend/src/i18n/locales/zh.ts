@@ -91,10 +91,18 @@ export default {
       "sloganTooltip": "致，所有独立开发者、开发团队和智能应用。",
       "collapse": "收起侧边栏",
       "doneEditing": "完成",
-      "visibilityTipTitle": "选择显示哪些 Agent",
-      "visibilityTip": "点这个眼睛，就能显示或隐藏列表里的 Agent。隐藏的不会丢，随时可以在这里恢复。",
-      "visibilityTipGotIt": "知道了",
       "expand": "展开侧边栏"
+    },
+    "coachMarks": {
+      "gotIt": "知道了",
+      "agentVisibility": {
+        "title": "选择显示哪些 Agent",
+        "text": "点这个眼睛，就能显示或隐藏列表里的 Agent。隐藏的不会丢，随时可以在这里恢复。"
+      },
+      "powerUps": {
+        "title": "扩展功能的开关移到了这里",
+        "text": "Team、Image、Remote、Bench 等可选项，现在在这个菜单的「扩展」里开启或关闭。"
+      }
     },
     "activityBar": {
       "disconnected": "已断开",

@@ -91,10 +91,19 @@ export default {
       "sloganTooltip": "For all Solo Builders, Dev Teams and Agents.",
       "collapse": "Collapse sidebar",
       "doneEditing": "Done",
-      "visibilityTipTitle": "Choose which agents show",
-      "visibilityTip": "Click the eye to show or hide agents in this list. Hidden ones stay here, one click away.",
-      "visibilityTipGotIt": "Got it",
       "expand": "Expand sidebar"
+    },
+    // One-time callouts pointing at a control (components/CoachMark).
+    "coachMarks": {
+      "gotIt": "Got it",
+      "agentVisibility": {
+        "title": "Choose which agents show",
+        "text": "Click the eye to show or hide agents in this list. Hidden ones stay here, one click away."
+      },
+      "powerUps": {
+        "title": "Power-ups moved here",
+        "text": "Team, Image, Remote, Bench and the other optional items are now switched on and off from this menu, under Power-ups."
+      }
     },
     "activityBar": {
       "disconnected": "Disconnected",

@@ -1,4 +1,4 @@
-import { Box, Button, ClickAwayListener, Drawer, IconButton, Paper, Popper, Tooltip, Stack, Typography } from '@mui/material';
+import { Box, ClickAwayListener, Drawer, IconButton, Tooltip, Stack } from '@mui/material';
 import { Menu as IconMenu, Visibility as IconVisibility, Check as IconCheck, tablerMui } from '@/components/icons';
 import { IconLayoutSidebarLeftCollapse } from '@tabler/icons-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -13,25 +13,19 @@ import { useActivityItems } from './useActivityItems.tsx';
 import { SidebarCollapsedProvider, useSidebarCollapsed } from './useSidebarCollapsed';
 import type { ActivityItem, LayoutProps } from './types';
 import { FloatingStatusIndicators } from '../components/FloatingStatusIndicators';
-import { setSyncedItem, syncUiPrefs } from '../services/uiPrefs';
+import { syncUiPrefs } from '../services/uiPrefs';
 import { useHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
 import { rememberAgentPath } from '@/pages/scenario/lastAgent';
+import { CoachMark } from '@/components/CoachMark';
+import { useOneTimeTip } from '@/hooks/useOneTimeTip';
 import type { NavItem } from './types';
+
+// The eye in the Agent sidebar header introduces itself once: a callout
+// pointing at it until the user closes it (or uses the eye).
+export const AGENT_VISIBILITY_TIP_KEY = 'layout.agentVisibilityTip.dismissed';
 
 // Outside edit mode hidden rows go, and so does any divider they leave
 // leading, trailing or doubled.
-// The eye in the Agent sidebar header introduces itself once: a callout
-// pointing at it until the user closes it (or uses the eye). Synced so
-// closing it in the browser also counts in the desktop window.
-export const AGENT_VISIBILITY_TIP_KEY = 'layout.agentVisibilityTip.dismissed';
-const readTipDismissed = () => {
-    try {
-        return localStorage.getItem(AGENT_VISIBILITY_TIP_KEY) === '1';
-    } catch {
-        return false;
-    }
-};
-
 const withoutHidden = (items: NavItem[]): NavItem[] => {
     const kept = items.filter(item => item.type === 'divider' || !item.hidden);
     return kept.filter((item, i) => item.type !== 'divider'
@@ -103,16 +97,12 @@ const LayoutInner = ({ children }: LayoutProps) => {
     // each with its visibility toggle. It replaced the /agent card page.
     const [editingAgents, setEditingAgents] = useState(false);
     const { toggleHidden } = useHiddenScenarios();
-    const [tipDismissed, setTipDismissed] = useState(readTipDismissed);
+    const { dismissed: tipDismissed, dismiss: dismissTip } = useOneTimeTip(AGENT_VISIBILITY_TIP_KEY);
     // The header renders in both the desktop nav and the (kept-mounted)
     // mobile drawer; anchor the callout to whichever eye is on screen.
     const [eyeEl, setEyeEl] = useState<HTMLElement | null>(null);
     const eyeRef = useCallback((el: HTMLElement | null) => {
         if (el && el.offsetParent !== null) setEyeEl(el);
-    }, []);
-    const dismissTip = useCallback(() => {
-        setTipDismissed(true);
-        setSyncedItem(AGENT_VISIBILITY_TIP_KEY, '1');
     }, []);
     useEffect(() => {
         if (activeActivity !== 'scenario') setEditingAgents(false);
@@ -190,7 +180,7 @@ const LayoutInner = ({ children }: LayoutProps) => {
                         size="small"
                         onClick={() => {
                             setEditingAgents(v => !v);
-                            if (!tipDismissed) dismissTip();
+                            dismissTip();
                         }}
                         aria-pressed={editingAgents}
                         aria-label={t('scenarioOverview.editTooltip')}
@@ -209,51 +199,13 @@ const LayoutInner = ({ children }: LayoutProps) => {
 
     const showTip = !tipDismissed && activeActivity === 'scenario' && hasSidebar && !sidebarCollapsed && !!eyeEl && eyeEl.isConnected;
     const visibilityTip = (
-        <Popper
+        <CoachMark
             open={showTip}
             anchorEl={eyeEl}
-            placement="right-start"
-            modifiers={[{ name: 'offset', options: { offset: [-8, 14] } }]}
-            sx={{ zIndex: Z_INDEX.drawer + 3 }}
-        >
-            <Paper
-                elevation={6}
-                sx={{
-                    position: 'relative',
-                    width: 260,
-                    p: 1.75,
-                    borderRadius: 2,
-                    border: '1px solid',
-                    borderColor: 'primary.main',
-                    // Arrow pointing back at the eye.
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        left: -7,
-                        top: 14,
-                        width: 12,
-                        height: 12,
-                        bgcolor: 'background.paper',
-                        borderLeft: '1px solid',
-                        borderBottom: '1px solid',
-                        borderColor: 'primary.main',
-                        transform: 'rotate(45deg)',
-                    },
-                }}
-            >
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    {t('layout.sidebar.visibilityTipTitle')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    {t('layout.sidebar.visibilityTip')}
-                </Typography>
-                <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-                    <Button size="small" variant="contained" disableElevation onClick={dismissTip}>
-                        {t('layout.sidebar.visibilityTipGotIt')}
-                    </Button>
-                </Stack>
-            </Paper>
-        </Popper>
+            title={t('layout.coachMarks.agentVisibility.title')}
+            text={t('layout.coachMarks.agentVisibility.text')}
+            onDismiss={dismissTip}
+        />
     );
 
     const navigationContent = (
@@ -263,6 +215,8 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 activeActivity={activeActivity}
                 onActivityClick={handleActivityClick}
                 onStandaloneNavigate={() => setMobileOpen(false)}
+                // One callout at a time: the rail's waits for this one.
+                tipsBlocked={showTip}
             />
             {hasSidebar && !sidebarCollapsed && (
                 <Sidebar
