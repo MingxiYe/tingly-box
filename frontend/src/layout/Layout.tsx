@@ -13,6 +13,7 @@ import { useActivityItems } from './useActivityItems.tsx';
 import { SidebarCollapsedProvider, useSidebarCollapsed } from './useSidebarCollapsed';
 import type { ActivityItem, LayoutProps } from './types';
 import { FloatingStatusIndicators } from '../components/FloatingStatusIndicators';
+import { GitHubStarBanner } from './GitHubStarBanner';
 import { syncUiPrefs } from '../services/uiPrefs';
 import { useHiddenScenarios } from '@/pages/scenario/scenarioRegistry';
 import { rememberAgentPath } from '@/pages/scenario/lastAgent';
@@ -287,6 +288,14 @@ const LayoutInner = ({ children }: LayoutProps) => {
                 sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden', position: 'relative', zIndex: 1 }}
             >
                 <Box sx={mobileContentSx}>
+                    {/* The closable star request shows on agent pages only
+                        (Team pages, also under /agent/team, belong to the
+                        Team rail item). See GitHubStarBanner. */}
+                    {location.pathname.startsWith('/agent/') && !location.pathname.startsWith('/agent/team') && (
+                        <Box sx={{ mb: 2 }}>
+                            <GitHubStarBanner />
+                        </Box>
+                    )}
                     {children ?? <Outlet />}
                 </Box>
             </Box>

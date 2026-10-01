@@ -4,7 +4,6 @@ import {
     Button,
     Divider,
     IconButton,
-    Link,
     List,
     ListItem,
     ListItemButton,
@@ -35,10 +34,10 @@ import {
     sidebarListScrollSx,
 } from './styles';
 import type { NavItem } from './types';
-import { VersionDisplay } from '@/components/VersionDisplay';
+import { IndicatorBadge, VersionDisplay, useVersionBadgeColor } from '@/components/VersionDisplay';
+import { REPO_URL } from './GitHubStarBanner';
 import { UpdatePanelDialog } from '@/components/UpdatePanelDialog';
 
-const REPO_URL = 'https://github.com/tingly-dev/tingly-box';
 
 // Shared sizing for the sidebar's nav-style rows now lives in ./styles
 // (NAV_ROW_SX / navRowTextSlotProps), so every row is the same height whether
@@ -62,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
     const { refresh } = useProfileContext();
     const { refresh: refreshTeams } = useTeamContext();
     const { currentVersion } = useVersion();
+    const badgeColor = useVersionBadgeColor();
 
     const [addProfileAnchorEl, setAddProfileAnchorEl] = useState<HTMLElement | null>(null);
     const [newProfileName, setNewProfileName] = useState('');
@@ -296,46 +296,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
             >
                 <VersionDisplay onClick={() => setUpdatePanelOpen(true)} />
                 <Tooltip title={t('layout.githubStar.text')} arrow placement="top">
-                    {/* Same shape as the version beside it: italic caption,
-                        then a 14px round badge carrying the icon. */}
-                    <Link
+                    {/* Built from the version's own pieces (same flex row,
+                        caption style and IndicatorBadge, in the badge's
+                        current colour), so the two never differ in height
+                        or hue. */}
+                    <Box
+                        component="a"
                         href={REPO_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        underline="none"
-                        variant="caption"
                         sx={{
-                            display: 'inline-flex',
+                            display: 'flex',
                             alignItems: 'center',
                             gap: 0.75,
-                            color: 'text.secondary',
-                            fontStyle: 'italic',
-                            transition: 'color 0.2s ease',
-                            '&:hover': { color: 'primary.main' },
-                            '&:hover .star-badge': { transform: 'scale(1.1)' },
+                            textDecoration: 'none',
+                            '&:hover': {
+                                opacity: 0.8,
+                                '& .indicator-badge': { transform: 'scale(1.1)' },
+                                '& .MuiTypography-root': { color: 'primary.main' },
+                            },
                         }}
                     >
-                        {t('layout.githubStar.label')}
-                        <Box
-                            component="span"
-                            className="star-badge"
-                            sx={{
-                                height: 14,
-                                width: 14,
-                                borderRadius: 7,
-                                bgcolor: 'warning.main',
-                                color: 'common.white',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                flexShrink: 0,
-                                transition: 'transform 0.2s ease',
-                            }}
+                        <Typography
+                            variant="caption"
+                            sx={{ color: 'text.secondary', display: 'block', fontStyle: 'italic', whiteSpace: 'nowrap', transition: 'color 0.2s ease' }}
                         >
+                            {t('layout.githubStar.label')}
+                        </Typography>
+                        <IndicatorBadge color={badgeColor}>
                             <IconStar sx={{ fontSize: 10 }} />
-                        </Box>
-                    </Link>
+                        </IndicatorBadge>
+                    </Box>
                 </Tooltip>
             </Box>
             {/* Add Profile Popover */}

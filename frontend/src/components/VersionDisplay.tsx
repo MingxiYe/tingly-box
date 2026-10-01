@@ -1,4 +1,4 @@
-import { Box, Tooltip, Typography, useTheme } from '@mui/material';
+import { Box, Tooltip, Typography } from '@mui/material';
 import React, { type ReactNode } from 'react';
 import { useVersion } from '@/contexts/VersionContext';
 import { FiberManualRecord, Check, Refresh, UpgradeOutlined } from '@/components/icons';
@@ -40,8 +40,8 @@ export const VersionDisplay: React.FC<VersionDisplayProps> = ({
     className,
     children,
 }) => {
-    const theme = useTheme();
     const { currentVersion, latestVersion, checking, hasUpdate } = useVersion();
+    const badgeColor = useVersionBadgeColor();
 
     const displayVersion = (currentVersion || 'Unknown').split('+')[0];
     const displayLatestVersion = (latestVersion || 'Unknown').split('+')[0];
@@ -164,31 +164,48 @@ export const VersionDisplay: React.FC<VersionDisplayProps> = ({
                 }}
             >
                 {content}
-                <Box
-                    className="indicator-badge"
-                    sx={{
-                        height: 14,
-                        width: 14,
-                        borderRadius: 7,
-                        backgroundColor: checking
-                            ? theme.palette.info.main
-                            : hasVersionUpdate
-                            ? theme.palette.warning.main
-                            : theme.palette.success.main,
-                        color: 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        flexShrink: 0,
-                        transition: 'transform 0.2s ease',
-                    }}
-                >
+                <IndicatorBadge color={badgeColor}>
                     {badgeState.icon}
-                </Box>
+                </IndicatorBadge>
             </Box>
         </Tooltip>
     );
 };
+
+export type IndicatorBadgeColor = 'info' | 'warning' | 'success';
+
+/** The version badge's colour: checking, update available, or up to date. */
+export function useVersionBadgeColor(): IndicatorBadgeColor {
+    const { currentVersion, latestVersion, checking, hasUpdate } = useVersion();
+    if (checking) return 'info';
+    if (hasUpdate && latestVersion && currentVersion) return 'warning';
+    return 'success';
+}
+
+/**
+ * The 14px round badge after the version text. Exported so neighbours in
+ * the same footer (the GitHub star link) share its exact size and colour.
+ */
+export const IndicatorBadge: React.FC<{ color: IndicatorBadgeColor; children: ReactNode }> = ({ color, children }) => (
+    <Box
+        component="span"
+        className="indicator-badge"
+        sx={{
+            height: 14,
+            width: 14,
+            borderRadius: 7,
+            bgcolor: `${color}.main`,
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            flexShrink: 0,
+            transition: 'transform 0.2s ease',
+        }}
+    >
+        {children}
+    </Box>
+);
 
 export default VersionDisplay;
