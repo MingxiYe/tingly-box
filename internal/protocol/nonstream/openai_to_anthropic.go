@@ -66,21 +66,13 @@ func marshalOpenAIChatToAnthropic(chat *openai.ChatCompletion, model string) ([]
 		return nil, fmt.Errorf("convert OpenAI Chat response to Anthropic: response is nil")
 	}
 	result := wire.AnthropicMsgWire{
-		ID:           ids.Message(),
-		Type:         "message",
-		Role:         "assistant",
-		Content:      []interface{}{},
-		Model:        model,
-		StopReason:   "end_turn",
-		StopSequence: "",
-		Usage:        anthropicUsageWire(usageconv.FromOpenAIChatCompletion(chat.Usage)),
-	}
-
-	// Preserve server_tool_use from ExtraFields if present
-	if chat.JSON.ExtraFields != nil {
-		if serverToolUse, exists := chat.JSON.ExtraFields["server_tool_use"]; exists && serverToolUse.Valid() {
-			result.ServerToolUse = json.RawMessage(serverToolUse.Raw())
-		}
+		ID:         ids.Message(),
+		Type:       "message",
+		Role:       "assistant",
+		Content:    []interface{}{},
+		Model:      model,
+		StopReason: "end_turn",
+		Usage:      anthropicUsageWire(usageconv.FromOpenAIChatCompletion(chat.Usage)),
 	}
 
 	var contentBlocks []anthropic.ContentBlockParamUnion
@@ -126,20 +118,13 @@ func ConvertOpenAIChatToAnthropicBeta(chat *openai.ChatCompletion, model string)
 		return nil, fmt.Errorf("convert OpenAI Chat response to Anthropic beta: response is nil")
 	}
 	result := wire.AnthropicMsgWire{
-		ID:           ids.Message(),
-		Type:         "message",
-		Role:         "assistant",
-		Content:      []interface{}{},
-		Model:        model,
-		StopReason:   string(anthropic.BetaStopReasonEndTurn),
-		StopSequence: "",
-		Usage:        anthropicUsageWire(usageconv.FromOpenAIChatCompletion(chat.Usage)),
-	}
-
-	if chat.JSON.ExtraFields != nil {
-		if serverToolUse, exists := chat.JSON.ExtraFields["server_tool_use"]; exists && serverToolUse.Valid() {
-			result.ServerToolUse = json.RawMessage(serverToolUse.Raw())
-		}
+		ID:         ids.Message(),
+		Type:       "message",
+		Role:       "assistant",
+		Content:    []interface{}{},
+		Model:      model,
+		StopReason: string(anthropic.BetaStopReasonEndTurn),
+		Usage:      anthropicUsageWire(usageconv.FromOpenAIChatCompletion(chat.Usage)),
 	}
 
 	var contentBlocks []anthropic.BetaContentBlockParamUnion
@@ -185,14 +170,13 @@ func ConvertOpenAIChatToAnthropicBeta(chat *openai.ChatCompletion, model string)
 // HandleResponsesToAnthropicBeta converts OpenAI Responses API response to Anthropic beta format
 func HandleResponsesToAnthropicBeta(rs *responses.Response, model string) anthropic.BetaMessage {
 	wire := wire.AnthropicMsgWire{
-		ID:           rs.ID,
-		Type:         "message",
-		Role:         "assistant",
-		Content:      []interface{}{},
-		Model:        model,
-		StopReason:   string(anthropic.BetaStopReasonEndTurn),
-		StopSequence: "",
-		Usage:        anthropicUsageWire(usageconv.FromOpenAIResponses(rs.Usage)),
+		ID:         rs.ID,
+		Type:       "message",
+		Role:       "assistant",
+		Content:    []interface{}{},
+		Model:      model,
+		StopReason: string(anthropic.BetaStopReasonEndTurn),
+		Usage:      anthropicUsageWire(usageconv.FromOpenAIResponses(rs.Usage)),
 	}
 
 	var contentBlocks []anthropic.BetaContentBlockParamUnion

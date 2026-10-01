@@ -25,15 +25,20 @@ func (e ResponsesOutputTextDoneEvent) EventType() string             { return e.
 func (e ResponsesFunctionCallArgumentsDeltaEvent) EventType() string { return e.Type }
 func (e ResponsesFunctionCallArgumentsDoneEvent) EventType() string  { return e.Type }
 
+// ResponsesStreamErrorEvent mirrors responses.ResponseErrorEvent: code,
+// message and param sit at the top level — unlike Chat Completions, there is
+// no nested "error" envelope. param is null unless an input field is at fault.
 type ResponsesStreamErrorEvent struct {
-	Type           string                   `json:"type"`
-	SequenceNumber int64                    `json:"sequence_number"`
-	Error          ResponsesStreamErrorBody `json:"error"`
+	Type           string  `json:"type"`
+	SequenceNumber int64   `json:"sequence_number"`
+	Code           string  `json:"code"`
+	Message        string  `json:"message"`
+	Param          *string `json:"param"`
 }
 
-type ResponsesStreamErrorBody struct {
-	Message string `json:"message"`
-	Type    string `json:"type"`
+// NewResponsesStreamErrorEvent builds a mid-stream "error" event.
+func NewResponsesStreamErrorEvent(seq int64, code, message string) ResponsesStreamErrorEvent {
+	return ResponsesStreamErrorEvent{Type: "error", SequenceNumber: seq, Code: code, Message: message}
 }
 
 type ResponsesCreatedEvent struct {
@@ -60,6 +65,12 @@ type ResponsesIncompleteEvent struct {
 	Response       ResponsesWireResponse `json:"response"`
 }
 
+// ResponsesWireResponse is the Response object carried by lifecycle events and
+// non-stream replies. error and incomplete_details are always emitted (null
+// when unset). The other SDK-required keys echo request parameters
+// (instructions, metadata, parallel_tool_calls, temperature, tool_choice,
+// tools, top_p, access_programs) that a converter cannot see, so they are left
+// out rather than fabricated.
 type ResponsesWireResponse struct {
 	ID                string                          `json:"id"`
 	Object            string                          `json:"object"`
@@ -69,7 +80,8 @@ type ResponsesWireResponse struct {
 	Usage             *ResponsesUsageWire             `json:"usage,omitempty"`
 	Model             string                          `json:"model,omitempty"`
 	CompletedAt       int64                           `json:"completed_at,omitempty"`
-	IncompleteDetails *ResponsesIncompleteDetailsWire `json:"incomplete_details,omitempty"`
+	IncompleteDetails *ResponsesIncompleteDetailsWire `json:"incomplete_details"`
+	Error             interface{}                     `json:"error"` // always null: failures surface as error events or HTTP errors
 }
 
 // ToMap converts the typed response contract to the legacy map surface used by
@@ -191,7 +203,16 @@ type ResponsesOutputTextDeltaEvent struct {
 	OutputIndex    int           `json:"output_index"`
 	ContentIndex   int           `json:"content_index"`
 	Delta          string        `json:"delta"`
-	Logprobs       []interface{} `json:"logprobs,omitempty"`
+	Logprobs       []interface{} `json:"logprobs"`
+}
+
+// MarshalJSON emits logprobs as [] when unset: the key is required.
+func (e ResponsesOutputTextDeltaEvent) MarshalJSON() ([]byte, error) {
+	type alias ResponsesOutputTextDeltaEvent
+	if e.Logprobs == nil {
+		e.Logprobs = []interface{}{}
+	}
+	return json.Marshal(alias(e))
 }
 
 type ResponsesOutputTextDoneEvent struct {
@@ -201,7 +222,16 @@ type ResponsesOutputTextDoneEvent struct {
 	OutputIndex    int           `json:"output_index"`
 	ContentIndex   int           `json:"content_index"`
 	Text           string        `json:"text"`
-	Logprobs       []interface{} `json:"logprobs,omitempty"`
+	Logprobs       []interface{} `json:"logprobs"`
+}
+
+// MarshalJSON emits logprobs as [] when unset: the key is required.
+func (e ResponsesOutputTextDoneEvent) MarshalJSON() ([]byte, error) {
+	type alias ResponsesOutputTextDoneEvent
+	if e.Logprobs == nil {
+		e.Logprobs = []interface{}{}
+	}
+	return json.Marshal(alias(e))
 }
 
 type ResponsesFunctionCallArgumentsDeltaEvent struct {
@@ -212,11 +242,12 @@ type ResponsesFunctionCallArgumentsDeltaEvent struct {
 	Delta          string `json:"delta"`
 }
 
+// ResponsesFunctionCallArgumentsDoneEvent carries no "name": the API never sends
+// one here (openai-go v3.68 dropped it); the name lives on the function_call item.
 type ResponsesFunctionCallArgumentsDoneEvent struct {
 	Type           string `json:"type"`
 	SequenceNumber int64  `json:"sequence_number"`
 	ItemID         string `json:"item_id"`
 	OutputIndex    int    `json:"output_index"`
-	Name           string `json:"name,omitempty"`
 	Arguments      string `json:"arguments"`
 }

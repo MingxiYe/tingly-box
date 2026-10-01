@@ -19,7 +19,7 @@ func TestNewAnthropicBetaToOpenAIChatConverter(t *testing.T) {
 			"message": map[string]any{
 				"id": "msg_parallel", "type": "message", "role": "assistant",
 				"content": []any{}, "model": "provider-model",
-				"usage": map[string]any{"input_tokens": 4, "output_tokens": 0},
+				"usage": map[string]any{"input_tokens": 4, "output_tokens": 0, "service_tier": "priority"},
 			},
 		},
 		map[string]any{"type": "content_block_start", "index": 0, "content_block": map[string]any{"type": "text", "text": ""}},
@@ -53,6 +53,11 @@ func TestNewAnthropicBetaToOpenAIChatConverter(t *testing.T) {
 	require.NotNil(t, converter.Usage())
 	assert.Equal(t, 4, converter.Usage().InputTokens)
 	assert.Equal(t, 2, converter.Usage().OutputTokens)
+	// Anthropic's tier from message_start rides on every Chat chunk.
+	for i, chunk := range chunks {
+		require.NotNilf(t, chunk.ServiceTier, "chunk %d service_tier", i)
+		assert.Equal(t, "priority", *chunk.ServiceTier)
+	}
 }
 
 func TestNewAnthropicBetaToOpenAIChatConverterPropagatesIteratorError(t *testing.T) {

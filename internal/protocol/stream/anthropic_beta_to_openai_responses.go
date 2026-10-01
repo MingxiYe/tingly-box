@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"net/http"
 
 	"github.com/anthropics/anthropic-sdk-go"
 	anthropicstream "github.com/anthropics/anthropic-sdk-go/packages/ssestream"
@@ -28,7 +27,7 @@ func HandleAnthropicBetaToOpenAIResponsesStream(
 		}
 	}()
 
-	conv := NewAnthropicBetaToOpenAIResponsesConverter(stream, responseModel)
+	conv := newAnthropicBetaToResponsesConverter(stream, responseModel)
 
 	usage, err := RunConverter(hc, conv, responsesSSEWriter(c))
 
@@ -48,7 +47,7 @@ func HandleAnthropicBetaToOpenAIResponsesStream(
 			return conv.Usage(), nil
 		}
 		logrus.WithContext(c.Request.Context()).Errorf("Anthropic stream error: %v", err)
-		sendResponsesErrorEvent(c, protocol.UpstreamMessage(err), "stream_error")
+		sendResponsesErrorEvent(c, conv.nextSeq(), "stream_failed", protocol.UpstreamMessage(err))
 		return conv.Usage(), err
 	}
 
@@ -66,13 +65,7 @@ func sendResponsesEvent(c *gin.Context, event any, _ interface{ Flush() }) {
 }
 
 // sendResponsesErrorEvent sends an error event in Responses API format.
-func sendResponsesErrorEvent(c *gin.Context, message string, errorType string, _ ...http.Flusher) {
-	errorEvent := wire.ResponsesStreamErrorEvent{
-		Type: "error",
-		Error: wire.ResponsesStreamErrorBody{
-			Type:    errorType,
-			Message: message,
-		},
-	}
+func sendResponsesErrorEvent(c *gin.Context, seq int, code, message string) {
+	errorEvent := wire.NewResponsesStreamErrorEvent(int64(seq), code, message)
 	OpenAIResponsesEvent(c, errorEvent.EventType(), errorEvent)
 }

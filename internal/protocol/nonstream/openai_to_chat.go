@@ -65,7 +65,9 @@ func ConvertResponsesToOpenAIChat(rs *responses.Response, responseModel string) 
 			Message:      message,
 			FinishReason: mapResponsesFinishReason(rs, len(state.toolCalls) > 0),
 		}},
-		Usage: usage,
+		Usage:       usage,
+		ServiceTier: protocol.ChatServiceTierFromResponses(rs.ServiceTier),
+		Moderation:  protocol.ChatModerationFromResponses(rs.Moderation),
 	}
 }
 

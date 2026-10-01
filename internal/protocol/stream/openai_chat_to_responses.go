@@ -41,14 +41,7 @@ func HandleOpenAIChatToResponsesStream(hc *protocol.HandleContext, stream *opena
 			return conv.Usage(), err
 		}
 
-		errorEvent := wire.ResponsesStreamErrorEvent{
-			Type:           "error",
-			SequenceNumber: conv.nextSeq(),
-			Error: wire.ResponsesStreamErrorBody{
-				Message: protocol.UpstreamMessage(err),
-				Type:    "stream_error",
-			},
-		}
+		errorEvent := wire.NewResponsesStreamErrorEvent(int64(conv.nextSeq()), "stream_failed", protocol.UpstreamMessage(err))
 		OpenAIResponsesEvent(c, errorEvent.EventType(), errorEvent)
 		return conv.Usage(), err
 	}

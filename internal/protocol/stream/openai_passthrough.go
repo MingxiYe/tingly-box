@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/tingly-dev/tingly-box/internal/protocol/ids"
+	"github.com/tingly-dev/tingly-box/internal/protocol/wire"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openai/openai-go/v3"
@@ -351,6 +352,8 @@ func HandleOpenAIResponsesStream(hc *protocol.HandleContext, stream ResponsesStr
 	usage := protocol.ZeroTokenUsage()
 	streamStart := time.Now()
 	sawTerminal := false
+	// Sequence number for any error event we synthesize after upstream events.
+	var nextSeq int64
 
 	protocol.RunLoop(c, func(w io.Writer) bool {
 		select {
@@ -370,7 +373,7 @@ func HandleOpenAIResponsesStream(hc *protocol.HandleContext, stream ResponsesStr
 		// strings.Clone breaks the gjson backing reference to the SSE buffer.
 		eventRaw := strings.Clone(evt.RawJSON())
 		eventType := evt.Type
-
+		nextSeq = evt.SequenceNumber + 1
 		switch eventType {
 		case "response.completed", "response.failed", "response.incomplete", "response.cancelled", "error":
 			sawTerminal = true
@@ -463,14 +466,8 @@ func HandleOpenAIResponsesStream(hc *protocol.HandleContext, stream ResponsesStr
 			SendStreamingError(c, err)
 			return usage, err
 		}
-		errorChunk := map[string]interface{}{
-			"error": map[string]interface{}{
-				"message": protocol.UpstreamMessage(err),
-				"type":    "stream_error",
-				"code":    "stream_failed",
-			},
-		}
-		OpenAIResponsesEvent(c, "error", errorChunk)
+		errorEvent := wire.NewResponsesStreamErrorEvent(nextSeq, "stream_failed", protocol.UpstreamMessage(err))
+		OpenAIResponsesEvent(c, errorEvent.EventType(), errorEvent)
 		return usage, err
 	}
 
@@ -487,13 +484,8 @@ func HandleOpenAIResponsesStream(hc *protocol.HandleContext, stream ResponsesStr
 		logrus.WithContext(c.Request.Context()).
 			WithField("elapsed", time.Since(streamStart).Round(time.Second)).
 			Warn("upstream ended responses stream without a terminal event")
-		OpenAIResponsesEvent(c, "error", map[string]interface{}{
-			"error": map[string]interface{}{
-				"message": "upstream ended responses stream without a terminal event",
-				"type":    "stream_error",
-				"code":    "upstream_truncated",
-			},
-		})
+		errorEvent := wire.NewResponsesStreamErrorEvent(nextSeq, "upstream_truncated", "upstream ended responses stream without a terminal event")
+		OpenAIResponsesEvent(c, errorEvent.EventType(), errorEvent)
 		return usage, fmt.Errorf("upstream ended responses stream without a terminal event")
 	}
 

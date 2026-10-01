@@ -45,6 +45,7 @@ type anthropicToOpenAIConverter struct {
 	suppressToolCall bool
 	pendingToolCalls []AnthropicToOpenAIToolCall
 	thinkingText     strings.Builder
+	serviceTier      *string // from message_start usage; stamped on every chunk
 
 	// pending event queue
 	pending []interface{}
@@ -130,6 +131,7 @@ func (c *anthropicToOpenAIConverter) processEvent(event *anthropic.BetaRawMessag
 	switch event.Type {
 	case "message_start":
 		c.started = true
+		c.serviceTier = protocol.ChatServiceTierFromAnthropic(event.Message.Usage.ServiceTier)
 		c.emitChunk(wire.ChatStreamDelta{Role: "assistant"}, nil)
 		c.acc.ConsumeBeta(event)
 
@@ -239,5 +241,6 @@ func (c *anthropicToOpenAIConverter) newChunk(delta wire.ChatStreamDelta, finish
 		Choices: []wire.ChatStreamChoice{
 			{Index: 0, Delta: delta, FinishReason: finishReason},
 		},
+		ServiceTier: c.serviceTier,
 	}
 }

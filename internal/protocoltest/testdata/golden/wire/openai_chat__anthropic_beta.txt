@@ -146,7 +146,7 @@ POST /v1/messages
   "model": "virtual-model-error-midstream-close"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"stop","index":0,"message":{"content":"hello world this stream will be truncated","role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-error-midstream-close","object":"chat.completion","usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
+{"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"hello world this stream will be truncated","refusal":null,"role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-error-midstream-close","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
 
 === error-midstream-close stream=true
 --- upstream request
@@ -168,9 +168,9 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-error-midstream-close","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-error-midstream-close","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-error-midstream-close","choices":[{"index":0,"delta":{"content":"hello world this stream will be truncated"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-error-midstream-close","choices":[{"index":0,"delta":{"content":"hello world this stream will be truncated"},"finish_reason":null}],"service_tier":null}
 
 data: {"error":{"message":"anthropic stream ended without message_stop","type":"stream_error"}}
 
@@ -195,7 +195,7 @@ POST /v1/messages
   "model": "virtual-model-incomplete"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"length","index":0,"message":{"content":"This response was truncated due to output limit.","role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-incomplete","object":"chat.completion","usage":{"completion_tokens":50,"prompt_tokens":10,"total_tokens":60}}
+{"choices":[{"finish_reason":"length","index":0,"logprobs":null,"message":{"content":"This response was truncated due to output limit.","refusal":null,"role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-incomplete","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":50,"prompt_tokens":10,"total_tokens":60}}
 
 === incomplete stream=true
 --- upstream request
@@ -217,11 +217,11 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-incomplete","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-incomplete","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-incomplete","choices":[{"index":0,"delta":{"content":"This response was truncated due to output limit."},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-incomplete","choices":[{"index":0,"delta":{"content":"This response was truncated due to output limit."},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-incomplete","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":50,"total_tokens":60}}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-incomplete","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":50,"total_tokens":60},"service_tier":null}
 
 data: [DONE]
 
@@ -244,7 +244,7 @@ POST /v1/messages
   "model": "virtual-model-multi_turn"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"stop","index":0,"message":{"content":"The capital of France is Paris.","role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-multi_turn","object":"chat.completion","usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
+{"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"The capital of France is Paris.","refusal":null,"role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-multi_turn","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
 
 === multi_turn stream=true
 --- upstream request
@@ -266,11 +266,11 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-multi_turn","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-multi_turn","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-multi_turn","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-multi_turn","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-multi_turn","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18}}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-multi_turn","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18},"service_tier":null}
 
 data: [DONE]
 
@@ -293,7 +293,7 @@ POST /v1/messages
   "model": "virtual-model-streaming_text"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"stop","index":0,"message":{"content":"The capital of France is Paris.","role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-streaming_text","object":"chat.completion","usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
+{"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"The capital of France is Paris.","refusal":null,"role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-streaming_text","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
 
 === streaming_text stream=true
 --- upstream request
@@ -315,11 +315,11 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_text","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_text","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_text","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_text","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_text","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18}}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_text","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18},"service_tier":null}
 
 data: [DONE]
 
@@ -342,7 +342,7 @@ POST /v1/messages
   "model": "virtual-model-streaming_tool_use"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"tool_calls","index":0,"message":{"role":"assistant","tool_calls":[{"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}","name":"get_weather"},"id":"<ID1>","type":"function"}]}}],"created":<TS>,"id":"<ID2>","model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","object":"chat.completion","usage":{"completion_tokens":20,"prompt_tokens":15,"total_tokens":35}}
+{"choices":[{"finish_reason":"tool_calls","index":0,"logprobs":null,"message":{"content":null,"refusal":null,"role":"assistant","tool_calls":[{"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}","name":"get_weather"},"id":"<ID1>","type":"function"}]}}],"created":<TS>,"id":"<ID2>","model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":20,"prompt_tokens":15,"total_tokens":35}}
 
 === streaming_tool_use stream=true
 --- upstream request
@@ -364,13 +364,13 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"<ID2>","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"<ID2>","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":15,"completion_tokens":20,"total_tokens":35}}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-streaming_tool_use","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":15,"completion_tokens":20,"total_tokens":35},"service_tier":null}
 
 data: [DONE]
 
@@ -393,7 +393,7 @@ POST /v1/messages
   "model": "virtual-model-text"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"stop","index":0,"message":{"content":"The capital of France is Paris.","role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-text","object":"chat.completion","usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
+{"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"The capital of France is Paris.","refusal":null,"role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-text","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
 
 === text stream=true
 --- upstream request
@@ -415,11 +415,11 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-text","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-text","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-text","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-text","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-text","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18}}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-text","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18},"service_tier":null}
 
 data: [DONE]
 
@@ -442,7 +442,7 @@ POST /v1/messages
   "model": "virtual-model-thinking"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"stop","index":0,"message":{"content":"The capital of France is Paris.","role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-thinking","object":"chat.completion","usage":{"completion_tokens":30,"prompt_tokens":10,"total_tokens":40}}
+{"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"The capital of France is Paris.","refusal":null,"role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-thinking","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":30,"prompt_tokens":10,"total_tokens":40}}
 
 === thinking stream=true
 --- upstream request
@@ -464,13 +464,13 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-thinking","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-thinking","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-thinking","choices":[{"index":0,"delta":{"reasoning_content":"Let me reason about this step by step..."},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-thinking","choices":[{"index":0,"delta":{"reasoning_content":"Let me reason about this step by step..."},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-thinking","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-thinking","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-thinking","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":30,"total_tokens":40}}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-thinking","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":30,"total_tokens":40},"service_tier":null}
 
 data: [DONE]
 
@@ -493,7 +493,7 @@ POST /v1/messages
   "model": "virtual-model-tool_result"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"stop","index":0,"message":{"content":"The capital of France is Paris.","role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-tool_result","object":"chat.completion","usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
+{"choices":[{"finish_reason":"stop","index":0,"logprobs":null,"message":{"content":"The capital of France is Paris.","refusal":null,"role":"assistant"}}],"created":<TS>,"id":"<ID1>","model":"pv-openai_chat-to-anthropic_beta-tool_result","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":8,"prompt_tokens":10,"total_tokens":18}}
 
 === tool_result stream=true
 --- upstream request
@@ -515,11 +515,11 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_result","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_result","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_result","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_result","choices":[{"index":0,"delta":{"content":"The capital of France is Paris."},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_result","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18}}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_result","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":8,"total_tokens":18},"service_tier":null}
 
 data: [DONE]
 
@@ -542,7 +542,7 @@ POST /v1/messages
   "model": "virtual-model-tool_use"
 }
 --- client response (status 200)
-{"choices":[{"finish_reason":"tool_calls","index":0,"message":{"role":"assistant","tool_calls":[{"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}","name":"get_weather"},"id":"<ID1>","type":"function"}]}}],"created":<TS>,"id":"<ID2>","model":"pv-openai_chat-to-anthropic_beta-tool_use","object":"chat.completion","usage":{"completion_tokens":20,"prompt_tokens":15,"total_tokens":35}}
+{"choices":[{"finish_reason":"tool_calls","index":0,"logprobs":null,"message":{"content":null,"refusal":null,"role":"assistant","tool_calls":[{"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}","name":"get_weather"},"id":"<ID1>","type":"function"}]}}],"created":<TS>,"id":"<ID2>","model":"pv-openai_chat-to-anthropic_beta-tool_use","moderation":null,"object":"chat.completion","service_tier":null,"usage":{"completion_tokens":20,"prompt_tokens":15,"total_tokens":35}}
 
 === tool_use stream=true
 --- upstream request
@@ -564,13 +564,13 @@ POST /v1/messages
   "stream": true
 }
 --- client response (status 200)
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_use","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_use","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_use","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"<ID2>","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_use","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"<ID2>","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_use","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]},"finish_reason":null}]}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_use","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}]},"finish_reason":null}],"service_tier":null}
 
-data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_use","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":15,"completion_tokens":20,"total_tokens":35}}
+data: {"id":"<ID1>","object":"chat.completion.chunk","created":<TS>,"model":"pv-openai_chat-to-anthropic_beta-tool_use","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":15,"completion_tokens":20,"total_tokens":35},"service_tier":null}
 
 data: [DONE]
 

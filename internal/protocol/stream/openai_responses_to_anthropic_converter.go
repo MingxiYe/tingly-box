@@ -364,9 +364,6 @@ func (r *responsesToAnthropicConverter) processEvent(currentEvent responses.Resp
 	case "response.function_call_arguments.done":
 		argsDone := currentEvent.AsResponseFunctionCallArgumentsDone()
 		if tc, ok := r.toolCalls[argsDone.ItemID]; ok {
-			if tc.name == "" && argsDone.Name != "" {
-				tc.name = argsDone.Name
-			}
 			r.emitContentBlockStop(tc.blockIndex)
 			tc.completed = true
 		}

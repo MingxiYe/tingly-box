@@ -79,7 +79,8 @@ func ConvertAnthropicBetaToOpenAIChat(bm *anthropic.BetaMessage, responseModel s
 				FinishReason: finishReason,
 			},
 		},
-		Usage: usage,
+		Usage:       usage,
+		ServiceTier: protocol.ChatServiceTierFromAnthropic(bm.Usage.ServiceTier),
 	}
 }
 

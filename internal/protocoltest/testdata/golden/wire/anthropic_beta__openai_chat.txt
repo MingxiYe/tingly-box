@@ -120,7 +120,7 @@ POST /v1/chat/completions
   "model": "virtual-model-error-midstream-close"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"hello world this stream will be truncated","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-error-midstream-close","stop_reason":"end_turn","stop_sequence":"","usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"hello world this stream will be truncated","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-error-midstream-close","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === error-midstream-close stream=true
 --- upstream request
@@ -166,7 +166,7 @@ POST /v1/chat/completions
   "model": "virtual-model-incomplete"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"This response was truncated due to output limit.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-incomplete","stop_reason":"max_tokens","stop_sequence":"","usage":{"input_tokens":10,"output_tokens":50,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"This response was truncated due to output limit.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-incomplete","stop_reason":"max_tokens","stop_sequence":null,"usage":{"input_tokens":10,"output_tokens":50,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === incomplete stream=true
 --- upstream request
@@ -218,7 +218,7 @@ POST /v1/chat/completions
   "model": "virtual-model-multi_turn"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-multi_turn","stop_reason":"end_turn","stop_sequence":"","usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-multi_turn","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === multi_turn stream=true
 --- upstream request
@@ -270,7 +270,7 @@ POST /v1/chat/completions
   "model": "virtual-model-streaming_text"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-streaming_text","stop_reason":"end_turn","stop_sequence":"","usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-streaming_text","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === streaming_text stream=true
 --- upstream request
@@ -322,7 +322,7 @@ POST /v1/chat/completions
   "model": "virtual-model-streaming_tool_use"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"id":"<ID2>","input":{"location":"Paris","unit":"celsius"},"name":"get_weather","type":"tool_use"}],"model":"pv-anthropic_beta-to-openai_chat-streaming_tool_use","stop_reason":"tool_use","stop_sequence":"","usage":{"input_tokens":15,"output_tokens":20,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"id":"<ID2>","input":{"location":"Paris","unit":"celsius"},"name":"get_weather","type":"tool_use"}],"model":"pv-anthropic_beta-to-openai_chat-streaming_tool_use","stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":15,"output_tokens":20,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === streaming_tool_use stream=true
 --- upstream request
@@ -377,7 +377,7 @@ POST /v1/chat/completions
   "model": "virtual-model-text"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-text","stop_reason":"end_turn","stop_sequence":"","usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-text","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === text stream=true
 --- upstream request
@@ -429,7 +429,7 @@ POST /v1/chat/completions
   "model": "virtual-model-thinking"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-thinking","stop_reason":"end_turn","stop_sequence":"","usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-thinking","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === thinking stream=true
 --- upstream request
@@ -481,7 +481,7 @@ POST /v1/chat/completions
   "model": "virtual-model-tool_result"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-tool_result","stop_reason":"end_turn","stop_sequence":"","usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"text":"The capital of France is Paris.","type":"text"}],"model":"pv-anthropic_beta-to-openai_chat-tool_result","stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":10,"output_tokens":8,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === tool_result stream=true
 --- upstream request
@@ -533,7 +533,7 @@ POST /v1/chat/completions
   "model": "virtual-model-tool_use"
 }
 --- client response (status 200)
-{"id":"<ID1>","type":"message","role":"assistant","content":[{"id":"<ID2>","input":{"location":"Paris","unit":"celsius"},"name":"get_weather","type":"tool_use"}],"model":"pv-anthropic_beta-to-openai_chat-tool_use","stop_reason":"tool_use","stop_sequence":"","usage":{"input_tokens":15,"output_tokens":20,"cache_read_input_tokens":0}}
+{"id":"<ID1>","type":"message","role":"assistant","content":[{"id":"<ID2>","input":{"location":"Paris","unit":"celsius"},"name":"get_weather","type":"tool_use"}],"model":"pv-anthropic_beta-to-openai_chat-tool_use","stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":15,"output_tokens":20,"cache_read_input_tokens":0,"cache_creation_input_tokens":0,"output_tokens_details":null,"cache_creation":null,"inference_geo":null,"server_tool_use":null,"service_tier":null},"container":null,"diagnostics":null,"stop_details":null}
 
 === tool_use stream=true
 --- upstream request

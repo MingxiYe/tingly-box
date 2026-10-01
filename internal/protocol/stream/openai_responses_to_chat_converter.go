@@ -26,6 +26,7 @@ type responsesToChatConverter struct {
 	usage           *protocol.TokenUsage
 	totalTokens     int64
 	hasSentCreated  bool
+	serviceTier     *string // stamped on every chunk; refined at completion
 	hasToolCalls    bool
 	completed       bool
 	toolCallIndexes map[string]int
@@ -106,6 +107,7 @@ func (c *responsesToChatConverter) processEvent(evt *responses.ResponseStreamEve
 	switch evt.Type {
 	case "response.created":
 		c.chatID = evt.Response.ID
+		c.serviceTier = protocol.ChatServiceTierFromResponses(evt.Response.ServiceTier)
 		if !c.hasSentCreated {
 			c.pending = append(c.pending, c.roleChunk())
 		}
@@ -201,8 +203,15 @@ func (c *responsesToChatConverter) processEvent(evt *responses.ResponseStreamEve
 			c.totalTokens = int64(c.usage.InputTokens + c.usage.CacheReadTokens + c.usage.OutputTokens)
 		}
 		c.emitCompletedOutput(evt.Response.Output)
+		// The terminal response carries the tier actually used (created may
+		// only say "auto") and any moderation verdict.
+		if tier := protocol.ChatServiceTierFromResponses(evt.Response.ServiceTier); tier != nil {
+			c.serviceTier = tier
+		}
 		finishReason := responsesToChatFinishReason(&evt.Response, c.hasToolCalls)
-		c.pending = append(c.pending, c.finalChunk(finishReason))
+		final := c.finalChunk(finishReason)
+		final.Moderation = protocol.ChatModerationFromResponses(evt.Response.Moderation)
+		c.pending = append(c.pending, final)
 		c.completed = true
 
 	case "error":
@@ -320,5 +329,6 @@ func (c *responsesToChatConverter) newChunk(delta wire.ChatStreamDelta, finishRe
 		Choices: []wire.ChatStreamChoice{
 			{Index: 0, Delta: delta, FinishReason: finishReason},
 		},
+		ServiceTier: c.serviceTier,
 	}
 }

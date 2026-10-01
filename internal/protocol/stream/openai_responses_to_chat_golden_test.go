@@ -34,7 +34,7 @@ func TestResponsesToChatConverter_GoldenSequence(t *testing.T) {
 			"type": "response.created",
 			"response": map[string]any{
 				"id": "resp_golden", "object": "response",
-				"status": "in_progress", "output": []any{},
+				"status": "in_progress", "output": []any{}, "service_tier": "auto",
 			},
 		},
 		{ // 2: first text delta
@@ -84,6 +84,11 @@ func TestResponsesToChatConverter_GoldenSequence(t *testing.T) {
 			"type": "response.completed",
 			"response": map[string]any{
 				"id": "resp_golden", "object": "response", "status": "completed",
+				"service_tier": "default",
+				"moderation": map[string]any{
+					"input":  map[string]any{"type": "error", "code": "timeout", "message": "moderation timed out"},
+					"output": map[string]any{"type": "error", "code": "timeout", "message": "moderation timed out"},
+				},
 				"output": []any{
 					map[string]any{
 						"id": "msg_1", "type": "message", "role": "assistant",
@@ -158,4 +163,17 @@ func TestResponsesToChatConverter_GoldenSequence(t *testing.T) {
 	usage := conv.Usage()
 	assert.Equal(t, 10, usage.InputTokens)
 	assert.Equal(t, 5, usage.OutputTokens)
+
+	// 8. service_tier: created's "auto" until completion reports the real tier;
+	//    moderation only on the final chunk, in the Chat shape.
+	require.NotNil(t, got[0].ServiceTier)
+	assert.Equal(t, "auto", *got[0].ServiceTier)
+	require.NotNil(t, got[6].ServiceTier)
+	assert.Equal(t, "default", *got[6].ServiceTier)
+	assert.Nil(t, got[5].Moderation)
+	require.NotNil(t, got[6].Moderation)
+	assert.JSONEq(t, `{
+		"input":  {"type":"error","code":"timeout","message":"moderation timed out"},
+		"output": {"type":"error","code":"timeout","message":"moderation timed out"}
+	}`, string(got[6].Moderation))
 }
