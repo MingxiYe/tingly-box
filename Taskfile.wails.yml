@@ -60,7 +60,7 @@ tasks:
     run: once
     silent: true
     vars:
-      WAILS_REQUIRED_VERSION: v3.0.0-beta.12
+      WAILS_REQUIRED_VERSION: v3.0.0-beta.26
     cmds:
       - |
         if ! command -v wails3 >/dev/null 2>&1; then
@@ -157,7 +157,7 @@ tasks:
 
   wails:manual:
     cmds:
-      - go build -tags debug -trimpath -buildvcs=false -ldflags="{{.VERSION_LDFLAGS}} -w -s" -o bin/{{.BIN_NAME}} {{.PACKAGE_PATH}}
+      - go build -tags debug,private_mac_apis -trimpath -buildvcs=false -ldflags="{{.VERSION_LDFLAGS}} -w -s" -o bin/{{.BIN_NAME}} {{.PACKAGE_PATH}}
         mkdir -p bin/{{.APP_NAME}}.app/Contents/{MacOS,Resources}
         cp build/darwin/icons.icns bin/{{.APP_NAME}}.app/Contents/Resources
         cp bin/{{.BIN_NAME}} bin/{{.APP_NAME}}.app/Contents/MacOS

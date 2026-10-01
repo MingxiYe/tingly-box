@@ -42,7 +42,11 @@ tasks:
         cd {{.WAILS_PACKAGE_PATH}}
         go build {{.BUILD_FLAGS}} -o "${cwd}/{{.OUTPUT}}" ./
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production -trimpath -buildvcs=false -ldflags="-w -s {{.VERSION_LDFLAGS}}"{{else}}-buildvcs=false -gcflags=all="-l"{{end}}'
+      # private_mac_apis: since wails v3 beta.26 the transparent webview behind
+      # MacBackdropTranslucent (hub panel, main window) is a private WebKit
+      # API, compiled in only with this tag. Fine for Developer ID builds;
+      # the Mac App Store would reject it.
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production,private_mac_apis -trimpath -buildvcs=false -ldflags="-w -s {{.VERSION_LDFLAGS}}"{{else}}-tags private_mac_apis -buildvcs=false -gcflags=all="-l"{{end}}'
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.BIN_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
       PRODUCTION: '{{.PRODUCTION | default "false"}}'
