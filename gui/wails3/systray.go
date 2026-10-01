@@ -34,11 +34,13 @@ const (
 	hubWindowHeight = 560
 )
 
-func useSystray(app *application.App, tinglyService *services.TinglyService) {
+// useSystray creates the tray icon and hub panel, and returns openMain — the
+// one way every menu reaches the main window — for the app menu to share.
+func useSystray(app *application.App, tinglyService *services.TinglyService) (openMain func(path string)) {
 	// openMain shows the main window at path. The panel hides first: it floats
 	// above everything (needed to sit under the tray icon), so leaving it up
 	// would cover the main window and make the click look like a no-op.
-	openMain := func(path string) {
+	openMain = func(path string) {
 		WindowSlim.Hide()
 		showMainWindow(app, tinglyService, path)
 	}
@@ -140,4 +142,6 @@ func useSystray(app *application.App, tinglyService *services.TinglyService) {
 		event.Cancel()
 		WindowSlim.Hide()
 	})
+
+	return openMain
 }

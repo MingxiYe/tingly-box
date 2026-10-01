@@ -130,8 +130,10 @@ func (l *appLauncher) Start(appManager *app.AppManager, opts options.StartServer
 	// Main-window geometry persistence target (see windowstate.go).
 	windowStatePath = filepath.Join(appManager.AppConfig().ConfigDir(), windowStateFile)
 
-	// Set up the tray icon + hub panel (must run after creating the app)
-	useSystray(app, tinglyService)
+	// Set up the tray icon + hub panel and the macOS menu bar (must run
+	// after creating the app)
+	openMain := useSystray(app, tinglyService)
+	useAppMenu(app, openMain, opts.EnableDebug)
 
 	// Launching a desktop app should show its window: open the main window
 	// at startup (first run maximised, later runs at the saved geometry).

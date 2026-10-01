@@ -13,6 +13,7 @@ import { appRoutes } from './appRoutes';
 import { SHELL_ROUTES } from './shellRoutes';
 // Read through Vite (?raw) rather than node:fs so the suite needs no
 // @types/node, same as i18n/locales/tKeyCoverage.test.ts.
+import appMenuGo from '../../../gui/wails3/appmenu.go?raw';
 import routesGo from '../../../gui/wails3/routes.go?raw';
 import runGo from '../../../gui/wails3/run.go?raw';
 import systrayGo from '../../../gui/wails3/systray.go?raw';
@@ -53,7 +54,7 @@ describe('route contract', () => {
     it('keeps tray navigation on the shared route constants', () => {
         // A raw "/..." literal passed to the main-window navigation helpers
         // would bypass routes.go and therefore this contract.
-        for (const src of [systrayGo, runGo, windowGo]) {
+        for (const src of [systrayGo, runGo, windowGo, appMenuGo]) {
             expect(src).not.toMatch(/showMainWindow\([^)]*"\//);
             expect(src).not.toMatch(/openMain\("\//);
         }
