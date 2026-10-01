@@ -8,7 +8,6 @@ import (
 	"github.com/tingly-dev/tingly-box/gui/wails3/services"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
-	assets "github.com/tingly-dev/tingly-box/internal"
 	"github.com/tingly-dev/tingly-box/internal/app"
 )
 
@@ -28,7 +27,7 @@ func newAppWithServerManager(appManager *app.AppManager, serverManager *app.Serv
 	tinglyService = services.NewTinglyServiceWithServerManager(appManager, serverManager)
 
 	// Create a new Wails application by providing the necessary options.
-	embdHandler := application.AssetFileServerFS(assets.GUIDistAssets)
+	embdHandler := application.AssetFileServerFS(guiDistAssets)
 	app := application.New(application.Options{
 		Name:        AppName,
 		Description: AppDescription,
@@ -73,6 +72,13 @@ func newAppWithServerManager(appManager *app.AppManager, serverManager *app.Serv
 			ActivationPolicy: macActivationPolicy,
 		},
 		Windows: application.WindowsOptions{},
+		Linux: application.LinuxOptions{
+			// Same id as the macOS bundle (CFBundleIdentifier) and the name
+			// of the installed .desktop file (build/linux/dev.tingly.box.desktop):
+			// on Wayland the shell pairs a window with its launcher entry by
+			// this id, so the dock shows our icon rather than a generic one.
+			ApplicationID: "dev.tingly.box",
+		},
 	})
 
 	return app
