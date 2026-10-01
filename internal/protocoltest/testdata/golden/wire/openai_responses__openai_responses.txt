@@ -178,7 +178,7 @@ event: response.output_text.delta
 data: {"content_index":0,"delta":"hello world this stream will be truncated","item_id":"<ID2>","output_index":0,"response_id":"<ID1>","type":"response.output_text.delta"}
 
 event: error
-data: {"error":{"code":"upstream_truncated","message":"upstream ended responses stream without a terminal event","type":"stream_error"}}
+data: {"type":"error","sequence_number":1,"code":"upstream_truncated","message":"upstream ended responses stream without a terminal event","param":null}
 
 === incomplete stream=false
 --- upstream request

@@ -144,7 +144,7 @@ event: response.output_text.delta
 data: {"type":"response.output_text.delta","sequence_number":4,"item_id":"<ID2>","output_index":0,"content_index":0,"delta":"hello world this stream will be truncated"}
 
 event: error
-data: {"type":"error","sequence_number":5,"error":{"message":"chat stream ended without a finish reason","type":"stream_error"}}
+data: {"type":"error","sequence_number":5,"code":"stream_failed","message":"chat stream ended without a finish reason","param":null}
 
 === incomplete stream=false
 --- upstream request

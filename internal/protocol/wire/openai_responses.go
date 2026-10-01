@@ -25,15 +25,20 @@ func (e ResponsesOutputTextDoneEvent) EventType() string             { return e.
 func (e ResponsesFunctionCallArgumentsDeltaEvent) EventType() string { return e.Type }
 func (e ResponsesFunctionCallArgumentsDoneEvent) EventType() string  { return e.Type }
 
+// ResponsesStreamErrorEvent mirrors responses.ResponseErrorEvent: code,
+// message and param sit at the top level — unlike Chat Completions, there is
+// no nested "error" envelope. param is null unless an input field is at fault.
 type ResponsesStreamErrorEvent struct {
-	Type           string                   `json:"type"`
-	SequenceNumber int64                    `json:"sequence_number"`
-	Error          ResponsesStreamErrorBody `json:"error"`
+	Type           string  `json:"type"`
+	SequenceNumber int64   `json:"sequence_number"`
+	Code           string  `json:"code"`
+	Message        string  `json:"message"`
+	Param          *string `json:"param"`
 }
 
-type ResponsesStreamErrorBody struct {
-	Message string `json:"message"`
-	Type    string `json:"type"`
+// NewResponsesStreamErrorEvent builds a mid-stream "error" event.
+func NewResponsesStreamErrorEvent(seq int64, code, message string) ResponsesStreamErrorEvent {
+	return ResponsesStreamErrorEvent{Type: "error", SequenceNumber: seq, Code: code, Message: message}
 }
 
 type ResponsesCreatedEvent struct {
