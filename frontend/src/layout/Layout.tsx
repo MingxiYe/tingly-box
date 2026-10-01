@@ -121,7 +121,13 @@ const LayoutInner = ({ children }: LayoutProps) => {
     const sidebarItems = useMemo(() => {
         const activity = activityItems.find(item => item.key === activeActivity);
         const children = activity?.children || [];
-        return editingAgents ? children : withoutHidden(children);
+        const visible = withoutHidden(children);
+        if (!editingAgents) return visible;
+        // Edit mode lists hidden agents too, but after the visible ones
+        // (behind a divider) rather than interleaved, so the shown list
+        // still reads as the sidebar the user will get.
+        const hidden = children.filter(item => item.type !== 'divider' && item.hidden);
+        return hidden.length > 0 ? [...visible, { type: 'divider' as const }, ...hidden] : visible;
     }, [activityItems, activeActivity, editingAgents]);
 
     // A sidebar is a choice between pages; an activity with a single page
