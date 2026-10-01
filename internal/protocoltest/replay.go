@@ -78,7 +78,7 @@ func StreamShapeForAgent(at AgentType) Assertion {
 // vmodel, real provider, mock agent).
 //
 // Uses add-or-update rather than update-only: some scenarios (e.g. Codex,
-// see internal/server/config/init.go) intentionally have no seeded
+// see internal/config/init.go) intentionally have no seeded
 // DefaultRules entry, so their builtin rule UUID won't exist yet on a fresh
 // AgentTestEnv and must be inserted here rather than found.
 func (env *AgentTestEnv) repointBuiltinRule(agentType AgentType, providerUUID, upstreamModel string) error {

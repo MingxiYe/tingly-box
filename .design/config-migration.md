@@ -1,6 +1,6 @@
 # Config Migration Pipeline
 
-`internal/server/config/migration.go` runs a pipeline of `Migrate` steps on
+`internal/config/migration.go` runs a pipeline of `Migrate` steps on
 every boot to repair/evolve `Config` (`~/.tingly/config.json`) across
 releases. After many iterations the step list only ever grew — this doc
 defines the classification and retirement policy that keeps it bounded.

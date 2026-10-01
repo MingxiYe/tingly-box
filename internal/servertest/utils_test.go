@@ -13,10 +13,10 @@ import (
 	server2 "github.com/tingly-dev/tingly-box/internal/server"
 
 	"github.com/tingly-dev/tingly-box/internal/appconfig"
+	serverconfig "github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/loadbalance"
 	"github.com/tingly-dev/tingly-box/internal/protocolserver"
 	"github.com/tingly-dev/tingly-box/internal/routing"
-	serverconfig "github.com/tingly-dev/tingly-box/internal/server/config"
 	typ "github.com/tingly-dev/tingly-box/internal/typ"
 )
 

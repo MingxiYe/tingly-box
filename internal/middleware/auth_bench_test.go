@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/db"
-	"github.com/tingly-dev/tingly-box/internal/server/config"
 )
 
 // Benchmarks for AuthMiddleware.ModelAuthMiddleware's multi-tenant

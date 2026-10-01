@@ -161,7 +161,7 @@ replay that concurrent runs would interleave.
 
 Each env boots a full `httptest.Server` + SQLite-backed `AppConfig` in a
 fresh temp dir. The single most expensive step of that boot is
-`internal/server/config`'s enterprise-context RSA-2048 key generation
+`internal/config`'s enterprise-context RSA-2048 key generation
 (~100-600ms of prime search) — a one-time cost for a real install, but every
 harness env is a fresh install by construction, and one CLI run boots dozens
 of them.
@@ -170,7 +170,7 @@ of them.
 this: one key pair is generated per process (`sync.OnceValues`) and written
 into every env's key slots before `config.NewAppConfig` runs, so
 `ensureEnterpriseContextRS256KeyPair` finds the files already present and
-skips generating its own. `internal/server/config/enterprise.go` only
+skips generating its own. `internal/config/enterprise.go` only
 exports the generic primitives this uses — `GenerateEnterpriseContextPEMs`,
 `WriteEnterpriseContextKeys`, `EnterpriseContextKeyPaths` — the same ones
 `ensureEnterpriseContextRS256KeyPair` already used internally; see §8 for why
@@ -505,8 +505,8 @@ that cost, so scaling purely with `GOMAXPROCS` would over-commit fd and
 memory limits on high-core CI runners for no throughput benefit; a small
 fixed ceiling caps it regardless of machine size.
 
-**Why does the RSA key pre-seed (§3.2) live in `internal/protocoltest`, not `internal/server/config`?**
-`internal/server/config` ships in the production server binary; the
+**Why does the RSA key pre-seed (§3.2) live in `internal/protocoltest`, not `internal/config`?**
+`internal/config` ships in the production server binary; the
 process-cache-and-reuse *policy* has zero production callers and exists
 purely to amortize a cost the harness's "fresh config dir per env"
 pattern creates. `enterprise.go` only exports the generic

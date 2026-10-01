@@ -9,7 +9,7 @@ import (
 // home directory. Apply/Restore functions resolve their target paths from
 // os.UserHomeDir() (e.g. ~/.claude/settings.json, ~/.codex/config.toml), so
 // the whole binary is redirected to a throwaway HOME before any test runs.
-// Mirrors internal/server/config/main_test.go's isolation strategy.
+// Mirrors internal/config/main_test.go's isolation strategy.
 func TestMain(m *testing.M) {
 	tmp, err := os.MkdirTemp("", "tb-agent-test-home-")
 	if err != nil {

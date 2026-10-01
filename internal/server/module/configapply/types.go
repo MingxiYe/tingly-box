@@ -2,7 +2,7 @@ package configapply
 
 import (
 	"github.com/tingly-dev/tingly-box/internal/agent"
-	"github.com/tingly-dev/tingly-box/internal/server/config"
+	"github.com/tingly-dev/tingly-box/internal/config"
 )
 
 // ApplyClaudeConfigRequest is the request body for ApplyClaudeConfig.

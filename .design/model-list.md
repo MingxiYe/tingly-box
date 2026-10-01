@@ -1,6 +1,6 @@
 # Model List 获取 / 缓存 / 兜底 设计
 
-> 适用对象：改 `internal/server/module/provider/handler.go`（`GetProviderModelsByUUID` / `UpdateProviderModelsByUUID`）、`internal/server/config/config.go`（`FetchAndSaveProviderModels`）、`internal/catalog/model_list.go`、`internal/data/db/provider_model.go`、`internal/catalog/provider_catalog.go` 的贡献者。
+> 适用对象：改 `internal/server/module/provider/handler.go`（`GetProviderModelsByUUID` / `UpdateProviderModelsByUUID`）、`internal/config/config.go`（`FetchAndSaveProviderModels`）、`internal/catalog/model_list.go`、`internal/data/db/provider_model.go`、`internal/catalog/provider_catalog.go` 的贡献者。
 > 本文档描述「前端请求某 provider 的模型列表 → gateway 返回」的取数、缓存与兜底最终设计。
 
 ---
@@ -24,7 +24,7 @@
 
 | 职责 | 位置 |
 |---|---|
-| **兜底链唯一真源（resolver）** | `Config.ResolveProviderModels(forceRefresh, uid)` — `internal/server/config/config.go` |
+| **兜底链唯一真源（resolver）** | `Config.ResolveProviderModels(forceRefresh, uid)` — `internal/config/config.go` |
 | 上游 API fetch + 持久化（内部） | `Config.fetchAndSaveAPIModels` — `config.go` |
 | 缓存预热薄封装（不返回列表） | `Config.FetchAndSaveProviderModels` — `config.go` |
 | 服务端点（读路径） | `GetProviderModelsByUUID` — `internal/server/module/provider/handler.go` |

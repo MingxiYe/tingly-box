@@ -18,13 +18,13 @@ import (
 	"github.com/openai/openai-go/v3/shared"
 	"github.com/stretchr/testify/require"
 
+	"github.com/tingly-dev/tingly-box/internal/advisortest"
 	"github.com/tingly-dev/tingly-box/internal/client"
+	serverconfig "github.com/tingly-dev/tingly-box/internal/config"
 	mcpruntime "github.com/tingly-dev/tingly-box/internal/mcp/runtime"
 	"github.com/tingly-dev/tingly-box/internal/protocol"
 	"github.com/tingly-dev/tingly-box/internal/protocol/transform"
 	"github.com/tingly-dev/tingly-box/internal/protocolserver/servertool"
-	serverconfig "github.com/tingly-dev/tingly-box/internal/server/config"
-	"github.com/tingly-dev/tingly-box/internal/advisortest"
 	"github.com/tingly-dev/tingly-box/internal/typ"
 )
 

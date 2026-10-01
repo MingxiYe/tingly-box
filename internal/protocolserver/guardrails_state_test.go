@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/guardrails"
 	guardrailscore "github.com/tingly-dev/tingly-box/internal/guardrails/core"
 	guardrailsutils "github.com/tingly-dev/tingly-box/internal/guardrails/utils"
-	"github.com/tingly-dev/tingly-box/internal/server/config"
 )
 
 // TestGuardrailsState_SetCarriesOverHistoryAndCredentials pins the swap

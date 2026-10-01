@@ -1,11 +1,11 @@
 package agent
 
 // This file holds a self-contained copy of the config-file-writing primitives
-// originally defined in internal/server/config/apply_config.go. It exists so
+// originally defined in internal/config/apply_config.go. It exists so
 // ai/agent (an independently-versioned go module) does not need to import the
-// parent repo's internal/server/config package — see
+// parent repo's internal/config package — see
 // .sdlc/docs/ai-module-decoupling-refactor-20260803.spec.md for the full
-// rationale. internal/server/config keeps its own copies for
+// rationale. internal/config keeps its own copies for
 // internal/server/module/configapply, which still depends on them directly;
 // the two copies are intentionally duplicated, not shared.
 
@@ -314,7 +314,7 @@ func buildClaudeSettings(base []byte, env map[string]string, applyOpts *applyOpt
 	existingConfig["env"] = envInterface
 
 	if applyOpts.defaultMode != "" {
-		// Mirrors internal/server/config/apply_config_claude.go: Claude Code's
+		// Mirrors internal/config/apply_config_claude.go: Claude Code's
 		// settings-reference documents this key as nested under "permissions";
 		// the legacy top-level key is also written for older CLI installs.
 		existingConfig["defaultMode"] = applyOpts.defaultMode
@@ -673,7 +673,7 @@ func ApplyOpenCodeConfig(payload map[string]interface{}) (*ApplyResult, error) {
 // tingly-served models.
 const codexModelCatalogFile = "tingly-model-catalog.json"
 
-const codexModelCatalogSchema = "https://raw.githubusercontent.com/tingly-dev/tingly-box/main/internal/server/config/codex-model-catalog.schema.json"
+const codexModelCatalogSchema = "https://raw.githubusercontent.com/tingly-dev/tingly-box/main/internal/config/codex-model-catalog.schema.json"
 
 // CodexPrefs is the typed, user-tunable surface of Codex's config.toml.
 // JSON tags map 1:1 to the config.toml keys, so the frontend round-trips the

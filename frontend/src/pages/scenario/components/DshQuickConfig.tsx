@@ -12,7 +12,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { type AppLanguage, resolveLanguage } from '@/i18n';
 
-// DshPrefs mirrors the Go struct in internal/server/config (DshPrefs). Keys
+// DshPrefs mirrors the Go struct in internal/config (DshPrefs). Keys
 // are the literal settings.yaml provider-stanza keys so the object
 // round-trips through the backend without an intermediate mapping layer.
 // All values are strings; "" means "omit this key, dsh treats the provider

@@ -9,9 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/constant"
 	"github.com/tingly-dev/tingly-box/internal/db"
-	"github.com/tingly-dev/tingly-box/internal/server/config"
 )
 
 const sharingScopeTestToken = "tb-share-valid"

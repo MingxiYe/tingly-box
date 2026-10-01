@@ -11,7 +11,7 @@ import (
 // incrementing past the historical maximum — means an ID freed by deleting an
 // entry ("p2", "t3", ...) is offered to the next one created, keeping IDs
 // short and gap-free over the lifetime of a config. Shared by profile IDs
-// (internal/server/config) and team slugs (internal/db).
+// (internal/config) and team slugs (internal/db).
 func NextFreeNumberedID(prefix string, existingIDs []string) string {
 	taken := make(map[int]bool, len(existingIDs))
 	for _, id := range existingIDs {

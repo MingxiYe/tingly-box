@@ -12,7 +12,7 @@ stable constant:
 | SmartGuide internal | `_internal_smart_guide_<botUUID>` | — |
 | User-created rules | random v4 UUID | — |
 
-The constants live in `internal/server/config/migration.go`
+The constants live in `internal/config/migration.go`
 (`RuleUUIDCC*` / `RuleUUIDBuiltin*`), alongside
 `BuiltinRuleUUID(scenario, model)` which builds the modern form. Anything
 that is system-seeded must have a deterministic UUID; randomness is

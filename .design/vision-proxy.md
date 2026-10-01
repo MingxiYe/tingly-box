@@ -69,7 +69,7 @@ provider。这是系统里 service 的统一建模,前端的选择器
 }
 ```
 
-约定 key:`internal/server/config/flag.go` 的 `VisionProxyServiceKey`。
+约定 key:`internal/config/flag.go` 的 `VisionProxyServiceKey`。
 
 ### 3.2 Rule 级 —— RuleFlags typed 字段
 
@@ -367,9 +367,9 @@ rule 内其他 op AND 组合形成"带条件的 vision proxy",但实际业务里
 | `RuleFlags` + `VisionProxyService` | `internal/typ/type.go` |
 | Flag registry + `FlagTypeServiceRef` 常量 | `internal/typ/flag_registry.go` |
 | `ScenarioFlags` / `ScenarioConfig` | `internal/typ/type.go` |
-| 场景配置 Get/Set | `internal/server/config/config.go` |
+| 场景配置 Get/Set | `internal/config/config.go` |
 | 场景配置 API | `internal/server/module/scenario/{routes,handler,types}.go` |
-| `VisionProxyServiceKey` 常量(Extensions key) | `internal/server/config/flag.go` |
+| `VisionProxyServiceKey` 常量(Extensions key) | `internal/config/flag.go` |
 | 入站 handler(钩子点) | `internal/server/{openai_chat,openai_responses,anthropic}.go` |
 | Scenario 级 UI | `frontend/src/components/PluginFeatures.tsx` |
 | Rule 级 UI | `frontend/src/components/rule-card/FlagCatalogDialog.tsx` |
