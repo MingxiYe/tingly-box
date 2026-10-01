@@ -10,6 +10,7 @@ export const host: HostBridge = {
     shellAuthToken: async () => null,
     // No shell, no tray: nothing ever asks a browser tab to navigate.
     onShellNavigate: () => () => {},
+    openMainWindow: async () => {},
     openExternal: (url) => {
         window.open(url, '_blank', 'noopener,noreferrer');
     },
