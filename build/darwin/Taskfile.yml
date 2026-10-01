@@ -140,6 +140,16 @@ tasks:
       - cp "{{.BIN_DIR}}/{{.BIN_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS"
       - chmod +x "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS/{{.BIN_NAME}}"
       - cp build/darwin/Info.plist "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents"
+      # Stamp the release version into the bundle (Finder / About show it).
+      # Only numeric versions qualify for CFBundleVersion: a release tag like
+      # v1.6.2 becomes 1.6.2; dev builds (git describe output) keep the
+      # plist's placeholder. Before signing — the signature covers the plist.
+      - cmd: |
+          V="{{.VERSION}}"; V="${V#v}"
+          if printf '%s' "$V" | grep -Eq '^[0-9]+(\.[0-9]+)*$'; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $V" -c "Set :CFBundleVersion $V" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Info.plist"
+          fi
+        platforms: [darwin]
       - task: '{{if eq OS "darwin"}}codesign:adhoc{{else}}codesign:skip{{end}}'
 
   codesign:adhoc:
