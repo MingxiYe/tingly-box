@@ -90,9 +90,10 @@ export default {
       "createTeamTooltip": "Create an isolated Team workspace",
       "sloganTooltip": "For all Solo Builders, Dev Teams and Agents.",
       "collapse": "Collapse sidebar",
-      "hiddenCount": "{{n}} hidden",
-      "collapseHidden": "Collapse hidden",
-      "visibilityTip": "Hover an agent and click the eye to hide it. Hidden agents wait at the bottom of this list.",
+      "doneEditing": "Done",
+      "visibilityTipTitle": "Choose which agents show",
+      "visibilityTip": "Click the eye to show or hide agents in this list. Hidden ones stay here, one click away.",
+      "visibilityTipGotIt": "Got it",
       "expand": "Expand sidebar"
     },
     "activityBar": {
@@ -2247,7 +2248,7 @@ export default {
     "notConfigured": "Not configured",
     "ruleCountOne": "1 rule",
     "ruleCount": "{{count}} rules",
-    "editTooltip": "Manage visible agents",
+    "editTooltip": "Show or hide agents",
     "powerUps": {
       "title": "Power-ups",
       "subtitle": "Optional capabilities. Turn one on to add it to this bar; turn it off to hide it.",

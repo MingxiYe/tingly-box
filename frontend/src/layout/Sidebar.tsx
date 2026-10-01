@@ -1,4 +1,4 @@
-import { Close as IconClose, Info as IconInfoCircle, Lightbulb as IconLightbulb, Star as IconStar, Visibility as IconVisibility, VisibilityOff as IconVisibilityOff } from '@/components/icons';
+import { Info as IconInfoCircle, Star as IconStar, Visibility as IconVisibility, VisibilityOff as IconVisibilityOff } from '@/components/icons';
 import {
     Box,
     Button,
@@ -49,15 +49,12 @@ interface SidebarProps {
     activeActivityLabel: string;
     onClose: () => void;
     headerAction?: React.ReactNode;
-    /** Rows with a `hideId` get a hover-revealed visibility toggle calling this. */
+    /** Edit mode: hidden rows are listed (dimmed) and every hideable row gets a visibility toggle. */
+    editing?: boolean;
     onToggleHidden?: (id: string) => void;
-    /** Click handler of the "N hidden" row (`#toggle-hidden`). */
-    onToggleShowHidden?: () => void;
-    /** A closable hint rendered under the list. */
-    tip?: { text: string; onDismiss: () => void };
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLabel, onClose, headerAction, onToggleHidden, onToggleShowHidden, tip }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLabel, onClose, headerAction, editing = false, onToggleHidden }) => {
     const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
@@ -155,17 +152,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
 
                     const isAddProfile = item.path === '#add-profile';
                     const isAddTeam = item.path === '#add-team';
-                    const isToggleHidden = item.path === '#toggle-hidden';
-                    const isAddAction = isAddProfile || isAddTeam || isToggleHidden;
+                    const isAddAction = isAddProfile || isAddTeam;
                     const active = !isAddAction && (item.match ? item.match(location.pathname) : isActive(item.path));
 
-                    const hideId = item.hideId;
-                    const visibilityLabel = item.hidden ? t('scenarioOverview.showInSidebar') : t('scenarioOverview.hideFromSidebar');
+                    const toggleable = editing && item.hideId && onToggleHidden;
                     const button = (
-                        <ListItem disablePadding sx={{ opacity: item.hidden ? 0.5 : 1 }}>
+                        <ListItem
+                            disablePadding
+                            sx={{ opacity: editing && item.hidden ? 0.5 : 1 }}
+                            secondaryAction={toggleable ? (
+                                <Tooltip title={item.hidden ? t('scenarioOverview.showInSidebar') : t('scenarioOverview.hideFromSidebar')} placement="right" arrow>
+                                    <IconButton
+                                        size="small"
+                                        edge="end"
+                                        onClick={() => onToggleHidden(item.hideId!)}
+                                        aria-label={item.hidden ? t('scenarioOverview.showInSidebar') : t('scenarioOverview.hideFromSidebar')}
+                                        sx={{ color: active ? 'primary.contrastText' : 'text.secondary', mr: 0.5 }}
+                                    >
+                                        {item.hidden ? <IconVisibilityOff sx={{ fontSize: 18 }} /> : <IconVisibility sx={{ fontSize: 18 }} />}
+                                    </IconButton>
+                                </Tooltip>
+                            ) : undefined}
+                        >
                             <ListItemButton
                                 {...(isAddAction
-                                    ? { onClick: isToggleHidden ? onToggleShowHidden : isAddProfile ? handleAddProfileClick : handleAddTeamClick }
+                                    ? { onClick: isAddProfile ? handleAddProfileClick : handleAddTeamClick }
                                     : { component: RouterLink, to: item.path, onClick: onClose }
                                 )}
                                 sx={{
@@ -189,10 +200,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                                         backgroundColor: active ? 'primary.main' : 'action.hover',
                                         color: active ? 'primary.contrastText' : 'text.primary',
                                     },
-                                    // The visibility toggle shows on hover/focus only, so
-                                    // it never competes with the name; a hidden row keeps
-                                    // it visible, since there it is the row's state.
-                                    '&:hover .visibility-toggle, &:focus-within .visibility-toggle': { opacity: 1 },
                                 }}
                             >
                                 {item.icon && (
@@ -222,31 +229,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                                         </Typography>
                                     </Tooltip>
                                 )}
-                                {hideId && onToggleHidden && (
-                                    <Tooltip title={visibilityLabel} placement="right" arrow>
-                                        <IconButton
-                                            className="visibility-toggle"
-                                            size="small"
-                                            aria-label={visibilityLabel}
-                                            onClick={(e) => {
-                                                // The row is a link: don't navigate.
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                onToggleHidden(hideId);
-                                            }}
-                                            sx={{
-                                                position: 'absolute',
-                                                right: 6,
-                                                opacity: item.hidden ? 1 : 0,
-                                                color: active ? 'primary.contrastText' : 'text.secondary',
-                                                bgcolor: active ? 'primary.main' : 'background.paper',
-                                                '&:hover': { bgcolor: active ? 'primary.dark' : 'action.selected' },
-                                            }}
-                                        >
-                                            {item.hidden ? <IconVisibilityOff sx={{ fontSize: 18 }} /> : <IconVisibility sx={{ fontSize: 18 }} />}
-                                        </IconButton>
-                                    </Tooltip>
-                                )}
                                 {item.tooltip && (
                                     <IconInfoCircle
                                         sx={{
@@ -271,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                                 <Tooltip title={t('layout.sidebar.createTeamTooltip')} arrow placement="right">
                                     {button}
                                 </Tooltip>
-                            ) : item.hint ? (
+                            ) : item.hint && !editing ? (
                                 <Tooltip
                                     title={item.hint}
                                     arrow
@@ -298,21 +280,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ sidebarItems, activeActivityLa
                     );
                 })}
             </List>
-            {tip && (
-                <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ mx: 1.5, mb: 1, p: 1.25, borderRadius: 1.5, border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover', alignItems: 'flex-start', flexShrink: 0 }}
-                >
-                    <IconLightbulb sx={{ fontSize: 16, color: 'warning.main', mt: '2px', flexShrink: 0 }} />
-                    <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.5, flex: 1 }}>
-                        {tip.text}
-                    </Typography>
-                    <IconButton size="small" aria-label={t('common.dismiss')} onClick={tip.onDismiss} sx={{ p: 0.25, mt: -0.25, mr: -0.5 }}>
-                        <IconClose sx={{ fontSize: 14 }} />
-                    </IconButton>
-                </Stack>
-            )}
             {/* Footer: version, and the GitHub star request — one quiet,
                 always-there link instead of a banner over every agent page. */}
             <Box

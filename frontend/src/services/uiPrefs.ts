@@ -19,7 +19,7 @@ const SYNCED: Array<string | RegExp> = [
     'scenario.hiddenDefaultsVersion',
     // Quick Start progress per agent (AgentSetupCard).
     /^setup-card-/,
-    // The Agent sidebar's "how to hide agents" tip, once closed (layout/Layout).
+    // The Agent sidebar's visibility callout, once closed (layout/Layout).
     'layout.agentVisibilityTip.dismissed',
 ];
 

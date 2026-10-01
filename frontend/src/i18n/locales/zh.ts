@@ -90,9 +90,10 @@ export default {
       "createTeamTooltip": "创建一个独立鉴权的 Team 工作区",
       "sloganTooltip": "致，所有独立开发者、开发团队和智能应用。",
       "collapse": "收起侧边栏",
-      "hiddenCount": "已隐藏 {{n}} 个",
-      "collapseHidden": "收起已隐藏",
-      "visibilityTip": "鼠标移到 Agent 上点眼睛即可隐藏；隐藏的收在列表底部，随时可恢复。",
+      "doneEditing": "完成",
+      "visibilityTipTitle": "选择显示哪些 Agent",
+      "visibilityTip": "点这个眼睛，就能显示或隐藏列表里的 Agent。隐藏的不会丢，随时可以在这里恢复。",
+      "visibilityTipGotIt": "知道了",
       "expand": "展开侧边栏"
     },
     "activityBar": {
@@ -2242,7 +2243,7 @@ export default {
     "notConfigured": "未配置",
     "ruleCountOne": "1 条规则",
     "ruleCount": "{{count}} 条规则",
-    "editTooltip": "管理可见的智能应用",
+    "editTooltip": "显示或隐藏 Agent",
     "powerUps": {
       "title": "增强能力",
       "subtitle": "可选能力。开启后出现在这一栏，关闭则隐藏。",
