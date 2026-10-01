@@ -825,15 +825,19 @@ rather than a hand-written expected body:
 
 - output-token field(s) within the model limit (the test model is not in the
   catalog, so the 8192 fallback), and on Chat the field the flag asks for;
-- on an Anthropic target, `1024 <= budget_tokens < max_tokens`;
+- on an Anthropic target, `1024 <= budget_tokens < max_tokens`, and a budget
+  carried from an OpenAI client's own effort leaves the answer at least half
+  of `max_tokens`;
 - the effort that arrives is the effective one — the rule's level when set,
   none when the rule says off, else the client's — collapsed through the
   generic tier map on a Chat target whenever the gateway derived it (a Chat
   client's own `reasoning_effort` is forwarded verbatim).
 
-Pre-existing gaps it exposed are registered as known gaps TL2–TL3 (see the
-bottom of `thinking_limits.go`). It also caught TL1 — a budget capped to equal
-`max_tokens`, which Anthropic rejects — fixed in the same change set. Run it with:
+It exposed three pre-existing gaps, all since fixed: TL1 — a budget capped to
+equal `max_tokens`, which Anthropic rejects (#1902); TL2 — an Anthropic
+client's budget not carried to Responses `reasoning.effort`; TL3 — an OpenAI
+client's effort not carried to Anthropic thinking (both #1917). The section
+has no known gaps left. Run it with:
 
 ```bash
 go test ./internal/protocoltest -run TestThinkingLimits -count=1

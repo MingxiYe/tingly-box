@@ -338,6 +338,13 @@ func checkThinkingLimits(env *TestEnv, c thinkingLimitsCase, model string) []str
 			if budget < 1024 || budget >= maxTokens {
 				failures = append(failures, fmt.Sprintf("upstream budget_tokens = %.0f with max_tokens = %.0f; Anthropic needs 1024 <= budget < max_tokens", budget, maxTokens))
 			}
+			// Thinking carried from an OpenAI client's own effort must leave
+			// the answer at least half the output (Anthropic counts thinking
+			// inside max_tokens). A rule level or an Anthropic client's own
+			// budget may take more: that is what they asked for.
+			if !isAnthropicAPI(c.source) && c.rule == typ.ThinkingEffortDefault && maxTokens-budget < maxTokens/2 {
+				failures = append(failures, fmt.Sprintf("upstream budget_tokens = %.0f leaves %.0f of max_tokens = %.0f for the answer; a client-carried budget takes at most half", budget, maxTokens-budget, maxTokens))
+			}
 		}
 	}
 	return failures
@@ -408,40 +415,3 @@ func thinkingLimitsFailureSummary(r TestResult) string {
 	}
 	return strings.Join(parts, "; ")
 }
-
-// Known gaps the suite exposed when it was added. Each fails identically on
-// the base it was added against (they predate the pipeline placement work);
-// fixing one flips its cases to passing, which fails the run until the entry
-// here is removed.
-var (
-	gapAnthropicThinkingToResponses = KnownGap{
-		ID:     "TL2",
-		Reason: "an Anthropic client's thinking budget is not carried to reasoning.effort on an OpenAI Responses provider (only the rule's level is)",
-	}
-	gapOpenAIEffortToAnthropic = KnownGap{
-		ID:     "TL3",
-		Reason: "an OpenAI Chat / Responses client's reasoning effort is not carried to a thinking block on an Anthropic provider (only the rule's level is)",
-	}
-)
-
-func thinkingLimitsKnownGap(c thinkingLimitsCase) (KnownGap, bool) {
-	fromClientOnly := c.rule == typ.ThinkingEffortDefault && c.client != ""
-	switch {
-	case isAnthropicAPI(c.source) && c.target == protocol.TypeOpenAIResponses && fromClientOnly:
-		return gapAnthropicThinkingToResponses, true
-	case !isAnthropicAPI(c.source) && c.target == protocol.TypeAnthropicBeta && fromClientOnly:
-		return gapOpenAIEffortToAnthropic, true
-	}
-	return KnownGap{}, false
-}
-
-var _ = func() bool {
-	for _, g := range thinkingLimitsGroups() {
-		for _, c := range g.cases() {
-			if gap, ok := thinkingLimitsKnownGap(c); ok {
-				registerKnownGaps(gap, c.name())
-			}
-		}
-	}
-	return true
-}()

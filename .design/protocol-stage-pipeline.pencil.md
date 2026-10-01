@@ -187,20 +187,28 @@
   以后（待定，见正文开放问题）：请求上一个 effort 字段 + "是否由网关推导"，③ 写一次，④ 只读这一处
 ```
 
-### 偏差 4–5：组合校验发现的缺口（harness `thinking_limits`，known gap TL2–TL3）
+### 偏差 4–5：组合校验发现的缺口（harness `thinking_limits`，TL2–TL3，已修 #1917）
 
 ```
   偏差 4（TL2）  ③ Anthropic → Responses
     client: thinking.budget_tokens 10240               rule thinking_effort = ""（按客户端）
-      现在：Bridge 不产出 effort ──► reasoning.effort 缺失                     ✗
-      以后：EffortFromBudget(10240) = medium ──► reasoning.effort "medium"      （与 → Chat 同一个产出）
+      以前：Bridge 不产出 effort ──► reasoning.effort 缺失                     ✗
+      现在：anthropicViewReasoningEffort ── EffortFromBudget(10240) = medium
+              ──► reasoning.effort "medium"                                   （与 → Chat 同一个 helper）
+            只认请求本身的 thinking（enabled / adaptive）；只在历史里有 thinking 块、或 disabled ──► 不带
 
   偏差 5（TL3）  ③ Chat / Responses → Anthropic
     client: reasoning_effort "high"                     rule thinking_effort = ""（按客户端）
-      现在：边缘转 Beta 不产出 thinking ──► 上游没有 thinking                    ✗
-      以后：BudgetMapping[high] = 20480 ──► thinking.enabled ──► ④ output_limit 与 vendor 按模型落地
+      以前：边缘转 Beta 不产出 thinking ──► 上游没有 thinking                    ✗
+      现在：③ applyOpenAIEffortAsThinking ── BudgetMapping[high] = 20480
+              ──► thinking.enabled + output_config.effort "high"
+                  并给回答留空间：没设上限 max_tokens 4096 + 20480；设了 32000 → budget ≤ 16000
+              ──► ④ output_limit 截到模型上限 ──► ④ vendor ReconcileBetaThinkingWithRequest：
+                    最后一条 assistant tool_use 消息没有 thinking 块？ ── 是 ──► thinking.disabled
+                    tool_choice 强制用工具（any / tool）？         ── 是 ──► thinking.disabled
+                    否则 temperature ≠ 1、top_k 丢掉，top_p 抬到 0.95
 
-  两条都只在 rule = ""（按客户端）时出现：rule 设了档位时，④ 的 RuleThinkingTransform 会补上，结果正确。
+  以前两条都只在 rule = ""（按客户端）时出现：rule 设了档位时，④ 的 RuleThinkingTransform 会补上。
 ```
 
 ### 偏差 6–8：rule flag 在部分路径上不生效（harness `flag_paths`，known gap FP1–FP3）
