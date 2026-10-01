@@ -186,3 +186,35 @@
 
   以后（待定，见正文开放问题）：请求上一个 effort 字段 + "是否由网关推导"，③ 写一次，④ 只读这一处
 ```
+
+### 偏差 4–5：组合校验发现的缺口（harness `thinking_limits`，known gap TL2–TL3）
+
+```
+  偏差 4（TL2）  ③ Anthropic → Responses
+    client: thinking.budget_tokens 10240               rule thinking_effort = ""（按客户端）
+      现在：Bridge 不产出 effort ──► reasoning.effort 缺失                     ✗
+      以后：EffortFromBudget(10240) = medium ──► reasoning.effort "medium"      （与 → Chat 同一个产出）
+
+  偏差 5（TL3）  ③ Chat / Responses → Anthropic
+    client: reasoning_effort "high"                     rule thinking_effort = ""（按客户端）
+      现在：边缘转 Beta 不产出 thinking ──► 上游没有 thinking                    ✗
+      以后：BudgetMapping[high] = 20480 ──► thinking.enabled ──► ④ output_limit 与 vendor 按模型落地
+
+  两条都只在 rule = ""（按客户端）时出现：rule 设了档位时，④ 的 RuleThinkingTransform 会补上，结果正确。
+```
+
+### 偏差 6–8：rule flag 在部分路径上不生效（harness `flag_paths`，known gap FP1–FP3）
+
+```
+                         → Anthropic       → Chat           → Responses
+  skip_usage / cursor_compat（Chat 客户端）
+                            ✓                 ✓                ✗ FP1  usage 仍回给客户端
+  skip_usage（Responses 客户端）
+                            ✗ FP2             ✗ FP2            ✗ FP2
+  recording（Responses 客户端）
+                            ✗ FP3 无记录      ✗ FP3 无记录     ✓
+
+  ✓ 的格子与 ✗ 的格子走的是同一组 ② / ④；差别在 ⑤ 回写：读不读 Extra 里的用量提示、录不录。
+  其余 flag（headers、block_tools、clean_header、claude_code_compat、vision、override、context_1m、
+  affinity、claude_org_id）在每个适用组合、流式与非流式上都生效。
+```
