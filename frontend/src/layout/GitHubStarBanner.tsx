@@ -2,11 +2,10 @@ import { IconButton, Link, Stack, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Close, GitHub, Star } from '@/components/icons';
-import { setSyncedItem } from '@/services/uiPrefs';
 
 export const REPO_URL = 'https://github.com/tingly-dev/tingly-box';
-// When the banner was last closed (epoch ms). Synced through services/uiPrefs
-// so closing it in the browser also counts in the desktop window.
+// When the banner was last closed (epoch ms). Local to this browser / window
+// on purpose: it's a nudge, not a preference worth syncing.
 export const STAR_BANNER_DISMISSED_AT_KEY = 'layout.githubStarBanner.dismissedAt';
 // A closed banner stays away this long, then comes back.
 const DISMISS_FOR_MS = 4 * 24 * 60 * 60 * 1000;
@@ -31,7 +30,7 @@ export const GitHubStarBanner = () => {
     const { t } = useTranslation();
     const [dismissed, setDismissed] = useState(isSnoozed);
 
-    // The post-sign-in sync may bring in a dismissal made on the other surface.
+    // A close in another tab of the same browser counts here too.
     useEffect(() => {
         const onStorage = (e: StorageEvent) => {
             if (e.key === STAR_BANNER_DISMISSED_AT_KEY) setDismissed(isSnoozed());
@@ -43,7 +42,11 @@ export const GitHubStarBanner = () => {
     if (dismissed) return null;
 
     const handleDismiss = () => {
-        setSyncedItem(STAR_BANNER_DISMISSED_AT_KEY, String(Date.now()));
+        try {
+            localStorage.setItem(STAR_BANNER_DISMISSED_AT_KEY, String(Date.now()));
+        } catch {
+            // Storage blocked: it just closes for this page view.
+        }
         setDismissed(true);
     };
 
