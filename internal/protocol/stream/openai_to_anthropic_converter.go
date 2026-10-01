@@ -196,13 +196,6 @@ func (c *openAIToAnthropicConverter) processChunk(chunk *openai.ChatCompletionCh
 	choice := chunk.Choices[0]
 	delta := choice.Delta
 
-	// Check for server_tool_use at chunk level
-	if chunk.JSON.ExtraFields != nil {
-		if serverToolUse, exists := chunk.JSON.ExtraFields["server_tool_use"]; exists && serverToolUse.Valid() {
-			c.state.deltaExtras["server_tool_use"] = serverToolUse.Raw()
-		}
-	}
-
 	// Collect extra fields
 	if extras := parseRawJSON(delta.RawJSON()); extras != nil {
 		extras = FilterOpenAIProtocolFields(extras)

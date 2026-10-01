@@ -4,15 +4,14 @@ package wire
 // anthropic.Message / anthropic.BetaMessage via marshal+unmarshal, which is
 // necessary because the SDK content union types have no public constructors.
 type AnthropicMsgWire struct {
-	ID            string             `json:"id"`
-	Type          string             `json:"type"`
-	Role          string             `json:"role"`
-	Content       interface{}        `json:"content"`
-	Model         string             `json:"model"`
-	StopReason    string             `json:"stop_reason"`
-	StopSequence  string             `json:"stop_sequence"`
-	Usage         AnthropicUsageWire `json:"usage"`
-	ServerToolUse interface{}        `json:"server_tool_use,omitempty"`
+	ID           string             `json:"id"`
+	Type         string             `json:"type"`
+	Role         string             `json:"role"`
+	Content      interface{}        `json:"content"`
+	Model        string             `json:"model"`
+	StopReason   string             `json:"stop_reason"`
+	StopSequence string             `json:"stop_sequence"`
+	Usage        AnthropicUsageWire `json:"usage"`
 }
 
 // AnthropicUsageWire represents the Anthropic usage wire format.

@@ -76,13 +76,6 @@ func marshalOpenAIChatToAnthropic(chat *openai.ChatCompletion, model string) ([]
 		Usage:        anthropicUsageWire(usageconv.FromOpenAIChatCompletion(chat.Usage)),
 	}
 
-	// Preserve server_tool_use from ExtraFields if present
-	if chat.JSON.ExtraFields != nil {
-		if serverToolUse, exists := chat.JSON.ExtraFields["server_tool_use"]; exists && serverToolUse.Valid() {
-			result.ServerToolUse = json.RawMessage(serverToolUse.Raw())
-		}
-	}
-
 	var contentBlocks []anthropic.ContentBlockParamUnion
 	for _, choice := range chat.Choices {
 		if choice.Message.Refusal != "" {
@@ -134,12 +127,6 @@ func ConvertOpenAIChatToAnthropicBeta(chat *openai.ChatCompletion, model string)
 		StopReason:   string(anthropic.BetaStopReasonEndTurn),
 		StopSequence: "",
 		Usage:        anthropicUsageWire(usageconv.FromOpenAIChatCompletion(chat.Usage)),
-	}
-
-	if chat.JSON.ExtraFields != nil {
-		if serverToolUse, exists := chat.JSON.ExtraFields["server_tool_use"]; exists && serverToolUse.Valid() {
-			result.ServerToolUse = json.RawMessage(serverToolUse.Raw())
-		}
 	}
 
 	var contentBlocks []anthropic.BetaContentBlockParamUnion
