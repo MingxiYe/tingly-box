@@ -217,11 +217,12 @@ type ResponsesFunctionCallArgumentsDeltaEvent struct {
 	Delta          string `json:"delta"`
 }
 
+// ResponsesFunctionCallArgumentsDoneEvent carries no "name": the API never sends
+// one here (openai-go v3.68 dropped it); the name lives on the function_call item.
 type ResponsesFunctionCallArgumentsDoneEvent struct {
 	Type           string `json:"type"`
 	SequenceNumber int64  `json:"sequence_number"`
 	ItemID         string `json:"item_id"`
 	OutputIndex    int    `json:"output_index"`
-	Name           string `json:"name,omitempty"`
 	Arguments      string `json:"arguments"`
 }

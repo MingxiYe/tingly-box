@@ -373,7 +373,7 @@ event: response.function_call_arguments.delta
 data: {"type":"response.function_call_arguments.delta","sequence_number":4,"item_id":"<ID2>","output_index":0,"delta":"\"unit\":\"celsius\"}"}
 
 event: response.function_call_arguments.done
-data: {"type":"response.function_call_arguments.done","sequence_number":5,"item_id":"<ID2>","output_index":0,"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}
+data: {"type":"response.function_call_arguments.done","sequence_number":5,"item_id":"<ID2>","output_index":0,"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}
 
 event: response.output_item.done
 data: {"type":"response.output_item.done","sequence_number":6,"output_index":0,"item":{"id":"<ID2>","type":"function_call","status":"completed","call_id":"<ID3>","name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}
@@ -610,7 +610,7 @@ event: response.function_call_arguments.delta
 data: {"type":"response.function_call_arguments.delta","sequence_number":4,"item_id":"<ID2>","output_index":0,"delta":"\"unit\":\"celsius\"}"}
 
 event: response.function_call_arguments.done
-data: {"type":"response.function_call_arguments.done","sequence_number":5,"item_id":"<ID2>","output_index":0,"name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}
+data: {"type":"response.function_call_arguments.done","sequence_number":5,"item_id":"<ID2>","output_index":0,"arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}
 
 event: response.output_item.done
 data: {"type":"response.output_item.done","sequence_number":6,"output_index":0,"item":{"id":"<ID2>","type":"function_call","status":"completed","call_id":"<ID3>","name":"get_weather","arguments":"{\"location\":\"Paris\",\"unit\":\"celsius\"}"}}

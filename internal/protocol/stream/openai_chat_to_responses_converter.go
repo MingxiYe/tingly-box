@@ -266,7 +266,6 @@ func (c *chatToResponsesConverter) emitCompletionEvents() {
 			SequenceNumber: c.nextSeq(),
 			ItemID:         ptc.itemID,
 			OutputIndex:    ptc.outputIdx,
-			Name:           ptc.name,
 			Arguments:      arguments,
 		})
 		c.pending = append(c.pending, wire.ResponsesOutputItemDoneEvent{
