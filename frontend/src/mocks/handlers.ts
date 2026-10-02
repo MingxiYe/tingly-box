@@ -2618,6 +2618,11 @@ export const handlers = [
         return HttpResponse.json({ success: true, data: [] })
     }),
 
+    // Mock mode does not contact the remote policy registry.
+    http.get('/api/v1/guardrails/registry', () => {
+        return HttpResponse.json({ success: true, url: '', policies: [] })
+    }),
+
     http.get('/api/v1/guardrails/credentials', () => {
         return HttpResponse.json({ success: true, data: [] })
     }),
