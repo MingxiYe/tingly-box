@@ -2,7 +2,7 @@
 // rendering anything: routes.contract.test.ts walks it to check that every
 // path another surface links to (Wails tray, legacy redirects) lands on a
 // real page instead of falling through to the catch-all.
-import { lazy, useEffect, useState } from 'react';
+import { lazy } from 'react';
 import { Navigate, Route, useLocation } from 'react-router-dom';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ExperimentalFeatureGate from '@/components/ExperimentalFeatureGate';
@@ -13,7 +13,7 @@ import Layout from '@/layout/Layout';
 // is a normal post-auth route, so it's lazy-loaded with everything else
 // below.
 import Login from '@/pages/Login';
-import { api } from '@/services/api';
+import OnboardingGate from './OnboardingGate';
 
 // Every route below this point is reached only after auth + navigation, so it
 // is lazy-loaded: each becomes its own chunk that downloads on first visit
@@ -71,45 +71,6 @@ const DeskPage = lazy(() => import('@/pages/desk/DeskPage'));
 const MCPLocalMode = lazy(() => import('@/pages/mcp/MCPLocalMode'));
 const MCPRegisteredServers = lazy(() => import('@/pages/mcp/MCPRegisteredServers'));
 const ServerToolPage = lazy(() => import('@/pages/servertool/ServerToolPage'));
-
-// OnboardingGate decides where a freshly-authenticated user lands. Brand-new
-// installs (no provider configured) get sent to /help — the lightbulb Help
-// page, whose ProvidersCard is the browsable "add your first provider"
-// experience (the old standalone Onboarding page's content, now a card
-// there instead of a page of its own); everyone else lands on /agent, which
-// opens the agent page they were last on. We hit /api/v2/providers once on mount; while in
-// flight we render nothing to avoid a flash of the default agent page.
-const OnboardingGate: React.FC = () => {
-    const [target, setTarget] = useState<string | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                const result = await api.getProviders();
-                if (cancelled) return;
-                const providers = Array.isArray(result?.data) ? result.data : [];
-                if (providers.length === 0) {
-                    setTarget('/help');
-                    localStorage.removeItem('layout.activeActivity');
-                    sessionStorage.removeItem('layout.activeActivity');
-                    return;
-                }
-            } catch {
-                // Swallow the error and fall through to the default agent —
-                // failing the gate should never lock the user out of the app.
-            }
-            // Clear stale activity state and open the last agent
-            localStorage.removeItem('layout.activeActivity');
-            sessionStorage.removeItem('layout.activeActivity');
-            if (!cancelled) setTarget('/agent');
-        })();
-        return () => { cancelled = true; };
-    }, []);
-
-    if (target === null) return null;
-    return <Navigate to={target} replace />;
-};
 
 // LegacyRemoteAgentRedirect keeps old per-platform bookmarks working
 // (/remote-agent/:platform and the older /remote-control/*): Remote Control
