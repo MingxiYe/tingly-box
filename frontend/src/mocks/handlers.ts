@@ -3,6 +3,7 @@ import { mockClaudeCodeModels } from './claudeCodeModels'
 import { deskHandlers } from './deskHandlers'
 import { resolveMockDataProfile } from './mockConfig'
 import { systemHandlers } from './systemHandlers'
+import { createSkillHandlers } from './skillHandlers'
 
 // ============================================
 // Mock Model Requests (correlated per-request traces)
@@ -1727,6 +1728,7 @@ const mockScenarioStringFlags = new Map<string, string>()
 export const handlers = [
     ...newcomerHandlers,
     ...systemHandlers,
+    ...createSkillHandlers(),
     // Remote Agents / Remote Graphs API endpoints
     http.get('/api/remote-agents', () => {
         return HttpResponse.json({
