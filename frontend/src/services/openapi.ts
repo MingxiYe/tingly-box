@@ -70,10 +70,7 @@ export const controlApi = async (
             getControlApiHeaders(),
         ]);
         const response = await request(client, headers);
-        if (response.error) {
-            return { success: false, error: errorMessage(response.error) };
-        }
-        return response.data;
+        return unwrap(response);
     } catch (error) {
         return { success: false, error: errorMessage(error) };
     }
