@@ -10,7 +10,7 @@ export const FloatingStatusIndicators = () => {
     const { hasUpdate, showUpdateDialog } = useAppVersion();
     const { isHealthy, showDisconnectDialog } = useHealth();
 
-    const showError = !isHealthy || import.meta.env.DEV;
+    const showError = !isHealthy;
     const showUpdate = hasUpdate || import.meta.env.DEV;
 
     if (!showError && !showUpdate) return null;
@@ -32,11 +32,7 @@ export const FloatingStatusIndicators = () => {
         >
             {showError && (
                 <Tooltip
-                    title={
-                        import.meta.env.DEV && isHealthy
-                            ? t('layout.activityBar.disconnectedDebug')
-                            : t('layout.activityBar.disconnected')
-                    }
+                    title={t('layout.activityBar.disconnected')}
                     placement="left"
                     arrow
                 >
