@@ -110,9 +110,22 @@ All binaries are:
 
 ### GUI Builds (Optional)
 
-GUI versions can be built via manual workflow dispatch:
-- macOS: `tingly-box-gui-macos-arm64.zip` (TinglyBox.app)
-- Windows: `tingly-box-gui-windows-amd64.zip` (TinglyBox.exe)
+The GUI is packaged separately from the CLI release and the npm publish, as an
+add-on in any order:
+
+- **With a release**: dispatch `release.yml` with `build_gui=true`.
+- **Later, onto an existing release**: Actions → "Release GUI" → Run workflow with
+  `release_tag=<existing tag>`. It builds all platforms and attaches them
+  (replacing same-named assets) plus `checksums-gui.txt`, then dispatches `npm.yml`
+  for the GUI package only (`publish_gui=true`, waits for `production` approval).
+  No CLI build or harness.
+- **npm, on its own**: `npm.yml` with `publish_gui=true`, `publish_cli=false`,
+  `build_docker=false` publishes only `tingly-box-gui` (it builds the per-platform
+  packages `@tingly-dev/tingly-box-gui-{darwin-arm64,win32-x64}` from the GUI zips
+  on the release, then the shim); CLI/Docker are untouched.
+
+Assets: `tingly-box-gui-macos-arm64.zip`, `tingly-box-gui-windows-amd64.zip`,
+`tingly-box-gui-linux-amd64.deb`, `tingly-box-gui-linux-amd64.rpm`.
 
 ## Development Workflow
 
@@ -180,8 +193,7 @@ Release is created, with `publish_cli=true`, `publish_gui=false`,
 left. (The explicit dispatch is needed because releases created with the
 workflow's `GITHUB_TOKEN` do not fire the `release: published` trigger.)
 
-Run it manually only to re-publish, to publish the GUI package, or to override
-the defaults:
+Run it manually only to re-publish, to publish the GUI package, or to override the defaults:
 
 ### Steps to Publish NPX Packages Manually
 
