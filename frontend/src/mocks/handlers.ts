@@ -2,6 +2,8 @@ import { http, HttpResponse } from 'msw'
 import { mockClaudeCodeModels } from './claudeCodeModels'
 import { deskHandlers } from './deskHandlers'
 import { resolveMockDataProfile } from './mockConfig'
+import { systemHandlers } from './systemHandlers'
+import { createSkillHandlers } from './skillHandlers'
 
 // ============================================
 // Mock Model Requests (correlated per-request traces)
@@ -1725,6 +1727,8 @@ const mockScenarioStringFlags = new Map<string, string>()
 
 export const handlers = [
     ...newcomerHandlers,
+    ...systemHandlers,
+    ...createSkillHandlers(),
     // Remote Agents / Remote Graphs API endpoints
     http.get('/api/remote-agents', () => {
         return HttpResponse.json({
@@ -2612,6 +2616,11 @@ export const handlers = [
 
     http.get('/api/v1/guardrails/builtins', () => {
         return HttpResponse.json({ success: true, data: [] })
+    }),
+
+    // Mock mode does not contact the remote policy registry.
+    http.get('/api/v1/guardrails/registry', () => {
+        return HttpResponse.json({ success: true, url: '', policies: [] })
     }),
 
     http.get('/api/v1/guardrails/credentials', () => {

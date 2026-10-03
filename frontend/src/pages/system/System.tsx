@@ -153,11 +153,11 @@ const System = () => {
         }, 500);
     };
 
-    const changeLanguage = (lng: string) => {
-        i18n.changeLanguage(lng);
+    const changeLanguage = async (lng: string) => {
+        await i18n.changeLanguage(lng);
         // Save language preference to localStorage
         localStorage.setItem('i18nextLng', lng);
-        notify.success(t('system.language.saveSuccess'));
+        notify.success(i18n.getFixedT(lng)('system.language.saveSuccess'));
     };
 
     const shownVersion = displayVersion(currentVersion);

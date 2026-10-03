@@ -51,7 +51,7 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
     const { currentVersion } = useAppVersion();
     const [preferencesAnchorEl, setPreferencesAnchorEl] = useState<HTMLElement | null>(null);
     const { isHealthy, showDisconnectDialog } = useHealth();
-    const showDisconnected = !isHealthy || import.meta.env.DEV;
+    const showDisconnected = !isHealthy;
     const isHelpActive = location.pathname === '/help';
     const { collapsed: sidebarCollapsed, toggle: toggleSidebar } = useSidebarCollapsed();
     const { dismissed: powerUpsTipDismissed, dismiss: dismissPowerUpsTip } = useOneTimeTip(POWER_UPS_TIP_KEY);
@@ -195,12 +195,11 @@ export const ActivityBar: React.FC<ActivityBarProps> = ({
 
             {/* Gateway unreachable — docked in the rail instead of floating
                 over the page (FloatingStatusIndicators keeps that role on
-                mobile, where the rail lives in a drawer). Forced on in dev
-                builds, as before, so the dialog stays easy to exercise. */}
+                mobile, where the rail lives in a drawer). */}
             {showDisconnected && (
                 <Box sx={activityBottomClusterSx}>
                     <Tooltip
-                        title={import.meta.env.DEV && isHealthy ? t('layout.activityBar.disconnectedDebug') : t('layout.activityBar.disconnected')}
+                        title={t('layout.activityBar.disconnected')}
                         placement="right"
                         arrow
                     >

@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import UnifiedCard from '@/components/UnifiedCard';
 import { api } from '@/services/api';
+import { isCredentialProvider } from '@/utils/providers';
 import { SPOTLIGHT_ADD_MODEL_EVENT } from '@/components/nodes/ActionAddNode';
 import { EntryGuideDialog } from '@/components/tier/EntryGuideDialog';
 import { useCopyFeedback } from '@/hooks/useCopyFeedback';
@@ -196,7 +197,7 @@ const AgentSetupCard: React.FC<AgentSetupCardProps> = ({
         api.getProviders().then((result) => {
             if (cancelled) return;
             const providers = Array.isArray(result?.data) ? result.data : [];
-            const enabled = providers.filter((p: any) => p.enabled);
+            const enabled = providers.filter((p: any) => p.enabled && isCredentialProvider(p));
             setHasProvider(enabled.length > 0);
             setProviderCount(enabled.length);
             setProviderLoading(false);
