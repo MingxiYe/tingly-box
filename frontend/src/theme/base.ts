@@ -23,6 +23,16 @@ export const baseShape: ThemeOptions['shape'] = {
 };
 
 export const baseComponents: ThemeOptions['components'] = {
+  // Native controls (buttons, tabs, list rows, menu items) keep the arrow
+  // cursor; a hand cursor is a web-link affordance. Real links (`<a>`,
+  // MuiLink) and disabled/drag states set their own cursor and are unaffected.
+  MuiButtonBase: {
+    styleOverrides: {
+      root: {
+        cursor: 'default',
+      },
+    },
+  },
   MuiChip: {
     styleOverrides: {
       root: {
