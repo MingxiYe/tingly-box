@@ -2,7 +2,9 @@ import { Box } from '@mui/material';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProviderQuotaOf } from '@/contexts/ProviderQuotaContext';
-import { QUOTA_COLORS, formatNumber } from '../dashboard/chartStyles';
+import { useTheme } from '@mui/material/styles';
+import { getStatusColor } from '@/theme/status';
+import { formatNumber } from '../dashboard/chartStyles';
 import { QuotaRing, formatQuotaDuration as formatDuration, quotaRingColor, quotaRingSpinSx } from '../credential/QuotaRing';
 import {
     formatQuotaAvailable,
@@ -28,12 +30,13 @@ const STALE_AFTER_MS = 60 * 60 * 1000;
  */
 export const ServiceNodeQuota: React.FC<{ providerUuid: string }> = ({ providerUuid }) => {
     const { t } = useTranslation();
+    const theme = useTheme();
     const { quota, refreshing, failed, refresh } = useProviderQuotaOf(providerUuid);
     const tightest = tightestWindow(quota);
     if (!quota || !tightest) return null;
 
     const remaining = quotaRemainingPercent(tightest);
-    const color = quotaRingColor(remaining);
+    const color = quotaRingColor(theme, remaining);
     const now = Date.now();
     const fetchedAt = quota.fetched_at ? new Date(quota.fetched_at).getTime() : NaN;
     const stale = Number.isFinite(fetchedAt) && now - fetchedAt > STALE_AFTER_MS;
@@ -56,7 +59,7 @@ export const ServiceNodeQuota: React.FC<{ providerUuid: string }> = ({ providerU
                 );
             })}
             {failed && (
-                <Box sx={{ mt: 0.5, color: QUOTA_COLORS.error }}>{t('rule.service.quota.refreshFailed')}</Box>
+                <Box sx={{ mt: 0.5, color: getStatusColor(theme, 'error') }}>{t('rule.service.quota.refreshFailed')}</Box>
             )}
             <Box sx={{ mt: 0.5, opacity: 0.7 }}>
                 {refreshing

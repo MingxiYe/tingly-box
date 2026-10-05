@@ -23,6 +23,7 @@ import { WaveSine as StreamIcon } from '@/components/icons';
 import { TOKEN_COLORS, formatNumber, hasCacheWrites } from './chartStyles';
 import api from '@/services/api';
 import { fontMono, fontSizes } from '@/theme/fonts';
+import { getStatusColor } from '@/theme/status';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,8 +53,6 @@ export interface UsageRecord {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SUCCESS_COLOR = '#10B981';
-const ERROR_COLOR = '#EF4444';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -267,10 +266,10 @@ function RequestTable({ records, total, page, rowsPerPage, statusFilter, loading
                                 {/* Status */}
                                 <TableCell align="center">
                                     {r.status === 'success' ? (
-                                        <Chip label={t('dashboard.requestsView.ok', { defaultValue: 'OK' })} size="small" sx={{ height: 18, fontSize: fontSizes.micro, fontWeight: 700, backgroundColor: SUCCESS_COLOR, color: '#fff', '& .MuiChip-label': { px: 0.75 } }} />
+                                        <Chip label={t('dashboard.requestsView.ok', { defaultValue: 'OK' })} size="small" sx={{ height: 18, fontSize: fontSizes.micro, fontWeight: 700, backgroundColor: getStatusColor(theme, 'success'), color: '#fff', '& .MuiChip-label': { px: 0.75 } }} />
                                     ) : (
                                         <Tooltip title={r.error_code || r.status} placement="top">
-                                            <Chip label={t('dashboard.requestsView.err', { defaultValue: 'ERR' })} size="small" sx={{ height: 18, fontSize: fontSizes.micro, fontWeight: 700, backgroundColor: ERROR_COLOR, color: '#fff', '& .MuiChip-label': { px: 0.75 } }} />
+                                            <Chip label={t('dashboard.requestsView.err', { defaultValue: 'ERR' })} size="small" sx={{ height: 18, fontSize: fontSizes.micro, fontWeight: 700, backgroundColor: getStatusColor(theme, 'error'), color: '#fff', '& .MuiChip-label': { px: 0.75 } }} />
                                         </Tooltip>
                                     )}
                                 </TableCell>
