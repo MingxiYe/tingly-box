@@ -637,6 +637,33 @@ func TestRemoveRenamedCCProfileArtifacts_RemovesOnlyOldDirectory(t *testing.T) {
 	}
 }
 
+func TestUpgradeLegacyCCEnv(t *testing.T) {
+	in := map[string]string{
+		"CLAUDE_CODE_MAX_ACTIVE_TASKS":              "3",
+		"CLAUDE_CODE_MAX_LONG_RUNNING_TASK_TIME_MS": "1000",
+	}
+	env := upgradeLegacyCCEnv(in)
+	if env["CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS"] != "3" {
+		t.Errorf("concurrency not carried over: %v", env)
+	}
+	if _, ok := env["CLAUDE_CODE_MAX_ACTIVE_TASKS"]; ok {
+		t.Error("legacy key must be removed so it is not written to settings")
+	}
+	if _, ok := env["CLAUDE_CODE_MAX_LONG_RUNNING_TASK_TIME_MS"]; ok {
+		t.Error("dead key must be dropped")
+	}
+	if len(in) != 2 || in["CLAUDE_CODE_MAX_ACTIVE_TASKS"] != "3" {
+		t.Errorf("input must not be modified: %v", in)
+	}
+	env = upgradeLegacyCCEnv(map[string]string{
+		"CLAUDE_CODE_MAX_ACTIVE_TASKS":         "3",
+		"CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "8",
+	})
+	if env["CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS"] != "8" {
+		t.Errorf("explicit value must win: %v", env)
+	}
+}
+
 func TestGenerateCCEnv_FableFollowsDefaultWithoutActiveRule(t *testing.T) {
 	for name, fable := range map[string]*typ.Rule{
 		"missing":  nil,
