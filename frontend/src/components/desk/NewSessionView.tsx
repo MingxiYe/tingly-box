@@ -1,56 +1,72 @@
 import type {RecentFolder} from '@/services/deskApi';
-import {Box, Chip, Stack, Typography} from '@mui/material';
-import {useState} from 'react';
+import {ArrowBack} from '@/components/icons';
+import {Box, Button, Chip, Stack, Typography} from '@mui/material';
 import {useTranslation} from 'react-i18next';
 import Composer from './Composer';
 import FolderPicker from './FolderPicker';
 import ModelSelect from './ModelSelect';
 import PermissionModeSelect from './PermissionModeSelect';
 import ProfileSelect from './ProfileSelect';
+import {useDeskDrafts} from './useDeskDrafts';
 
 interface NewSessionViewProps {
     initialFolder?: string;
     recentFolders: RecentFolder[];
     permissionModes: string[];
     onCreate: (path: string, prompt: string, permissionMode: string, profile: string, model: string) => Promise<boolean>;
+    onAddProject?: () => void;
+    onBack?: () => void;
 }
 
 // NewSessionView opens straight onto the prompt (ux-principles #2): the
-// folder and permission mode sit on the composer as context, prefilled with
-// the folder used last, so starting a session is type-and-Enter.
-const NewSessionView = ({initialFolder, recentFolders, permissionModes, onCreate}: NewSessionViewProps) => {
+// project directory has its own visible field above the composer; launch
+// settings stay with the prompt, so starting a task is type-and-Enter.
+const NewSessionView = ({initialFolder, recentFolders, permissionModes, onCreate, onAddProject, onBack}: NewSessionViewProps) => {
     const {t} = useTranslation();
     // null until the user picks or types a folder; until then it follows the
     // requested folder, else the one used last (which may load after mount).
-    const [picked, setPicked] = useState<string | null>(null);
-    const folder = picked ?? initialFolder ?? recentFolders[0]?.path ?? '';
-    const [permissionMode, setPermissionMode] = useState('');
-    const [profile, setProfile] = useState('');
+    const [form, setForm] = useDeskDrafts(`desk.newDraft:${initialFolder ?? ''}`);
+    const update = (field: string, value: string) => setForm((prev) => ({...prev, [field]: value}));
+    const setPicked = (value: string) => update('folder', value);
+    const folder = form.folder ?? initialFolder ?? recentFolders[0]?.path ?? '';
+    const permissionMode = form.permissionMode ?? '';
+    const profile = form.profile ?? '';
     // A tier belongs to the profile it was picked under.
-    const [model, setModel] = useState('');
+    const model = form.model ?? '';
     const pickProfile = (p: string) => {
-        setProfile(p);
-        setModel('');
+        setForm((prev) => ({...prev, profile: p, model: ''}));
     };
 
     return (
-        <Box sx={{height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 2}}>
-            <Box sx={{width: '100%', maxWidth: 720, mb: '10vh'}}>
+        <Box sx={{height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', px: 2}}>
+            {onBack && <Button onClick={onBack} startIcon={<ArrowBack/>} sx={{alignSelf: 'flex-start', mt: 1}}>
+                {t('common.back', {defaultValue: 'Back'})}
+            </Button>}
+            <Box sx={{width: '100%', maxWidth: 720, mx: 'auto', mt: 'auto', mb: 'auto', py: {xs: 2, md: 5}, flexShrink: 0}}>
                 <Typography variant="h5" sx={{textAlign: 'center', mb: 3, fontWeight: 500}}>
                     {t('desk.newSessionHeading', {defaultValue: 'What should the agent work on?'})}
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{alignItems: 'center', mb: 1.5}}>
+                    <FolderPicker value={folder} onChange={setPicked} recentFolders={recentFolders}/>
+                    {onAddProject && <Button size="small" onClick={onAddProject} sx={{flexShrink: 0}}>{t('desk.addProject', {defaultValue: 'Add project'})}</Button>}
+                </Stack>
+                <Typography variant="caption" sx={{display: 'block', mb: 1.5, color: 'text.secondary'}}>
+                    {t('desk.taskDirectoryHint', {defaultValue: 'Choose a project directory, then describe the task below.'})}
                 </Typography>
                 <Composer
                     autoFocus
                     minRows={3}
                     placeholder={t('desk.promptPlaceholder', {defaultValue: 'Describe a task…'})}
                     canSubmit={folder.trim() !== ''}
+                    text={form.prompt ?? ''}
+                    onTextChange={(text) => update('prompt', text)}
+                    onAccepted={(submitted) => setForm((previous) => previous.prompt === submitted ? {...previous, prompt: ''} : previous)}
                     onSubmit={(prompt) => onCreate(folder.trim(), prompt, permissionMode, profile, model)}
                     context={(
                         <>
-                            <FolderPicker value={folder} onChange={setPicked} recentFolders={recentFolders}/>
                             <ProfileSelect value={profile} onChange={pickProfile}/>
-                            <ModelSelect profile={profile} value={model} onChange={setModel}/>
-                            <PermissionModeSelect value={permissionMode} permissionModes={permissionModes} onChange={setPermissionMode}/>
+                            <ModelSelect profile={profile} value={model} onChange={(value) => update('model', value)}/>
+                            <PermissionModeSelect value={permissionMode} permissionModes={permissionModes} onChange={(value) => update('permissionMode', value)}/>
                         </>
                     )}
                 />

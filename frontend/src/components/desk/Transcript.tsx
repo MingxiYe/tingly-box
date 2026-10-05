@@ -1,13 +1,15 @@
 import {Block, Cancel, Check, CheckCircle, ChevronRight, Close, ErrorOutline, ExpandMore, Robot} from '@/components/icons';
 import type {MessageInfo} from '@/services/deskApi';
-import {Box, Button, Chip, CircularProgress, Collapse, Paper, Stack, TextField, Typography} from '@mui/material';
+import {Box, Button, Chip, CircularProgress, Collapse, Paper, Stack, TextField, Alert, Typography} from '@mui/material';
 import type {TFunction} from 'i18next';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {ActivityStep, TaskState, TranscriptBlock} from './deskUtils';
 import {agentReport, formatTokens, toolSummary} from './deskUtils';
 import Markdown from './Markdown';
+import {getReadableAccent} from '@/theme/status';
 import { fontMono, fontSizes } from '@/theme/fonts';
+import {useDeskStorage} from './useDeskStorage';
 
 interface TranscriptProps {
     blocks: TranscriptBlock[];
@@ -15,7 +17,7 @@ interface TranscriptProps {
     working: boolean;
     // Opens every activity row; each row can still be toggled on its own.
     expandAll?: boolean;
-    onRespond: (requestId: string, approved: boolean, answer: string) => Promise<void>;
+    onRespond: (requestId: string, approved: boolean, answer: string) => Promise<boolean>;
 }
 
 const mono = {fontFamily: fontMono, fontSize: fontSizes.md};
@@ -61,7 +63,7 @@ const TaskTag = ({task}: {task: TaskState}) => {
             color={task.status === 'failed' ? 'error' : 'default'}
             icon={task.status === 'running' ? <CircularProgress size={10} sx={{ml: '6px !important'}}/> : undefined}
             label={`${t('desk.background', {defaultValue: 'background'})} · ${statusLabel(t, task.status)}`}
-            sx={{height: 20, flexShrink: 0, '& .MuiChip-label': {px: 0.75, fontSize: fontSizes.xs}}}
+            sx={{height: 20, flexShrink: 0, color: (theme) => task.status === 'failed' ? getReadableAccent(theme, 'error') : undefined, borderColor: (theme) => task.status === 'failed' ? getReadableAccent(theme, 'error') : undefined, '& .MuiChip-label': {px: 0.75, fontSize: fontSizes.xs}}}
         />
     );
 };
@@ -78,7 +80,7 @@ const StepDetail = ({step}: {step: ActivityStep}) => {
     return (
         <Box>
             <Stack direction="row" spacing={1} sx={{alignItems: 'baseline', minWidth: 0}}>
-                <Typography variant="body2" sx={{fontWeight: 600, flexShrink: 0, color: step.isError ? 'error.main' : 'text.primary'}}>
+                <Typography variant="body2" sx={{fontWeight: 600, flexShrink: 0, color: (theme) => step.isError ? getReadableAccent(theme, 'error') : theme.palette.text.primary}}>
                     {step.name || 'Result'}
                 </Typography>
                 {summary && (
@@ -125,7 +127,7 @@ const ActivityRow = ({steps, live, expandAll}: {steps: ActivityStep[]; live: boo
                 role="button"
                 onClick={() => setOpen((v) => !v)}
                 sx={{
-                    display: 'inline-flex', alignItems: 'center', gap: 0.5, cursor: 'pointer', userSelect: 'none',
+                    display: 'inline-flex', alignItems: 'center', gap: 0.5, cursor: 'default', userSelect: 'none',
                     color: 'text.secondary', '&:hover': {color: 'text.primary'},
                 }}
             >
@@ -134,7 +136,7 @@ const ActivityRow = ({steps, live, expandAll}: {steps: ActivityStep[]; live: boo
                 {/* A failing command is routine inside an agent's run (a red
                     test it goes on to fix), so only the count is marked. */}
                 {failed > 0 && (
-                    <Typography variant="body2" sx={{color: 'error.main'}}>
+                    <Typography variant="body2" sx={{color: (theme) => getReadableAccent(theme, 'error')}}>
                         · {t('desk.failedCount', {defaultValue: '{{count}} failed', count: failed})}
                     </Typography>
                 )}
@@ -149,27 +151,43 @@ const ActivityRow = ({steps, live, expandAll}: {steps: ActivityStep[]; live: boo
     );
 };
 
+interface ApprovalDraft {answer: string; status: 'idle' | 'sending' | 'accepted'}
+const decodeApproval = (value: unknown): ApprovalDraft => {
+    const saved = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+    return {answer: typeof saved.answer === 'string' ? saved.answer : '', status: saved.status === 'accepted' ? 'accepted' : 'idle'};
+};
+
 // RequestCard is an approval or a question from Claude. Only the one still
 // waiting on a live turn is actionable; an answered one collapses to a line
 // saying what was decided.
 const RequestCard = ({block, pending, onRespond}: {
     block: Extract<TranscriptBlock, {type: 'request'}>;
     pending: boolean;
-    onRespond: (approved: boolean, answer: string) => Promise<void>;
+    onRespond: (approved: boolean, answer: string) => Promise<boolean>;
 }) => {
     const {t} = useTranslation();
-    const [answer, setAnswer] = useState('');
-    const [busy, setBusy] = useState(false);
     const {message, response} = block;
+    const [request, setRequest, currentRequest] = useDeskStorage(`desk.requestDraft:${message.request_id ?? ''}`, decodeApproval);
+    const answer = request.answer;
+    const setAnswer = (text: string) => setRequest((previous) => ({...previous, answer: text}));
+    const busy = request.status === 'sending';
+    const submitted = request.status === 'accepted';
+    const [failed, setFailed] = useState(false);
     const isAsk = message.kind === 'ask_request';
-    const summary = isAsk ? '' : toolSummary(message.payload);
+    const summary = isAsk ? '' : JSON.stringify(message.payload ?? {}, null, 2);
 
     const respond = async (approved: boolean) => {
-        setBusy(true);
+        if (currentRequest.current.status !== 'idle' || (approved && isAsk && !answer.trim())) return;
+        setRequest((previous) => ({...previous, status: 'sending'}));
+        setFailed(false);
         try {
-            await onRespond(approved, answer);
+            if (await onRespond(approved, answer.trim())) {
+                setRequest((previous) => ({answer: previous.answer === answer ? '' : previous.answer, status: 'accepted'}));
+            } else setFailed(true);
+        } catch {
+            setFailed(true);
         } finally {
-            setBusy(false);
+            setRequest((previous) => previous.status === 'sending' ? {...previous, status: 'idle'} : previous);
         }
     };
 
@@ -185,7 +203,7 @@ const RequestCard = ({block, pending, onRespond}: {
     }
 
     return (
-        <Paper variant="outlined" sx={{p: 1.5, borderRadius: 2, borderColor: 'primary.main'}}>
+        <Paper data-request-id={message.request_id} variant="outlined" sx={{p: 1.5, borderRadius: 2, borderColor: 'primary.main'}}>
             <Typography variant="body2" sx={{fontWeight: 600, mb: 0.75, color: 'text.primary', fontSize: '0.875rem'}}>
                 {isAsk
                     ? message.content
@@ -200,18 +218,29 @@ const RequestCard = ({block, pending, onRespond}: {
                 <TextField
                     size="small"
                     fullWidth
-                    autoFocus
+                    multiline
+                    maxRows={8}
+                    disabled={busy || submitted}
+                    slotProps={{htmlInput: {'aria-label': t('desk.answerPlaceholder', {defaultValue: 'Your answer'})}}}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.nativeEvent.isComposing) {
+                            event.preventDefault();
+                            void respond(true);
+                        }
+                    }}
                     placeholder={t('desk.answerPlaceholder', {defaultValue: 'Your answer'})}
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
                     sx={{mb: 1}}
                 />
             )}
+            {failed && <Alert severity="error" sx={{mb: 1}}>{t('desk.responseRetry', {defaultValue: 'Response was not accepted. Your answer is kept; try again.'})}</Alert>}
+            {submitted && <Typography role="status" variant="caption">{t('desk.responseSubmitted', {defaultValue: 'Response sent — waiting for the agent…'})}</Typography>}
             <Stack direction="row" spacing={1}>
-                <Button size="small" variant="contained" startIcon={<Check/>} disabled={busy} onClick={() => respond(true)}>
+                <Button size="small" variant="contained" startIcon={<Check/>} disabled={busy || submitted || (isAsk && !answer.trim())} onClick={() => respond(true)}>
                     {isAsk ? t('desk.answer', {defaultValue: 'Answer'}) : t('desk.approve', {defaultValue: 'Allow'})}
                 </Button>
-                <Button size="small" variant="outlined" color="inherit" startIcon={<Close/>} disabled={busy} onClick={() => respond(false)}>
+                <Button size="small" variant="outlined" color="inherit" startIcon={<Close/>} disabled={busy || submitted} onClick={() => respond(false)}>
                     {isAsk ? t('desk.decline', {defaultValue: 'Decline'}) : t('desk.deny', {defaultValue: 'Deny'})}
                 </Button>
             </Stack>
@@ -224,7 +253,7 @@ interface BlockListProps {
     pendingRequestId?: string;
     working: boolean;
     expandAll: boolean;
-    onRespond: (requestId: string, approved: boolean, answer: string) => Promise<void>;
+    onRespond: (requestId: string, approved: boolean, answer: string) => Promise<boolean>;
 }
 
 // BlockList renders a run of blocks: the conversation, or a subagent's own
@@ -244,7 +273,7 @@ const BlockList = ({blocks, pendingRequestId, working, expandAll, onRespond}: Bl
                 case 'request':
                     return (
                         <RequestCard
-                            key={i}
+                            key={b.message.request_id ?? i}
                             block={b}
                             pending={b.message.request_id === pendingRequestId}
                             onRespond={(approved, answer) => onRespond(b.message.request_id ?? '', approved, answer)}
@@ -252,7 +281,7 @@ const BlockList = ({blocks, pendingRequestId, working, expandAll, onRespond}: Bl
                     );
                 case 'error':
                     return (
-                        <Stack key={i} direction="row" spacing={0.75} sx={{alignItems: 'flex-start', color: 'error.main'}}>
+                        <Stack key={i} direction="row" spacing={0.75} sx={{alignItems: 'flex-start', color: (theme) => getReadableAccent(theme, 'error')}}>
                             <ErrorOutline sx={{fontSize: 18, mt: 0.25}}/>
                             <Typography variant="body2" sx={{color: 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-word'}}>{b.message.content}</Typography>
                         </Stack>
@@ -285,7 +314,7 @@ const AgentCard = ({block, turnLive, expandAll, onRespond}: {
     block: Extract<TranscriptBlock, {type: 'agent'}>;
     turnLive: boolean;
     expandAll: boolean;
-    onRespond: (requestId: string, approved: boolean, answer: string) => Promise<void>;
+    onRespond: (requestId: string, approved: boolean, answer: string) => Promise<boolean>;
 }) => {
     const {t} = useTranslation();
     const [toggled, setToggled] = useState<{under: boolean; open: boolean} | null>(null);
@@ -306,9 +335,9 @@ const AgentCard = ({block, turnLive, expandAll, onRespond}: {
 
     const statusIcon = {
         running: <CircularProgress size={14}/>,
-        completed: <CheckCircle sx={{fontSize: 16, color: 'success.main'}}/>,
+        completed: <CheckCircle sx={{fontSize: 16, color: (theme) => getReadableAccent(theme, 'success')}}/>,
         stopped: <Block sx={{fontSize: 16, color: 'text.secondary'}}/>,
-        failed: <Cancel sx={{fontSize: 16, color: 'error.main'}}/>,
+        failed: <Cancel sx={{fontSize: 16, color: (theme) => getReadableAccent(theme, 'error')}}/>,
     }[status];
 
     return (
@@ -317,7 +346,7 @@ const AgentCard = ({block, turnLive, expandAll, onRespond}: {
                 role="button"
                 aria-expanded={open}
                 onClick={() => setToggled({under: expandAll, open: !open})}
-                sx={{px: 1.5, py: 1, cursor: 'pointer', userSelect: 'none', '&:hover': {bgcolor: 'action.hover'}}}
+                sx={{px: 1.5, py: 1, cursor: 'default', userSelect: 'none', '&:hover': {bgcolor: 'action.hover'}}}
             >
                 <Stack direction="row" spacing={1} sx={{alignItems: 'center', minWidth: 0}}>
                     <Robot sx={{fontSize: 18, color: 'text.secondary', flexShrink: 0}}/>
