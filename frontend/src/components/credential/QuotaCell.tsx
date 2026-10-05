@@ -26,6 +26,9 @@ const STALE_AFTER_MS = 60 * 60 * 1000;
 // row height the Actions group already sets.
 const MAX_ALLOWANCE_LINES = 2;
 const MAX_VALUE_LINES_ALONE = 2;
+// Resource groups (e.g. Codex reset credits, "3/4") take whatever is left of
+// the three lines, so they show up front when they fit instead of only in the hover.
+const MAX_LINES = 3;
 
 interface QuotaCellProps {
     quota: ProviderQuota | undefined;
@@ -57,11 +60,13 @@ function formatMoney(value: number, window: QuotaWindow): string {
 
 interface CellLine {
     item: QuotaWindowDisplayItem;
-    /** allowance: a share of a cap · wallet: money against a cap · balance: an amount left · spend: an amount used */
-    kind: 'allowance' | 'wallet' | 'balance' | 'spend';
+    /** allowance: a share of a cap · wallet: money against a cap · balance: an amount left · spend: an amount used · resource: a group of credits/entries */
+    kind: 'allowance' | 'wallet' | 'balance' | 'spend' | 'resource';
     /** Remaining share, for the ring; only allowance and wallet have one. */
     remaining?: number;
     text: string;
+    /** Resource only: nothing left, shown as a muted dot. */
+    exhausted?: boolean;
 }
 
 /**
@@ -111,8 +116,17 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
     const allowances = described.filter(line => line.kind === 'allowance');
     const values = described.filter(line => line.kind !== 'allowance');
     const allowanceLines = allowances.slice(0, MAX_ALLOWANCE_LINES);
-    const lines = [...allowanceLines, ...values.slice(0, allowanceLines.length ? 1 : MAX_VALUE_LINES_ALONE)];
-    const hidden = described.length - lines.length;
+    const primary = [...allowanceLines, ...values.slice(0, allowanceLines.length ? 1 : MAX_VALUE_LINES_ALONE)];
+    const resources: CellLine[] = resourceItems
+        .filter(r => r.key === 'resource')
+        .map(r => ({
+            item: { key: `resource:${r.key}`, label: r.window.label ?? r.key, window: r.window },
+            kind: 'resource' as const,
+            exhausted: r.exhausted,
+            text: r.countLabel,
+        }));
+    const lines = [...primary, ...resources.slice(0, Math.max(0, MAX_LINES - primary.length))];
+    const hidden = described.length + resources.length - lines.length;
 
     // Allowances are named by period ("5h", "7d") when that tells them apart —
     // short and scannable down a column. Two of the same period (e.g.
@@ -169,7 +183,30 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
                     );
                 })}
                 {resourceItems.map(item => (
-                    <TooltipRow key={item.key} label={item.window.label ?? item.key} value={item.countLabel} />
+                    <Box key={item.key} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <TooltipRow dot dotMuted={item.exhausted} label={item.window.label ?? item.key} value={item.countLabel} />
+                        {item.entries.map(({ key, label, window }) => {
+                            const voucher = window.unit === 'credits' && window.limit === 1;
+                            const resetsAt = window.resets_at ? new Date(window.resets_at).getTime() : NaN;
+                            return (
+                                <TooltipRow
+                                    key={key}
+                                    indent
+                                    label={label}
+                                    value={voucher
+                                        ? window.label
+                                        : isCountable(window)
+                                            ? t('rule.service.quota.left', { value: formatQuotaRemaining(window, formatNumber) })
+                                            : formatQuotaAvailable(window, formatNumber)}
+                                    detail={voucher
+                                        ? window.description
+                                        : Number.isFinite(resetsAt) && resetsAt > now
+                                            ? t('rule.service.quota.resetsIn', { duration: formatQuotaDuration(resetsAt - now) })
+                                            : window.description}
+                                />
+                            );
+                        })}
+                    </Box>
                 ))}
                 {cost && costText && (
                     <TooltipRow label={cost.label || t('providerTable.quota.cost')} value={costText} />
@@ -228,7 +265,9 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
                     const { remaining } = line;
                     return (
                         <Box key={line.item.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                            {remaining != null ? (
+                            {line.kind === 'resource' ? (
+                                <ResourceDot size={14} muted={line.exhausted} />
+                            ) : remaining != null ? (
                                 <Box component="span" sx={{ display: 'inline-flex', ...(refreshing && quotaRingSpinSx) }}>
                                     {/* While refreshing, a fixed quarter arc spins like a loader — the
                                         real arc can be empty (used up), and an empty ring shows no motion. */}
@@ -325,6 +364,19 @@ export function QuotaCell({ quota, refreshing, onRefresh }: QuotaCellProps) {
     );
 }
 
+/**
+ * Marks a resource (credits, per-model entries) in the ring's slot. These are
+ * counts of things, not shares of a cap, so a ring would imply a proportion —
+ * a dot only says "there is one here" — green while any is left, muted once all are spent.
+ */
+function ResourceDot({ size, muted }: { size: number; muted?: boolean }) {
+    return (
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size, flexShrink: 0 }}>
+            <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: muted ? 'text.disabled' : QUOTA_COLORS.success }} />
+        </Box>
+    );
+}
+
 function TooltipAction({ icon, label, disabled, onClick }: {
     icon: ReactNode;
     label: string;
@@ -366,16 +418,23 @@ function TooltipAction({ icon, label, disabled, onClick }: {
  * its full name, and the figure right-aligned so a column of figures lines up;
  * the reset time sits underneath in the secondary color.
  */
-function TooltipRow({ remaining, label, value, detail }: {
+function TooltipRow({ remaining, dot, dotMuted, label, value, detail, indent }: {
     remaining?: number;
+    /** A dot instead of a ring: the row is an item or a group, not a share of a cap. */
+    dot?: boolean;
+    dotMuted?: boolean;
+    /** A child entry of the group row above: shifted right, no ring slot of its own. */
+    indent?: boolean;
     label: ReactNode;
     value: ReactNode;
     detail?: ReactNode;
 }) {
     return (
-        <Box sx={{ display: 'grid', gridTemplateColumns: '12px 1fr auto', columnGap: 1, alignItems: 'center' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: '12px 1fr auto', columnGap: 1, alignItems: 'center', pl: indent ? 2.5 : 0 }}>
             <Box sx={{ display: 'inline-flex' }}>
-                {remaining != null && <QuotaRing remaining={remaining} color={quotaRingColor(remaining)} size={12} />}
+                {dot
+                    ? <ResourceDot size={12} muted={dotMuted} />
+                    : remaining != null && <QuotaRing remaining={remaining} color={quotaRingColor(remaining)} size={12} />}
             </Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {label}
