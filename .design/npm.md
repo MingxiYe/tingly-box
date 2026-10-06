@@ -7,7 +7,7 @@ again.
 
 Packages under `build/npx/`, published by `.github/workflows/npm.yml` on
 each GitHub release (dispatched by the `trigger-npm-publish` job at the end of
-`release.yml` for both tag pushes and manual releases, since a release created
+`release-cli.yml` for tag pushes and manual releases, and by `release-gui.yml` for the GUI package, since a release created
 with `GITHUB_TOKEN` does not fire the `release: published` event; the run then
 waits for the `production` environment approval):
 
@@ -88,7 +88,7 @@ the path to re-enable global installs.
   It also esbuild-bundles the gui shim and parse-checks it, so a broken
   `shared/` import fails the harness for every package. Run it before
   touching the shims or the publish workflow. CI runs it too: the
-  `verify-npx-shim` job in `verify-release.yml` executes it on every release
+  `verify-npx-shim` job in `verify-release-cli.yml` executes it on every release
   (and on manual runs against any tag).
 
 ### The failure, precisely

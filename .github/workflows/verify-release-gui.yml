@@ -4,17 +4,15 @@ run-name: >-
   🔍 Verify GUI release ${{ inputs.tag }}
 
 # Post-release verification of the desktop GUI assets on a release. The CLI has
-# its own (verify-release.yml); the two pipelines are independent. Checks the
-# assets already attached by release-gui.yml (or release.yml with build_gui),
-# no rebuild: release-gui.yml already builds, installs and ldd-checks them.
+# its own (verify-release-cli.yml); the two pipelines are independent. Checks the
+# assets release-gui.yml attached, no rebuild: release-gui.yml already builds, installs and ldd-checks them.
 #
 #   tingly-box-gui-macos-arm64.zip    TinglyBox.app, arm64 Mach-O
 #   tingly-box-gui-windows-amd64.zip  tingly-box-gui.exe, x86-64 PE
 #   tingly-box-gui-linux-amd64.deb    package tingly-box-gui, /usr/bin/tingly-box-gui
 #   tingly-box-gui-linux-amd64.rpm    RPM package
 #
-# Called by release-gui.yml after it attaches the packages, and by release.yml
-# after it publishes a release that built the GUI. Can also be run by hand.
+# Called by release-gui.yml after it attaches the packages. Can also be run by hand.
 on:
   workflow_dispatch:
     inputs:
@@ -49,9 +47,9 @@ jobs:
             --dir assets
           ls -lh assets/
 
-      # release.yml lists the GUI files in checksums.txt; a standalone
-      # release-gui.yml run writes checksums-gui.txt. One of them must exist
-      # and every GUI file must be covered, or the check would pass vacuously.
+      # release-gui.yml writes checksums-gui.txt (the CLI's checksums.txt does not
+      # list GUI files). Every GUI file must be covered, or the check would pass
+      # vacuously.
       - name: Verify checksums
         working-directory: assets
         run: |

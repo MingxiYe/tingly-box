@@ -1,0 +1,32 @@
+name: Ensure GitHub release
+description: >-
+  Create the release for a tag if it does not exist yet (with generated notes),
+  and do nothing if it does. release-cli.yml and release-gui.yml run in parallel
+  and either may finish first, so both call this and then only upload assets
+  (`gh release upload --clobber`) and edit their own bounded notes section; neither
+  overwrites the other's work. Safe against the two creating at the same moment.
+inputs:
+  tag:
+    description: Release tag
+    required: true
+  github_token:
+    description: Token with contents:write
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Create the release if missing
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        TAG: ${{ inputs.tag }}
+      run: |
+        if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          echo "Release $TAG already exists."
+          exit 0
+        fi
+        # Loses a creation race with the other pipeline: fine, as long as the
+        # release exists afterwards.
+        gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes \
+          || gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+        echo "Release $TAG is ready."

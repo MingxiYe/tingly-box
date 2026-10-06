@@ -8,7 +8,7 @@ name: Verify Compile
 #   - compile-frontend : pnpm build of frontend/
 # The three jobs are independent: the Go builds embed the committed
 # PLACEHOLDER dist, so they never wait on the frontend build. Full release
-# builds (and the release-asset checks) live in release.yml / verify-release.yml.
+# builds (and the release-asset checks) live in release-cli.yml / verify-release-cli.yml.
 on:
   pull_request:
     # Everything except areas no build here reads (docs, CI config, the
@@ -204,7 +204,7 @@ jobs:
       - name: Run codegen
         run: pnpm gen:api
 
-      # Same policy as release.yml: legacy type errors exist, so report them
+      # Same policy as release-cli.yml: legacy type errors exist, so report them
       # without failing the check.
       - name: Type check (non-blocking)
         continue-on-error: true

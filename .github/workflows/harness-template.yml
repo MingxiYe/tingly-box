@@ -6,7 +6,7 @@ name: Harness Template
 #
 #   - harness-matrix.yml : the CI trigger wrapper (push ci/**, PR-merge to
 #     main, manual dispatch). Calls this template with the chosen focus.
-#   - release.yml        : gates the GitHub release on a green harness by
+#   - release-cli.yml        : gates the GitHub release on a green harness by
 #     calling this template directly.
 #
 # Both callers share this matrix definition, so the leg set and the pass/fail

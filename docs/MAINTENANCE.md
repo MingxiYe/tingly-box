@@ -25,7 +25,7 @@ Pushing to any `ci/*` branch automatically triggers the build pipeline:
 git push origin ci/your-fix-description
 ```
 
-The GitHub Actions workflow (`.github/workflows/gh-release.yml`) will:
+The GitHub Actions workflow (`.github/workflows/release-cli.yml`, started by `release.yml`) will:
 1. Build the frontend (React + MUI)
 2. Generate API client from swagger.json
 3. Build CLI binaries for all platforms (linux-amd64, linux-arm64, macos-amd64, macos-arm64, windows-amd64)
@@ -110,14 +110,16 @@ All binaries are:
 
 ### GUI Builds (Optional)
 
-The GUI is packaged separately from the CLI release and the npm publish, as an
-add-on in any order:
+The GUI is its own pipeline (`release-gui.yml`), independent of the CLI's
+(`release-cli.yml`) and off by default: a tag push releases the CLI only.
 
-- **With a release**: dispatch `release.yml` with `build_gui=true`.
-- **Later, onto an existing release**: Actions → "Release GUI" → Run workflow with
-  `release_tag=<existing tag>`. It builds all platforms and attaches them
-  (replacing same-named assets) plus `checksums-gui.txt`, then dispatches `npm.yml`
-  for the GUI package only (`publish_gui=true`, waits for `production` approval).
+- **With a release**: dispatch `release.yml` with `build_gui=true` (and `build_cli`
+  as wanted); the two pipelines run in parallel.
+- **Alone, any time**: Actions → "Release GUI" → Run workflow with
+  `release_tag=<tag>`. It builds all platforms, creates the release if the CLI
+  one is not there yet, attaches the packages (replacing same-named assets) plus
+  `checksums-gui.txt`, then dispatches `npm.yml` for the GUI package only
+  (`publish_gui=true`, waits for `production` approval) and verifies the result.
   No CLI build or harness.
 - **npm, on its own**: `npm.yml` with `publish_gui=true`, `publish_cli=false`,
   `build_docker=false` publishes only `tingly-box-gui` (it builds the per-platform
@@ -171,7 +173,7 @@ If a release introduces issues:
 
 ## References
 
-- CI/CD Configuration: [`.github/workflows/gh-release.yml`](../.github/workflows/release.yml)
+- CI/CD Configuration: [`.github/workflows/release.yml`](../.github/workflows/release.yml) (entry point), [`release-cli.yml`](../.github/workflows/release-cli.yml), [`release-gui.yml`](../.github/workflows/release-gui.yml)
 - NPX Publish Workflow: [`.github/workflows/gh-npx-publish.yml`](../.github/workflows/npm.yml)
 - User Manual: [`docs/user-manual.md`](user-manual.md)
 - Docker Setup: [`docs/docker.md`](docker.md)
@@ -185,7 +187,7 @@ After a GitHub Release is created, publish NPX packages to npm for easy installa
 Publishes npm packages based on an existing GitHub Release.
 
 For a tag push (`v*`), you do not start it by hand: the last job of
-`release.yml` (`trigger-npm-publish`) dispatches it as soon as the GitHub
+`release-cli.yml` (`trigger-npm-publish`) dispatches it as soon as the GitHub
 Release is created, with `publish_cli=true`, `publish_gui=false`,
 `build_docker=true` and the npm dist-tag inferred from the version
 (`v1.2.3` → `latest`, `v1.2.3-rc1` → `rc`). The run then waits at the

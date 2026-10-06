@@ -62,7 +62,7 @@ path — because that is the product's core. This boundary is deliberate:
 Every hermetic mode runs in
 [`.github/workflows/harness-matrix.yml`](../../.github/workflows/harness-matrix.yml)
 (shared leg definitions live in `harness-template.yml`, also called directly
-by `release.yml` to gate releases): matrix (single / transitive / idempotent
+by `release-cli.yml` to gate releases): matrix (single / transitive / idempotent
 / flags / content_shapes / cache_controls / cache_prefix / vendor /
 servertool / thinking_limits / flag_paths), one
 matrix leg per client driver (gosdk / python / node / aisdk), `replay batch`
