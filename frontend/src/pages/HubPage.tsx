@@ -8,6 +8,8 @@ import {
     CircularProgress,
     Divider,
     IconButton,
+    Menu,
+    MenuItem,
     Paper,
     Stack,
     Tooltip,
@@ -15,7 +17,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { host } from '@/host';
-import { AiAgents, BarChart, ChevronRight, Lock, Refresh, Settings, TextSnippet } from '@/components/icons';
+import { AiAgents, BarChart, ChevronRight, Lock, Refresh, Settings, Sort, TextSnippet } from '@/components/icons';
 import { useHealth } from '@/contexts/HealthContext';
 import { useVersion } from '@/contexts/VersionContext';
 import { useProviderQuota } from '@/hooks/useProviderQuota';
@@ -34,6 +36,21 @@ interface HubProvider {
     oauth_detail?: Provider['oauth_detail'];
 }
 
+type QuotaSortMode = 'remaining' | 'name' | 'type';
+const SORT_MODES: QuotaSortMode[] = ['remaining', 'name', 'type'];
+const SORT_STORAGE_KEY = 'hub.quotaSort';
+
+// The panel is reopened constantly, so the chosen order is remembered; storage
+// can be unavailable, in which case the default order applies.
+function readSortMode(): QuotaSortMode {
+    try {
+        const saved = localStorage.getItem(SORT_STORAGE_KEY);
+        return SORT_MODES.find((m) => m === saved) ?? 'remaining';
+    } catch {
+        return 'remaining';
+    }
+}
+
 // HubPage is the tray's compact panel — a dedicated small window (see
 // gui/wails3/systray.go's useSystray) separate from the main app window. It
 // never navigates itself; its jumps open the main window instead, so this
@@ -46,6 +63,8 @@ export default function HubPage() {
     const { currentVersion, hasUpdate } = useVersion();
     const [providers, setProviders] = useState<HubProvider[]>([]);
     const [loadingProviders, setLoadingProviders] = useState(true);
+    const [sortMode, setSortMode] = useState<QuotaSortMode>(readSortMode);
+    const [sortAnchor, setSortAnchor] = useState<HTMLElement | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -78,7 +97,20 @@ export default function HubPage() {
             const tightest = tightestWindow(row.quota);
             return { ...row, remaining: tightest ? quotaRemainingPercent(tightest) : Infinity };
         })
-        .sort((a, b) => a.remaining - b.remaining);
+        .map((row) => ({ ...row, type: providerIconId(row.provider, row.quota.provider_type) ?? '' }));
+    const displayName = (row: { provider: HubProvider }) => row.provider.name || row.provider.uuid;
+    // Every order falls back to name so equal keys never shuffle between renders.
+    const byName = (a: typeof quotaRows[number], b: typeof quotaRows[number]) =>
+        displayName(a).localeCompare(displayName(b));
+    quotaRows.sort((a, b) => {
+        if (sortMode === 'name') return byName(a, b);
+        if (sortMode === 'type') {
+            // Providers with no recognised type go last, not first.
+            if (!a.type !== !b.type) return a.type ? -1 : 1;
+            return a.type.localeCompare(b.type) || byName(a, b);
+        }
+        return a.remaining - b.remaining || byName(a, b);
+    });
 
     // Opens the separate main app window at the given path. HTTP-first: the
     // same-origin /api/v1/gui/open route reaches the exact same Go handler
@@ -185,6 +217,35 @@ export default function HubPage() {
                     <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                         {t('hub.quota.title')}
                     </Typography>
+                    <Box>
+                    <IconButton
+                        size="small"
+                        aria-label={t('hub.quota.sort.label')}
+                        onClick={(e) => setSortAnchor(e.currentTarget)}
+                        disabled={quotaRows.length < 2}
+                    >
+                        <Sort sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <Menu
+                        anchorEl={sortAnchor}
+                        open={Boolean(sortAnchor)}
+                        onClose={() => setSortAnchor(null)}
+                        slotProps={{ list: { dense: true } }}
+                    >
+                        {SORT_MODES.map((mode) => (
+                            <MenuItem
+                                key={mode}
+                                selected={mode === sortMode}
+                                onClick={() => {
+                                    setSortMode(mode);
+                                    try { localStorage.setItem(SORT_STORAGE_KEY, mode); } catch { /* not remembered */ }
+                                    setSortAnchor(null);
+                                }}
+                            >
+                                {t(`hub.quota.sort.${mode}`)}
+                            </MenuItem>
+                        ))}
+                    </Menu>
                     <IconButton
                         size="small"
                         aria-label={t('hub.quota.refresh')}
@@ -193,6 +254,7 @@ export default function HubPage() {
                     >
                         <Refresh sx={{ fontSize: 16 }} />
                     </IconButton>
+                    </Box>
                 </Stack>
                 <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0, px: 1.5 }}>
                     {loadingProviders ? (

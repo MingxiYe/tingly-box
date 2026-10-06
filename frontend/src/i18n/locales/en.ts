@@ -1645,7 +1645,13 @@ export default {
     "quota": {
       "title": "Provider Quota",
       "empty": "No quota data yet",
-      "refresh": "Refresh quota"
+      "refresh": "Refresh quota",
+      "sort": {
+        "label": "Sort providers",
+        "remaining": "Closest to limit",
+        "name": "Name",
+        "type": "Type"
+      }
     }
   },
   "mcp": {
