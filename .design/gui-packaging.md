@@ -1,10 +1,13 @@
 # Desktop GUI packaging
 
 What the Wails GUI (`gui/wails3`) ships as, per platform, and why. Built by
-`.github/workflows/release-gui.yml`, its own pipeline: `release.yml` (`build_gui`) can call
-it, or dispatch it alone with an existing release tag to attach the packages
-later. Publishing `tingly-box-gui` to npm (`npm.yml`, `publish_gui`) is a
-separate step; the three can run in any order.
+`.github/workflows/release-gui.yml`, a pipeline independent of the CLI's
+(`release-cli.yml`). `release.yml` is only the entry point and starts the two in
+parallel; a tag push runs the CLI only, and the GUI is opt-in (dispatch `release.yml`
+with `build_gui`, or dispatch `release-gui.yml` with a tag, before or after the
+CLI release). Whichever pipeline finishes first creates the GitHub release
+(`.github/actions/ensure-release`); the other attaches to it. The GUI pipeline
+also dispatches its own npm publish (`npm.yml`, `publish_gui`, pending approval).
 
 | Platform | Asset | How users get it |
 |---|---|---|
@@ -40,6 +43,15 @@ mismatch, `--transport-version`).
   missing package never fails the run. Each new package name needs a Trusted
   Publisher (repo `tingly-dev/tingly-box`, workflow `npm.yml`, environment
   `production`) on npmjs.com before its first publish.
+
+## Verification
+
+The GUI has its own post-release check, `verify-release-gui.yml`, separate from
+the CLI's `verify-release-cli.yml`. It inspects the packages already on the release
+(checksum coverage, macOS arm64 app, Windows x64 exe, deb metadata/contents and
+version, rpm format) without rebuilding. `release-gui.yml` runs it after
+attaching. The build itself
+(including installing the deb and the `ldd` check) stays in `release-gui.yml`.
 
 ## Naming
 

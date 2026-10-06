@@ -20,7 +20,7 @@ import { existsSync } from "fs";
 import { dirname, join } from "path";
 
 // key: `${process.platform}-${process.arch}` → { name, zip }
-// zip: the release asset name (release.yml) the package is built from.
+// zip: the release asset name (release-cli.yml) the package is built from.
 export const PLATFORM_PACKAGES = {
 	"linux-x64": { name: "@tingly-dev/tingly-box-linux-x64", zip: "tingly-box-linux-amd64.zip" },
 	"linux-arm64": { name: "@tingly-dev/tingly-box-linux-arm64", zip: "tingly-box-linux-arm64.zip" },
