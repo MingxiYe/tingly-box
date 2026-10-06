@@ -5,6 +5,7 @@ import type { Provider } from '../../types/provider';
 import { AuthTypeBadge } from '../AuthTypeBadge';
 import { ApiStyleBadge } from '../ApiStyleBadge';
 import SearchField from '../SearchField';
+import ProviderLogo from '../ProviderLogo';
 
 export interface ProviderSidebarProps {
     groupedProviders: Array<{ authType: string; providers: Provider[] }>;
@@ -133,6 +134,7 @@ export function ProviderSidebar({
                                                     flex: 1,
                                                     minWidth: 0
                                                 }}>
+                                                <ProviderLogo provider={provider} size={16} />
                                                 <Typography
                                                     variant="body2"
                                                     color={isSelectedTab ? 'primary.main' : 'text.primary'}
