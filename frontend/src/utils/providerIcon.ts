@@ -69,8 +69,8 @@ function hostOf(apiBase?: string): string {
 
 /**
  * Last resort for plain API-key providers, which carry no quota type: match the
- * API base's host against the catalog's canonical_domain (a host or a
- * dot-separated suffix of it). Several templates can share one host — OAuth
+ * API base's host against the catalog's canonical_domain and base URLs
+ * (a host or a dot-separated suffix of it). Several templates can share one host — OAuth
  * products such as Claude Code sit on api.anthropic.com beside the API itself —
  * so OAuth templates are skipped and the longest matching domain wins.
  */
@@ -79,10 +79,13 @@ function iconIdFromCatalog(provider: IconSource | undefined): string | undefined
     if (!host) return undefined;
     let best: { domain: string; icon: string } | undefined;
     for (const template of Object.values(getServiceProvidersSync())) {
-        const domain = template.canonical_domain?.toLowerCase();
-        if (!domain || !template.icon || template.auth_type === 'oauth') continue;
-        if (host !== domain && !host.endsWith(`.${domain}`)) continue;
-        if (!best || domain.length > best.domain.length) best = { domain, icon: template.icon };
+        if (!template.icon || template.auth_type === 'oauth') continue;
+        const domains = [template.canonical_domain, hostOf(template.base_url_openai), hostOf(template.base_url_anthropic)];
+        for (const raw of domains) {
+            const domain = raw?.toLowerCase();
+            if (!domain || (host !== domain && !host.endsWith(`.${domain}`))) continue;
+            if (!best || domain.length > best.domain.length) best = { domain, icon: template.icon };
+        }
     }
     return best?.icon;
 }

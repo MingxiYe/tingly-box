@@ -492,6 +492,22 @@ const getMockProviderCatalogs = () => ({
         base_url_anthropic: 'https://api.anthropic.com', api_style: 'anthropic',
         region: 'global', type: 'official', icon: 'anthropic',
     },
+    'dashscope-intl': {
+        id: 'dashscope-intl', name: 'Alibaba DashScope (Intl)', status: 'active', valid: true,
+        website: 'https://www.alibabacloud.com', description: 'Alibaba Cloud Model Studio, international',
+        api_doc: '', model_doc: '', pricing_doc: '',
+        canonical_domain: 'dashscope-intl.aliyuncs.com',
+        base_url_openai: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', api_style: 'openai',
+        region: 'intl', type: 'official', icon: 'qwen',
+    },
+    'googleapis-com': {
+        id: 'googleapis-com', name: 'Google Gemini', status: 'active', valid: true,
+        website: 'https://ai.google.dev', description: 'Gemini API',
+        api_doc: '', model_doc: '', pricing_doc: '',
+        canonical_domain: 'generativelanguage.googleapis.com',
+        base_url_openai: 'https://generativelanguage.googleapis.com/v1beta/openai', api_style: 'openai',
+        region: 'global', type: 'official', icon: 'gemini',
+    },
     'deepseek-cn': {
         id: 'deepseek-cn', name: 'DeepSeek (CN)', status: 'active', valid: true,
         website: 'https://deepseek.com', description: 'DeepSeek mainland China endpoint',
