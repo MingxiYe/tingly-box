@@ -113,8 +113,8 @@ All binaries are:
 The GUI is its own pipeline (`release-gui.yml`), independent of the CLI's
 (`release-cli.yml`) and off by default: a tag push releases the CLI only.
 
-- **With a release**: dispatch `release.yml` with `build_gui=true` (and `build_cli`
-  as wanted); the two pipelines run in parallel.
+- **With a release**: dispatch `release.yml` with `build_gui=true`; the CLI and GUI
+  pipelines run in parallel.
 - **Alone, any time**: Actions → "Release GUI" → Run workflow with
   `release_tag=<tag>`. It builds all platforms, creates the release if the CLI
   one is not there yet, attaches the packages (replacing same-named assets) plus

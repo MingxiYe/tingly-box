@@ -25,7 +25,6 @@ on:
         default: './build/docker/docker.build.Dockerfile'
         type: string
 
-env: {}
 
 jobs:
   build-and-push:

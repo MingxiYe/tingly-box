@@ -87,6 +87,8 @@ jobs:
 
   build-cli:
     needs: build-frontend
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
     runs-on: ${{ matrix.runs-on }}
     strategy:
       matrix:
@@ -124,11 +126,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: true
-
-      - name: Set up tag environment
-        shell: bash
-        run: |
-          echo "RELEASE_TAG=${{ inputs.release_tag }}" >> $GITHUB_ENV
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -281,18 +278,16 @@ jobs:
     needs: [build-cli, harness]
     runs-on: ubuntu-latest
     if: needs.build-cli.result == 'success' && needs.harness.result == 'success'
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
     permissions:
       contents: write
     steps:
+      # Only for the local ensure-release action.
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          submodules: true
-
-      - name: Set up tag environment
-        run: |
-          echo "RELEASE_TAG=${{ inputs.release_tag }}" >> $GITHUB_ENV
+          sparse-checkout: .github
 
       - name: Download CLI artifacts
         uses: actions/download-artifact@v4
@@ -332,27 +327,18 @@ jobs:
             echo "No zip files found in release directory"
           fi
 
-      # The release may already exist: release-gui.yml runs in parallel and
-      # can get there first. Either way this only uploads, never rewrites notes.
       - name: Ensure the GitHub release exists
         uses: ./.github/actions/ensure-release
         with:
           tag: ${{ env.RELEASE_TAG }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload CLI assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber -- \
             release/*.zip release/checksums.txt
 
-  # GitHub never starts workflow runs for events that a workflow creates with
-  # its own GITHUB_TOKEN, so the release published above does not fire the
-  # `release: published` trigger in npm.yml. Dispatch it explicitly instead.
-  # Nothing gets published by this: the npm run stops at the `production`
-  # environment approval gate before the first `npm publish`. This only
-  # removes the manual "Run workflow" step, not the human approval.
   trigger-npm-publish:
     needs: github-release
     runs-on: ubuntu-latest
@@ -360,56 +346,19 @@ jobs:
       actions: write
       contents: read
     steps:
+      # Only for the local dispatch-npm action.
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github
+
       - name: Dispatch NPX publish workflow
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
-        run: |
-          # Same inference npm.yml applies on a release event: stable → latest,
-          # pre-release (v1.2.3-rc1) → rc.
-          VERSION="${RELEASE_TAG#v}"
-          if [[ "$VERSION" == *-* ]]; then
-            NPM_TAG=rc
-          else
-            NPM_TAG=latest
-          fi
-
-          echo "Dispatching npm.yml for $RELEASE_TAG (npm dist-tag: $NPM_TAG)"
-          gh workflow run npm.yml \
-            --repo "$GITHUB_REPOSITORY" \
-            --ref "$RELEASE_TAG" \
-            -f tag="$RELEASE_TAG" \
-            -f npm_tag="$NPM_TAG" \
-            -f publish_cli=true \
-            -f publish_gui=false \
-            -f build_docker=true
-
-          # Best effort: link the dispatched run so approvers can find it from here.
-          RUN_URL=""
-          for _ in 1 2 3 4 5 6; do
-            sleep 5
-            RUN_URL="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow npm.yml \
-              --event workflow_dispatch --branch "$RELEASE_TAG" --limit 1 \
-              --json url -q '.[0].url' 2>/dev/null || true)"
-            [ -n "$RUN_URL" ] && break
-          done
-
-          {
-            echo "## 📦 NPX publish dispatched"
-            echo ""
-            echo "| Item | Value |"
-            echo "| --- | --- |"
-            echo "| Release | \`$RELEASE_TAG\` |"
-            echo "| npm dist-tag | \`$NPM_TAG\` |"
-            echo "| Publish | cli=true, gui=false (release-gui.yml dispatches its own), docker=true |"
-            if [ -n "$RUN_URL" ]; then
-              echo "| Run | $RUN_URL |"
-            else
-              echo "| Run | see the [NPX Package Publish workflow](https://github.com/$GITHUB_REPOSITORY/actions/workflows/npm.yml) |"
-            fi
-            echo ""
-            echo "The run waits for approval of the \`production\` environment before publishing."
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/dispatch-npm
+        with:
+          tag: ${{ inputs.release_tag }}
+          publish_cli: true
+          publish_gui: false # release-gui.yml dispatches its own
+          build_docker: true
 
   # Verify the CLI release we just published. verify-release-cli.yml's own
   # `release: published` trigger never fires for it (same GITHUB_TOKEN rule

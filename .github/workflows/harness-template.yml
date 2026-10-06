@@ -6,7 +6,7 @@ name: Harness Template
 #
 #   - harness-matrix.yml : the CI trigger wrapper (push ci/**, PR-merge to
 #     main, manual dispatch). Calls this template with the chosen focus.
-#   - release-cli.yml        : gates the GitHub release on a green harness by
+#   - release-cli.yml    : gates the GitHub release on a green harness by
 #     calling this template directly.
 #
 # Both callers share this matrix definition, so the leg set and the pass/fail
@@ -30,12 +30,7 @@ env:
   GO_VERSION: '1.26'
 
 jobs:
-  # Compile the harness once. Every leg used to `go run ./cli/harness`, i.e.
-  # recompile the same ~150 MB binary on its own cold runner (~3 min each, ~57
-  # of the ~67 runner-minutes of a full run) to execute a leg that itself takes
-  # 1-15 s. The legs now download this binary instead; `duo` re-executes itself
-  # (os.Executable) and `lb` embeds its scenarios, so a prebuilt binary run from
-  # a plain checkout behaves the same.
+  # Compile the harness once; legs download it instead of each running `go run`.
   build:
     name: Build harness
     runs-on: ubuntu-latest
@@ -190,11 +185,12 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # No submodules and no Go toolchain: the legs only need the checkout for
-      # tests/clients (the python/node/aisdk drivers) next to the binary.
-      - name: Checkout code
-        if: steps.gate.outputs.run == 'true'
+      # Only the client-driver legs read from the tree (tests/clients).
+      - name: Checkout client drivers
+        if: steps.gate.outputs.run == 'true' && matrix.leg.setup
         uses: actions/checkout@v6
+        with:
+          sparse-checkout: tests/clients
 
       - name: Download harness binary
         if: steps.gate.outputs.run == 'true'
@@ -263,15 +259,11 @@ jobs:
     steps:
       - name: Evaluate harness outcome
         run: |
-          # A failed build skips every leg, which would otherwise read as a pass.
-          if [ "${{ needs.build.result }}" != "success" ]; then
-            echo "❌ Harness build failed (result=${{ needs.build.result }})."
-            exit 1
-          fi
+          BUILD="${{ needs.build.result }}"
           RESULT="${{ needs.harness.result }}"
-          echo "Harness matrix result: $RESULT"
-          # 'success' when every leg passed or was skipped; otherwise fail.
-          if [ "$RESULT" = "success" ] || [ "$RESULT" = "skipped" ]; then
+          echo "Harness build: $BUILD, legs: $RESULT"
+          # A failed build skips every leg, so require it to have succeeded.
+          if [ "$BUILD" = "success" ] && { [ "$RESULT" = "success" ] || [ "$RESULT" = "skipped" ]; }; then
             echo "✅ All harness legs passed."
           else
             echo "❌ One or more harness legs failed (result=$RESULT)."
