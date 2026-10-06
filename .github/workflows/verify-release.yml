@@ -7,11 +7,11 @@ run-name: >-
 # jobs:
 #   - verify-release-assets: checks the already-built release assets
 #     (zip integrity, checksums, binary formats) — no rebuild.
-#   - verify-gui-package: runs the full production GUI packaging on Linux
-#     (wails bindings codegen, wails frontend build, version ldflags, launch
-#     smoke test). verify-compile.yml's gui job only type-checks the Go side
-#     at PR time; this catches packaging regressions even when a release was
-#     cut without GUI artifacts (build_gui=false).
+#   - verify-gui-package: rebuilds the GUI from source on Linux (wails
+#     bindings codegen, wails frontend build, version ldflags, ELF + linked
+#     library check). It is a ~6 min build, so it only runs on manual runs and
+#     `release: published`; release.yml leaves it off (verify_gui=false) because
+#     release-gui.yml already builds, installs and checks every GUI package.
 #   - verify-npx-shim: runs build/npx/test-shim.sh against the release.
 # Called by release.yml right after it publishes a release (non-blocking, in
 # parallel with the NPX publish workflow) — that release is created with
@@ -27,12 +27,22 @@ on:
         description: 'Release tag to verify (e.g., v1.0.0)'
         required: true
         type: string
+      verify_gui:
+        description: 'Also rebuild the GUI from source (~6 min)'
+        required: false
+        type: boolean
+        default: true
   workflow_call:
     inputs:
       tag:
         description: 'Release tag to verify'
         required: true
         type: string
+      verify_gui:
+        description: 'Also rebuild the GUI from source (~6 min)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -152,6 +162,8 @@ jobs:
 
   verify-gui-package:
     name: Verify GUI Package (Linux)
+    # `inputs` is empty on a `release` event, which always verifies the GUI.
+    if: github.event_name == 'release' || inputs.verify_gui
     runs-on: ubuntu-latest
     env:
       GO_VERSION: '1.26'
@@ -237,11 +249,15 @@ jobs:
       - name: Build GUI (production)
         run: task linux:build PRODUCTION=true VERSION="${{ steps.tag.outputs.tag }}"
 
+      # The GUI binary is `tingly-box-gui` (Taskfile.wails.yml BIN_NAME), never
+      # the CLI's `tingly-box`. It opens a window, so it is not launched here;
+      # release-gui.yml installs the deb and runs the same ldd check.
       - name: Verify GUI binary
         run: |
-          file bin/tingly-box
-          file bin/tingly-box | grep -q 'ELF 64-bit.*x86-64'
-          ./bin/tingly-box --help >/dev/null
+          file bin/tingly-box-gui
+          file bin/tingly-box-gui | grep -q 'ELF 64-bit.*x86-64'
+          # Not `! ldd | grep`: set -e ignores a negated pipeline.
+          if ldd bin/tingly-box-gui | grep "not found"; then exit 1; fi
 
       - name: Write summary
         if: always()
