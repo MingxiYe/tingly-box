@@ -9,6 +9,7 @@ import {
     TableRow,
     TablePagination,
     Box,
+    Stack,
     alpha,
     useTheme,
 } from '@mui/material';
@@ -21,6 +22,7 @@ import {
 } from './UsageMetricCells';
 import { getUsageMetricColumns } from './usageMetricColumns';
 import { fontSizes } from '@/theme/fonts';
+import { ProviderLogoByUuid } from '@/components/ProviderLogo';
 
 export interface AggregatedStat {
     key: string;
@@ -187,7 +189,12 @@ export default function ServiceStatsTable({ stats }: ServiceStatsTableProps) {
                                             },
                                         }}
                                     >
-                                        <TableCell>{stat.provider_name || '-'}</TableCell>
+                                        <TableCell>
+                                            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                                                <ProviderLogoByUuid uuid={stat.provider_uuid} size={16} />
+                                                <span>{stat.provider_name || '-'}</span>
+                                            </Stack>
+                                        </TableCell>
                                         <TableCell>
                                             <Typography
                                                 variant="body2"

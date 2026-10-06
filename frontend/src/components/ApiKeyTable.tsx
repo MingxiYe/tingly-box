@@ -5,6 +5,7 @@ import {
     exportProviderAsJsonlToClipboard,
 } from "@/components/rule-card/utils";
 import {QuotaCell} from "@/components/credential/QuotaCell";
+import ProviderLogo from "@/components/ProviderLogo";
 import {
     Check,
     Cancel,
@@ -255,33 +256,36 @@ const ApiKeyTable = ({
                                 </TableCell>
                                 {/* Name */}
                                 <TableCell>
-                                    <Tooltip
-                                        arrow
-                                        placement="top"
-                                        title={(
-                                            <Box>
-                                                <Typography variant="caption" sx={{display: 'block', color: 'inherit', fontWeight: 600}}>
-                                                    {provider.name}
-                                                </Typography>
-                                                <Typography variant="caption" sx={{display: 'block', color: 'inherit', fontFamily: fontMono, opacity: 0.8}}>
-                                                    UUID: {provider.uuid}
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                    >
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontWeight: 500,
-                                                maxWidth: 140,
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                whiteSpace: "nowrap",
-                                            }}
+                                    <Stack direction="row" spacing={1} sx={{alignItems: "center"}}>
+                                        <ProviderLogo provider={provider}/>
+                                        <Tooltip
+                                            arrow
+                                            placement="top"
+                                            title={(
+                                                <Box>
+                                                    <Typography variant="caption" sx={{display: 'block', color: 'inherit', fontWeight: 600}}>
+                                                        {provider.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{display: 'block', color: 'inherit', fontFamily: fontMono, opacity: 0.8}}>
+                                                        UUID: {provider.uuid}
+                                                    </Typography>
+                                                </Box>
+                                            )}
                                         >
-                                            {provider.name}
-                                        </Typography>
-                                    </Tooltip>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    fontWeight: 500,
+                                                    maxWidth: 140,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {provider.name}
+                                            </Typography>
+                                        </Tooltip>
+                                    </Stack>
                                 </TableCell>
                                 {/* Quota — the binding window as a ring; hover for the rest, click to refresh */}
                                 {showQuota && (
