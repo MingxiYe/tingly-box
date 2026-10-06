@@ -21,8 +21,8 @@ import { AiAgents, BarChart, ChevronRight, Lock, Refresh, Settings, Sort, TextSn
 import { useHealth } from '@/contexts/HealthContext';
 import { useVersion } from '@/contexts/VersionContext';
 import { useProviderQuota } from '@/hooks/useProviderQuota';
-import ProviderIcon from '@/components/ProviderIcon';
-import { providerIconId, type IconSource } from '@/utils/providerIcon';
+import ProviderLogo from '@/components/ProviderLogo';
+import { useProviderIconId, type IconSource } from '@/utils/providerIcon';
 import { QuotaCell } from '@/components/credential/QuotaCell';
 import { quotaRemainingPercent, quotaToWindows, tightestWindow, type ProviderQuota } from '@/types/quota';
 import { api, fetchUIAPI } from '@/services/api';
@@ -62,6 +62,7 @@ export default function HubPage() {
     const { currentVersion, hasUpdate } = useVersion();
     const [providers, setProviders] = useState<HubProvider[]>([]);
     const [loadingProviders, setLoadingProviders] = useState(true);
+    const iconId = useProviderIconId();
     const [sortMode, setSortMode] = useState<QuotaSortMode>(readSortMode);
     const [sortAnchor, setSortAnchor] = useState<HTMLElement | null>(null);
 
@@ -96,7 +97,7 @@ export default function HubPage() {
             const tightest = tightestWindow(row.quota);
             return { ...row, remaining: tightest ? quotaRemainingPercent(tightest) : Infinity };
         })
-        .map((row) => ({ ...row, type: providerIconId(row.provider, row.quota.provider_type) ?? '' }));
+        .map((row) => ({ ...row, type: iconId(row.provider, row.quota.provider_type) ?? '' }));
     const displayName = (row: { provider: HubProvider }) => row.provider.name || row.provider.uuid;
     // Every order falls back to name so equal keys never shuffle between renders.
     const byName = (a: typeof quotaRows[number], b: typeof quotaRows[number]) =>
@@ -284,11 +285,7 @@ export default function HubPage() {
                                             '&:hover .hub-provider-name': { color: 'primary.main' },
                                         }}
                                     >
-                                        <ProviderIcon
-                                            identifier={providerIconId(provider, quota.provider_type) ?? ''}
-                                            size={18}
-                                            sx={{ mr: 0.75 }}
-                                        />
+                                        <ProviderLogo provider={provider} quotaType={quota.provider_type} sx={{ mr: 0.75 }} />
                                         <Typography className="hub-provider-name" variant="body2" sx={{ fontWeight: 500 }} noWrap>
                                             {provider.name || provider.uuid}
                                         </Typography>

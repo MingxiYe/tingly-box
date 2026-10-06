@@ -5,6 +5,7 @@ import {
     exportProviderAsJsonlToClipboard,
 } from "@/components/rule-card/utils";
 import {QuotaCell} from "@/components/credential/QuotaCell";
+import ProviderLogo from "@/components/ProviderLogo";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
     ContentCopy,
@@ -273,6 +274,7 @@ const OAuthTable = ({
                                         <Stack direction="row" spacing={1} sx={{
                                             alignItems: "center"
                                         }}>
+                                            <ProviderLogo provider={provider} quotaType={providerQuotas?.[provider.uuid]?.provider_type}/>
                                             <Tooltip
                                                 arrow
                                                 placement="top"
