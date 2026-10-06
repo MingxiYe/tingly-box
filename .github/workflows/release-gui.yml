@@ -214,6 +214,44 @@ jobs:
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber -- \
             *.zip *.deb *.rpm checksums-gui.txt
 
+      # release.yml writes this section into the notes when it builds the GUI
+      # itself; a standalone run attaches to a release created without it.
+      # Idempotent: a run that finds the section already there leaves it.
+      - name: Add desktop app section to the release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          START="<!-- DESKTOP_APP_INFO:START -->"
+          END="<!-- DESKTOP_APP_INFO:END -->"
+          CURRENT="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body)"
+          if printf '%s' "$CURRENT" | grep -q '^## Desktop app (unsigned)'; then
+            echo "Release notes already describe the desktop app; leaving them."
+            exit 0
+          fi
+          {
+            printf '%s\n\n' "$CURRENT"
+            echo "$START"
+            cat <<'NOTES'
+          ## Desktop app (unsigned)
+
+          | Platform | Download |
+          | --- | --- |
+          | macOS Apple Silicon | `tingly-box-gui-macos-arm64.zip` |
+          | Windows x64 | `tingly-box-gui-windows-amd64.zip` |
+          | Linux x64 — Ubuntu 24.04+ / Debian 13+ | `tingly-box-gui-linux-amd64.deb` |
+          | Linux x64 — Fedora 40+ | `tingly-box-gui-linux-amd64.rpm` |
+
+          The desktop builds are not signed by Apple or Microsoft.
+
+          - **macOS**: easiest is `npx tingly-box-gui`, which skips Gatekeeper. For a browser download, unzip and open `TinglyBox.app`; when macOS blocks it, go to **System Settings → Privacy & Security → Open Anyway**, or run `xattr -dr com.apple.quarantine TinglyBox.app`.
+          - **Windows**: if SmartScreen appears, choose **More info → Run anyway**.
+          - **Linux**: `sudo apt install ./tingly-box-gui-linux-amd64.deb` or `sudo dnf install ./tingly-box-gui-linux-amd64.rpm` (pulls in GTK4 and WebKitGTK 6.0), then open **Tingly Box** from the app menu or run `tingly-box-gui`.
+          NOTES
+            echo "$END"
+          } > desktop-notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file desktop-notes.md
+
       # Same as release.yml's trigger-npm-publish, for the GUI package only.
       # Publishes nothing by itself: npm.yml waits at the `production`
       # environment approval before `npm publish`.
