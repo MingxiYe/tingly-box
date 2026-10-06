@@ -26,9 +26,10 @@ waits for the `production` environment approval):
   set. Built by `build/npx/scripts/build-platform-packages.sh` and published
   *before* the shim at the same version. Not meant to be installed directly.
 - **`tingly-box-gui`** — shim variant for the desktop UI, published on demand;
-  download-only (no platform packages). Launches the Apple Silicon macOS app
-  only; on Linux, Windows and Intel Macs it exits pointing at the release
-  assets (`gui-packaging.md`).
+  platform packages for macOS arm64, Windows x64 and Linux x64/arm64 (the
+  Linux ones are the GTK3 bare binary; the shim checks system libraries first), same
+  scheme as the cli. Intel Macs and Windows arm64 exit pointing at
+  the release assets (`gui-packaging.md`).
 
 `tingly-box-bundle` (all platform zips inside one ~70 MB package) is retired
 as of 2026-09; see F below. Its published versions stay on npm because
@@ -414,8 +415,10 @@ and npm >= 11.5.1 exchanges it for a single-publish credential. There is no
   that did get published (`tingly-box-{linux-x64,linux-arm64,darwin-x64,darwin-arm64}@0.260903.1`)
   are orphaned and should be `npm deprecate`d; no shim ever referenced them.
 - **New package names** cannot be configured for Trusted Publishing before
-  they exist, so a brand-new package is published once by hand with
-  `build/npx/scripts/publish-platform-packages-manual.sh <tag>` (curl download,
-  interactive 2FA), then configured on npmjs.com, then left to CI.
+  they exist, so a brand-new package is first published by hand (an empty
+  placeholder version, or the real one with
+  `build/npx/scripts/publish-platform-packages-manual.sh <tag>`), then
+  configured with `npm trust` or on npmjs.com, then left to CI. Step by step:
+  [npm-ci.md](./npm-ci.md).
 - **Local runs** (`npm publish` from a laptop) still work with 2FA and are the
   fallback if GitHub OIDC is unavailable.
