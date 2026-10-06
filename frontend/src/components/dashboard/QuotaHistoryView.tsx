@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { fetchUIAPI } from '@/services/api';
+import { ProviderLogoByUuid } from '@/components/ProviderLogo';
 import { QuotaRawResponseButton } from '@/components/credential/QuotaRawResponseButton';
 import { formatQuotaRemaining, formatQuotaUsage, isCountable, quotaRemainingPercent, quotaToWindows, type ProviderQuota, type QuotaWindow } from '@/types/quota';
 
@@ -12,7 +13,7 @@ interface Props { startTime: string; endTime: string; provider: string; daily: b
 interface Sample { time: number; value: number; window: QuotaWindow }
 interface Series { key: string; label: string; mode: 'percent' | 'available'; samples: Sample[] }
 // latestRaw is only present for short ranges: long-range reads skip the payload.
-interface ProviderSeries { uuid: string; name: string; count: number; latestError?: string; latestRaw?: unknown; windows: Series[] }
+interface ProviderSeries { uuid: string; name: string; type?: string; count: number; latestError?: string; latestRaw?: unknown; windows: Series[] }
 
 const number = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
@@ -43,7 +44,7 @@ function groupSnapshots(snapshots: ProviderQuota[]): ProviderSeries[] {
         }
         const latest = records[records.length - 1];
         return {
-            uuid, name: latest.provider_name || uuid, count: records.length,
+            uuid, name: latest.provider_name || uuid, type: latest.provider_type, count: records.length,
             latestError: latest.last_error || undefined, latestRaw: latest.raw_response, windows: Array.from(windows.values()),
         };
     }).sort((a, b) => Number(b.windows.length > 0) - Number(a.windows.length > 0) || a.name.localeCompare(b.name));
@@ -132,7 +133,10 @@ export default function QuotaHistoryView({ startTime, endTime, provider, daily, 
             {providers.map((item) => (
                 <Paper key={item.uuid} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2 }}>
                     <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'baseline', gap: 1, mb: 2 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>{item.name}</Typography>
+                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                            <ProviderLogoByUuid uuid={item.uuid} quotaType={item.type} size={22} />
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>{item.name}</Typography>
+                        </Stack>
                         <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
                             <QuotaRawResponseButton providerName={item.name} response={item.latestRaw} />
                             <Typography variant="caption" color="text.secondary">

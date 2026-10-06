@@ -1,6 +1,7 @@
 import type { SxProps, Theme } from '@mui/material';
 import ProviderIcon from '@/components/ProviderIcon';
 import { useProviderIconId, type IconSource } from '@/utils/providerIcon';
+import { useProvidersByUuid } from '@/hooks/useProvidersByUuid';
 
 /**
  * The vendor mark for a configured provider, shown beside its name in lists.
@@ -17,4 +18,14 @@ export default function ProviderLogo({ provider, quotaType, size = 18, sx }: {
 }) {
     const iconId = useProviderIconId();
     return <ProviderIcon identifier={iconId(provider, quotaType) ?? ''} size={size} sx={sx} />;
+}
+
+/**
+ * ProviderLogo for rows that only know a provider's uuid (dashboard tables):
+ * the provider is looked up from the shared list, and until it loads — or for
+ * a provider since deleted — the quota type alone decides, else the placeholder.
+ */
+export function ProviderLogoByUuid({ uuid, ...rest }: { uuid: string | undefined } & Omit<Parameters<typeof ProviderLogo>[0], 'provider'>) {
+    const providers = useProvidersByUuid();
+    return <ProviderLogo provider={uuid ? providers.get(uuid) : undefined} {...rest} />;
 }
