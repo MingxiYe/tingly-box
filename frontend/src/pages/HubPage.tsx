@@ -97,7 +97,7 @@ export default function HubPage() {
             const tightest = tightestWindow(row.quota);
             return { ...row, remaining: tightest ? quotaRemainingPercent(tightest) : Infinity };
         })
-        .map((row) => ({ ...row, type: iconId(row.provider, row.quota.provider_type) ?? '' }));
+        .map((row) => ({ ...row, type: iconId(row.provider) ?? '' }));
     const displayName = (row: { provider: HubProvider }) => row.provider.name || row.provider.uuid;
     // Every order falls back to name so equal keys never shuffle between renders.
     const byName = (a: typeof quotaRows[number], b: typeof quotaRows[number]) =>
@@ -285,7 +285,7 @@ export default function HubPage() {
                                             '&:hover .hub-provider-name': { color: 'primary.main' },
                                         }}
                                     >
-                                        <ProviderLogo provider={provider} quotaType={quota.provider_type} sx={{ mr: 0.75 }} />
+                                        <ProviderLogo provider={provider} sx={{ mr: 0.75 }} />
                                         <Typography className="hub-provider-name" variant="body2" sx={{ fontWeight: 500 }} noWrap>
                                             {provider.name || provider.uuid}
                                         </Typography>

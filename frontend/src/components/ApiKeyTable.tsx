@@ -257,7 +257,7 @@ const ApiKeyTable = ({
                                 {/* Name */}
                                 <TableCell>
                                     <Stack direction="row" spacing={1} sx={{alignItems: "center"}}>
-                                        <ProviderLogo provider={provider} quotaType={providerQuotas?.[provider.uuid]?.provider_type}/>
+                                        <ProviderLogo provider={provider}/>
                                         <Tooltip
                                             arrow
                                             placement="top"

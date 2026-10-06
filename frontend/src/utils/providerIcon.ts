@@ -7,20 +7,13 @@ export interface IconSource {
     oauth_detail?: { provider_type?: string; issuer?: string };
 }
 
-// Quota provider_type values (ai/quota/types.go) whose name isn't already a
-// ProviderIcon key.
-const QUOTA_TYPE_ICON: Record<string, string> = {
-    tingly_box: 'tinglybox',
+// OAuth issuer ids (see components/oauth/fallbackProviders.tsx) whose name
+// isn't already a ProviderIcon key.
+const OAUTH_ISSUER_ICON: Record<string, string> = {
     claude_code: 'claudecode',
-    kimi_k2: 'kimi',
     kimi_code: 'kimi',
-    zai: 'zhipu',
-    glm: 'zhipu',
-    minimaxi: 'minimax',
-    vertex_ai: 'vertexai',
-    gemini_cli: 'gemini',
-    antigravity: 'google',
     qwen_code: 'qwen',
+    antigravity: 'google',
 };
 
 /**
@@ -34,27 +27,19 @@ export function isTinglyBoxBase(apiBase?: string): boolean {
 }
 
 /**
- * Picks the ProviderIcon identifier for a configured provider: a Tingly-Box
- * upstream first, then the quota fetcher's provider type, then the OAuth
- * issuer, then the API base's host. Undefined when nothing matches, so the
- * caller can fall back to ProviderIcon's neutral placeholder.
+ * Picks the ProviderIcon identifier for a configured provider from the
+ * provider itself: a Tingly-Box upstream by its route, an OAuth provider by its
+ * issuer, anything else by its API base's host. Quota is deliberately not
+ * consulted — which fetcher read a quota says nothing about who the provider is,
+ * and the logo must not change with whether a reading has arrived. Undefined
+ * when nothing matches, so the caller can fall back to ProviderIcon's neutral
+ * placeholder.
  */
-export function providerIconId(
-    provider: IconSource | undefined,
-    quotaProviderType?: string,
-): string | undefined {
-    return providerIconIdFromHints(provider, quotaProviderType) ?? iconIdFromCatalog(provider);
-}
-
-function providerIconIdFromHints(
-    provider: IconSource | undefined,
-    quotaProviderType?: string,
-): string | undefined {
-    if (quotaProviderType === 'tingly_box' || isTinglyBoxBase(provider?.api_base)) return 'tinglybox';
-    if (quotaProviderType) return QUOTA_TYPE_ICON[quotaProviderType] ?? quotaProviderType;
+export function providerIconId(provider: IconSource | undefined): string | undefined {
+    if (isTinglyBoxBase(provider?.api_base)) return 'tinglybox';
     const issuer = provider?.oauth_detail?.provider_type || provider?.oauth_detail?.issuer;
-    if (issuer) return QUOTA_TYPE_ICON[issuer] ?? issuer;
-    return undefined;
+    if (issuer) return OAUTH_ISSUER_ICON[issuer] ?? issuer;
+    return iconIdFromCatalog(provider);
 }
 
 function hostOf(apiBase?: string): string {
