@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	commandgui "github.com/tingly-dev/tingly-box/gui/wails3/command"
@@ -81,6 +84,79 @@ func notifyRunningGUI(appManager *app.AppManager) error {
 	return nil
 }
 
+// offerTakeover handles a launch that lost the single-instance race to a
+// non-GUI server (CLI / npx / daemon): the window says exactly what is running
+// (pid, port, version) and offers what `tingly-box restart` does — stop it and
+// start again, here as the app — so GUI and CLI start/stop behave alike
+// instead of dead-ending in an error. On confirm it stops the old server and
+// relaunches this binary: wails3's application.New is a process-wide
+// singleton, so the main app cannot be built after the notice app in-process.
+func offerTakeover(appManager *app.AppManager, lockErr error) error {
+	fileLock := lock.NewFileLock(appManager.ConfigDir())
+	pid, _ := fileLock.GetPID()
+	port := appManager.GetRuntimeServerPort()
+	version, _ := fileLock.ReadVersion()
+	if version == "" {
+		version = "unknown version"
+	}
+
+	message := fmt.Sprintf("Tingly Box is already running in the background (pid %d, port %d, %s).\n\nIt was started from the command line, so it has no window. You can restart it as the app, or keep using the running instance.", pid, port, version)
+	confirmed := runNoticeApp("Tingly Box Is Already Running", message, &noticeAction{
+		Prompt: fmt.Sprintf("Stop the running instance (pid %d, port %d) and restart it as the app?\n\nIn-flight AI requests will be interrupted.", pid, port),
+		Label:  "Restart as App",
+	})
+	if !confirmed {
+		return lockErr
+	}
+
+	if err := command.StopRunningServer(appManager.ConfigDir()); err != nil {
+		return fmt.Errorf("failed to stop the running instance (pid %d): %w", pid, err)
+	}
+	// Stopping returns once the lock is free, but give a force-killed process a
+	// moment to drop it so the relaunch never loses the single-instance race
+	// to the instance it just stopped.
+	for deadline := time.Now().Add(5 * time.Second); fileLock.IsLocked(); time.Sleep(100 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			// No second error window: application.New is a singleton and the
+			// notice app has already run, so report through the log + error.
+			return fmt.Errorf("the previous instance (pid %d) did not release its lock", pid)
+		}
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	// A restart continues on the port the old server was actually using, like
+	// `tingly-box restart` (see RestartCmdKong). Args are kept so flags such as
+	// --host survive; an explicit --port the user passed still wins.
+	args := append([]string(nil), os.Args[1:]...)
+	if port > 0 && !hasPortFlag(args) {
+		insertAt := len(args)
+		for i, a := range args {
+			if a == "--" {
+				insertAt = i
+				break
+			}
+		}
+		args = append(args[:insertAt], append([]string{"--port", fmt.Sprint(port)}, args[insertAt:]...)...)
+	}
+	log.Printf("Stopped pid %d; relaunching GUI on port %d", pid, port)
+	return exec.Command(exe, args...).Start()
+}
+
+func hasPortFlag(args []string) bool {
+	for _, a := range args {
+		if a == "--" {
+			return false
+		}
+		if a == "--port" || a == "-p" || strings.HasPrefix(a, "--port=") || strings.HasPrefix(a, "-p=") ||
+			(len(a) > 2 && strings.HasPrefix(a, "-p") && a[2] >= '0' && a[2] <= '9') {
+			return true
+		}
+	}
+	return false
+}
+
 // appLauncher implements the AppLauncher interface
 type appLauncher struct{}
 
@@ -103,8 +179,7 @@ func (l *appLauncher) Start(appManager *app.AppManager, flags command.ServerFlag
 			log.Printf("Another GUI instance is running; asked it to show its window")
 			return nil
 		}
-		runErrorApp(err.Error())
-		return err
+		return offerTakeover(appManager, err)
 	}
 	// Unlock also removes the runtime port/version files written below.
 	defer fileLock.Unlock()
@@ -119,12 +194,17 @@ func (l *appLauncher) Start(appManager *app.AppManager, flags command.ServerFlag
 	opts := flags.Resolve(appManager.AppConfig(), options.StartFlags{})
 	log.Printf("Starting GUI with options: port=%d, host=%s, debug=%v", opts.Port, opts.Host, opts.EnableDebug)
 
-	// Check if port is available before starting the app
-	available, info := network.IsPortAvailableWithInfo(opts.Host, opts.Port)
-	log.Printf("[Port Check] Port %d: available=%v, info=%s", opts.Port, available, info)
-
+	// Same bounded wait as the CLI's startServer: right after a stopped server
+	// exits (restart, or the "Restart as App" takeover) the OS may not have
+	// released its socket yet, and a single instant probe would fail spuriously.
+	available, info := false, ""
+	for deadline := time.Now().Add(3 * time.Second); ; time.Sleep(100 * time.Millisecond) {
+		if available, info = network.IsPortAvailableWithInfo(opts.Host, opts.Port); available || time.Now().After(deadline) {
+			break
+		}
+	}
 	if !available {
-		// Create a minimal error-only app and run it (this will block until the user closes it)
+		log.Printf("[Port Check] Port %d unavailable: %s", opts.Port, info)
 		runErrorApp(fmt.Sprintf("Port %d is already in use.\n\nPlease close the application using this port or use a different port with --port.\n\nDetails: %s", opts.Port, info))
 		return fmt.Errorf("port %d is already in use", opts.Port)
 	}
