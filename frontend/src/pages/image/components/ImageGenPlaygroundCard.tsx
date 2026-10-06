@@ -10,7 +10,6 @@ import {
     DialogTitle,
     FormControl,
     IconButton,
-    InputAdornment,
     InputLabel,
     ListItemText,
     Menu,
@@ -48,6 +47,8 @@ import MaskEditorDialog from './MaskEditorDialog';
 import SketchCanvasDialog from './SketchCanvasDialog';
 import { createImageProfile, removeImageProfile, updateImageProfile } from '../profiles/imageProfileStore';
 import { newPromptId, type ImageProfile, type ProfilePrompt } from '../profiles/imageProfileTypes';
+import { PromptEditorCopyButton, PromptEditorField, PromptPanelField } from './PromptFields';
+import { usePromptFilled, usePromptStore } from './usePromptStore';
 import ProfilePromptTabs from '../profiles/ProfilePromptTabs';
 import { deriveLabel } from '../profiles/promptLabel';
 import { dropProfileSession } from './useImageGenRuns';
@@ -69,6 +70,43 @@ import type {
 // overview (searchable, grid, newest first), not here. Capping the strip to
 // its most recent items and handing off anything older to a single "open the
 // overview" tile keeps the strip a status readout instead of a second archive.
+// The prompt field fills whatever height its column has left (see the comment
+// at its use).
+const PROMPT_FIELD_SX = {
+    flex: { lg: 1 },
+    minHeight: 0,
+    display: 'flex',
+    '& .MuiInputBase-root': {
+        flex: 1,
+        minHeight: 0,
+        alignItems: 'flex-start',
+    },
+    // The textarea autosizes to its content with an inline
+    // height; inside a fixed-height column it has to be the
+    // flex item that shrinks and scrolls instead, or it is
+    // painted straight past the outline.
+    '& textarea.MuiInputBase-input': {
+        flex: 1,
+        alignSelf: 'stretch',
+        height: { lg: 'auto !important' },
+        minHeight: 0,
+        boxSizing: 'border-box',
+        overflowY: 'auto !important',
+        overscrollBehavior: 'contain',
+        resize: 'none',
+        scrollbarWidth: 'thin',
+    },
+} as const;
+
+// The prompts with `text` folded into prompt `id`; the same array back when nothing changed.
+const withText = (prompts: ProfilePrompt[], id: string, text: string) => (
+    prompts.some((item) => item.id === id && item.text !== text)
+        ? prompts.map((item) => (item.id === id ? { ...item, text } : item))
+        : prompts
+);
+
+// Pause after the last keystroke before the prompt is saved into the profile.
+const PROMPT_SAVE_DELAY_MS = 600;
 const HISTORY_STRIP_VISIBLE = 6;
 
 interface ImageGenPlaygroundCardProps {
@@ -101,9 +139,13 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
     // place. Outside a profile both stay empty and the field is free text.
     const [profilePrompts, setProfilePrompts] = useState<ProfilePrompt[]>(profile?.prompts ?? []);
     const [activePromptId, setActivePromptId] = useState(profile?.activePromptId ?? '');
-    const [prompt, setPrompt] = useState(
-        () => profile?.prompts.find((item) => item.id === profile.activePromptId)?.text ?? '',
+    // The prompt text lives in its own store (usePromptStore.ts): keeping it in
+    // this card's state would re-render the whole card on every keystroke.
+    const promptStore = usePromptStore(
+        profile?.prompts.find((item) => item.id === profile.activePromptId)?.text ?? '',
     );
+    const { set: setPrompt, get: getPrompt } = promptStore;
+    const hasPrompt = usePromptFilled(promptStore);
     // The prompt in a dialog-sized editor: the panel's field is one column of a
     // fixed-height panel, which is the wrong place to read or rework a long one.
     const [promptEditorOpen, setPromptEditorOpen] = useState(false);
@@ -353,19 +395,19 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
         }
     }, [showNotification, t]);
 
-    const canSubmit = Boolean(prompt.trim()) && Boolean(model);
+    const canSubmit = hasPrompt && Boolean(model);
 
     const handleSubmit = useCallback(async () => {
         if (!canSubmit) return;
         await runGeneration({
-            prompt: prompt.trim(),
+            prompt: getPrompt().trim(),
             model,
             size,
             quality,
             count,
             sources: referenceImages,
         });
-    }, [canSubmit, count, model, prompt, quality, referenceImages, runGeneration, size]);
+    }, [canSubmit, count, getPrompt, model, quality, referenceImages, runGeneration, size]);
 
     // ⌘/Ctrl+Enter from the prompt — in the panel or in the larger editor —
     // is the keyboard's Generate button.
@@ -471,15 +513,46 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
     // so there is no "unsaved" state to manage. The prompt is per-run and
     // never saved.
     const profileId = profile?.id;
-    // The field edits the active saved prompt in place.
+    // The field edits the active saved prompt in place. Typing must stay cheap:
+    // keystrokes only touch the prompt store; the text is copied into the saved
+    // list (which re-renders the tabs and rewrites the profile store) after a
+    // pause, and right away when switching tabs or leaving the page.
+    const latest = useRef({ prompts: profilePrompts, activePromptId });
+    latest.current = { prompts: profilePrompts, activePromptId };
+    // The saved list with the field's current text folded into the active prompt.
+    const syncedPrompts = useCallback(
+        () => withText(latest.current.prompts, latest.current.activePromptId, promptStore.get()),
+        [promptStore],
+    );
     useEffect(() => {
         if (!profileId) return;
-        // Same array back when nothing changed, so opening the page is not
-        // mistaken for an edit.
-        setProfilePrompts((current) => (current.some((item) => item.id === activePromptId && item.text !== prompt)
-            ? current.map((item) => (item.id === activePromptId ? { ...item, text: prompt } : item))
-            : current));
-    }, [activePromptId, profileId, prompt]);
+        let timer: number | undefined;
+        const unsubscribe = promptStore.subscribe(() => {
+            // The id the text was typed under, not whichever is active when the timer fires.
+            const id = latest.current.activePromptId;
+            window.clearTimeout(timer);
+            timer = window.setTimeout(() => {
+                setProfilePrompts((current) => withText(current, id, promptStore.get()));
+            }, PROMPT_SAVE_DELAY_MS);
+        });
+        return () => {
+            unsubscribe();
+            window.clearTimeout(timer);
+        };
+    }, [profileId, promptStore]);
+    // Leaving inside the delay — a route change or a reload — must not lose the last words.
+    useEffect(() => {
+        if (!profileId) return;
+        const flush = () => {
+            const next = syncedPrompts();
+            if (next !== latest.current.prompts) updateImageProfile(profileId, { prompts: next });
+        };
+        window.addEventListener('pagehide', flush);
+        return () => {
+            window.removeEventListener('pagehide', flush);
+            flush();
+        };
+    }, [profileId, syncedPrompts]);
     useEffect(() => {
         if (!profileId) return;
         updateImageProfile(profileId, {
@@ -493,28 +566,40 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
         });
     }, [activePromptId, count, profileId, profilePrompts, quality, referenceImages, selectedModel, size]);
 
-    const selectPrompt = (id: string) => {
-        setActivePromptId(id);
-        setPrompt(profilePrompts.find((item) => item.id === id)?.text ?? '');
-    };
-    const addPrompt = () => {
-        const id = newPromptId();
-        setProfilePrompts((current) => [...current, { id, name: '', text: '' }]);
-        setActivePromptId(id);
-        setPrompt('');
-    };
-    const removePrompt = (id: string) => {
-        const index = profilePrompts.findIndex((item) => item.id === id);
-        if (index === -1 || profilePrompts.length < 2) return;
-        const remaining = profilePrompts.filter((item) => item.id !== id);
-        setProfilePrompts(remaining);
-        if (id === activePromptId) {
-            // The neighbour takes its place, as closing a tab would.
-            const next = remaining[Math.min(index, remaining.length - 1)];
-            setActivePromptId(next.id);
-            setPrompt(next.text);
-        }
-    };
+    // Stable identities (they read through `latest`), so the memoised tab row
+    // is not re-rendered by every keystroke in the prompt field.
+    const tabActions = useMemo(() => ({
+        select: (id: string) => {
+            const { activePromptId: current } = latest.current;
+            if (id === current) return;
+            const synced = syncedPrompts();
+            setProfilePrompts(synced);
+            setActivePromptId(id);
+            setPrompt(synced.find((item) => item.id === id)?.text ?? '');
+        },
+        add: () => {
+            const id = newPromptId();
+            // Read before the field is cleared below.
+            const synced = syncedPrompts();
+            setProfilePrompts([...synced, { id, name: '', text: '' }]);
+            setActivePromptId(id);
+            setPrompt('');
+        },
+        remove: (id: string) => {
+            const { prompts, activePromptId: current } = latest.current;
+            const index = prompts.findIndex((item) => item.id === id);
+            if (index === -1 || prompts.length < 2) return;
+            const remaining = syncedPrompts().filter((item) => item.id !== id);
+            setProfilePrompts(remaining);
+            if (id === current) {
+                // The neighbour takes its place, as closing a tab would.
+                const next = remaining[Math.min(index, remaining.length - 1)];
+                setActivePromptId(next.id);
+                setPrompt(next.text);
+            }
+        },
+        rename: (id: string, name: string) => setProfilePrompts((current) => current.map((item) => (item.id === id ? { ...item, name } : item))),
+    }), [setPrompt, syncedPrompts]);
 
     const location = useLocation();
     const [renaming, setRenaming] = useState(Boolean((location.state as { rename?: boolean } | null)?.rename));
@@ -529,13 +614,13 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
 
     // The common way a profile is born: set up a run that works here, then
     // keep it. What was typed becomes the profile's fixed description.
-    const canSaveAsProfile = referenceImages.length > 0 || Boolean(prompt.trim());
+    const canSaveAsProfile = referenceImages.length > 0 || hasPrompt;
     const handleSaveAsProfile = () => {
         const created = createImageProfile({
             // Named after what it makes; renaming is one click on the next page.
-            name: deriveLabel(prompt, 12) || t('imageProfile.untitled', { defaultValue: 'Untitled profile' }),
+            name: deriveLabel(getPrompt(), 12) || t('imageProfile.untitled', { defaultValue: 'Untitled profile' }),
             refs: referenceImages,
-            prompts: [{ id: 'p1', name: '', text: prompt.trim() }],
+            prompts: [{ id: 'p1', name: '', text: getPrompt().trim() }],
             activePromptId: 'p1',
             model: selectedModel,
             size,
@@ -569,6 +654,7 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
     const insertSnippet = (text: string) => {
         setSnippetAnchor(null);
         const input = promptInputRef.current;
+        const prompt = getPrompt();
         const start = input?.selectionStart ?? prompt.length;
         const end = input?.selectionEnd ?? prompt.length;
         const before = prompt.slice(0, start);
@@ -747,18 +833,16 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
                             <ProfilePromptTabs
                                 prompts={profilePrompts}
                                 activeId={activePromptId}
-                                onSelect={selectPrompt}
-                                onAdd={addPrompt}
-                                onRename={(id, name) => setProfilePrompts((current) => current.map((item) => (item.id === id ? { ...item, name } : item)))}
-                                onRemove={removePrompt}
+                                onSelect={tabActions.select}
+                                onAdd={tabActions.add}
+                                onRename={tabActions.rename}
+                                onRemove={tabActions.remove}
                             />
                         )}
 
-                        <TextField
+                        <PromptPanelField
+                            store={promptStore}
                             inputRef={promptInputRef}
-                            multiline
-                            minRows={3}
-                            fullWidth
                             // On a profile the tabs above already name the field.
                             label={profile ? undefined : t('playground.prompt', { defaultValue: 'Prompt' })}
                             placeholder={hasMaskedReference
@@ -768,89 +852,50 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
                                 : referenceImages.length > 0
                                     ? t('playground.referencePromptPlaceholder', { defaultValue: 'Describe what to make from these images…' })
                                     : t('playground.promptPlaceholder', { defaultValue: 'Describe the image you want to generate…' })}
-                            value={prompt}
-                            onChange={(event) => setPrompt(event.target.value)}
+                            ariaLabel={t('playground.prompt', { defaultValue: 'Prompt' })}
+                            disabled={noModels}
                             onKeyDown={handlePromptKeyDown}
-                            onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => {
                                 event.preventDefault();
                                 if (event.dataTransfer.files?.length) {
                                     handleDroppedFiles(event.dataTransfer.files, (images) => { void handleAddReferenceImages(images); });
                                 }
                             }}
-                            disabled={noModels}
-                            slotProps={{
-                                htmlInput: { 'aria-label': t('playground.prompt', { defaultValue: 'Prompt' }) },
-                                input: {
-                                    endAdornment: (
-                                        <InputAdornment position="end" sx={{ alignSelf: 'flex-start', mt: 0.5, mr: -0.5, gap: 0.25 }}>
-                                            {/* A prompt is text the user goes on to reuse elsewhere —
-                                                it should never have to be selected by hand. */}
-                                            {prompt.trim() && (
-                                                <CopyIconButton
-                                                    value={prompt}
-                                                    label={copyPromptLabel}
-                                                    copiedLabel={promptCopiedLabel}
-                                                    iconSize={16}
-                                                />
-                                            )}
-                                            <Tooltip title={t('imageLibrary.insertSnippet', { defaultValue: 'Insert a snippet' })}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={(event) => setSnippetAnchor(event.currentTarget)}
-                                                    aria-label={t('imageLibrary.insertSnippet', { defaultValue: 'Insert a snippet' })}
-                                                >
-                                                    <TextPlus sx={{ fontSize: 16 }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title={t('playground.openPromptFile', { defaultValue: 'Open a text file as the prompt' })}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => promptFileInputRef.current?.click()}
-                                                    aria-label={t('playground.openPromptFile', { defaultValue: 'Open a text file as the prompt' })}
-                                                >
-                                                    <Description sx={{ fontSize: 16 }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title={t('playground.expandPrompt', { defaultValue: 'Open the prompt in a larger editor' })}>
-                                                <IconButton
-                                                    size="small"
-                                                    edge="end"
-                                                    onClick={() => setPromptEditorOpen(true)}
-                                                    aria-label={t('playground.expandPrompt', { defaultValue: 'Open the prompt in a larger editor' })}
-                                                >
-                                                    <OpenInFull sx={{ fontSize: 16 }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </InputAdornment>
-                                    ),
-                                },
-                            }}
-                            sx={{
-                                flex: { lg: 1 },
-                                minHeight: 0,
-                                display: 'flex',
-                                '& .MuiInputBase-root': {
-                                    flex: 1,
-                                    minHeight: 0,
-                                    alignItems: 'flex-start',
-                                },
-                                // The textarea autosizes to its content with an inline
-                                // height; inside a fixed-height column it has to be the
-                                // flex item that shrinks and scrolls instead, or it is
-                                // painted straight past the outline.
-                                '& textarea.MuiInputBase-input': {
-                                    flex: 1,
-                                    alignSelf: 'stretch',
-                                    height: { lg: 'auto !important' },
-                                    minHeight: 0,
-                                    boxSizing: 'border-box',
-                                    overflowY: 'auto !important',
-                                    overscrollBehavior: 'contain',
-                                    resize: 'none',
-                                    scrollbarWidth: 'thin',
-                                },
-                            }}
+                            copyLabel={copyPromptLabel}
+                            copiedLabel={promptCopiedLabel}
+                            sx={PROMPT_FIELD_SX}
+                            actions={(
+                                <>
+                                    <Tooltip title={t('imageLibrary.insertSnippet', { defaultValue: 'Insert a snippet' })}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={(event) => setSnippetAnchor(event.currentTarget)}
+                                            aria-label={t('imageLibrary.insertSnippet', { defaultValue: 'Insert a snippet' })}
+                                        >
+                                            <TextPlus sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title={t('playground.openPromptFile', { defaultValue: 'Open a text file as the prompt' })}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => promptFileInputRef.current?.click()}
+                                            aria-label={t('playground.openPromptFile', { defaultValue: 'Open a text file as the prompt' })}
+                                        >
+                                            <Description sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title={t('playground.expandPrompt', { defaultValue: 'Open the prompt in a larger editor' })}>
+                                        <IconButton
+                                            size="small"
+                                            edge="end"
+                                            onClick={() => setPromptEditorOpen(true)}
+                                            aria-label={t('playground.expandPrompt', { defaultValue: 'Open the prompt in a larger editor' })}
+                                        >
+                                            <OpenInFull sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </Tooltip>
+                                </>
+                            )}
                         />
 
                         <Box
@@ -1095,12 +1140,7 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
                     <Typography variant="h6" component="span" sx={{ flex: 1, fontSize: '1.05rem' }}>
                         {t('playground.promptEditorTitle', { defaultValue: 'Prompt' })}
                     </Typography>
-                    <CopyIconButton
-                        value={prompt}
-                        label={copyPromptLabel}
-                        copiedLabel={promptCopiedLabel}
-                        size="medium"
-                    />
+                    <PromptEditorCopyButton store={promptStore} label={copyPromptLabel} copiedLabel={promptCopiedLabel} />
                     <Tooltip title={t('playground.openPromptFile', { defaultValue: 'Open a text file as the prompt' })}>
                         <IconButton
                             onClick={() => promptFileInputRef.current?.click()}
@@ -1119,14 +1159,8 @@ const ImageGenPlaygroundCard: React.FC<ImageGenPlaygroundCardProps> = ({
                 <DialogContent dividers>
                     {/* Same state as the panel's field — this is a bigger window
                         onto the prompt, not a second prompt. */}
-                    <TextField
-                        autoFocus
-                        multiline
-                        minRows={12}
-                        maxRows={28}
-                        fullWidth
-                        value={prompt}
-                        onChange={(event) => setPrompt(event.target.value)}
+                    <PromptEditorField
+                        store={promptStore}
                         onKeyDown={handlePromptKeyDown}
                         placeholder={t('playground.promptPlaceholder', { defaultValue: 'Describe the image you want to generate…' })}
                         helperText={t('playground.submitShortcut', { defaultValue: '⌘/Ctrl + Enter to generate' })}
