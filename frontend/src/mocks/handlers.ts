@@ -153,6 +153,18 @@ interface MockProviderCatalogEntry {
 // One source of truth for standard provider metadata and its available models.
 // Rules and provider-model endpoints are validated against this catalog below.
 const mockStandardProviderCatalog: MockProviderCatalogEntry[] = [
+    // A provider whose upstream is another tingly-box: the base is a
+    // /tingly/<scenario> route and the quota is the relayed one (ai/quota
+    // relay.go), each window labelled "<upstream provider> · <window>".
+    {
+        provider: {
+            uuid: 'mock-provider-tingly-box', name: 'Central Tingly-Box',
+            api_base: 'https://box.example.com/tingly/claude_code', api_style: 'anthropic', auth_type: 'api_key',
+            token: 'tingly-****wxyz', enabled: true, proxy_url: '',
+            api_base_openai: null, api_base_anthropic: 'https://box.example.com/tingly/claude_code',
+        },
+        models: ['claude-sonnet-5', 'claude-opus-4-8'],
+    },
     {
         provider: {
             uuid: 'mock-provider-anthropic', name: 'Anthropic',
@@ -983,6 +995,29 @@ const inThirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOStr
 // rendering state: an allowance, a balance, an uncapped window, a scoped limit
 // that must not answer for the account, and a quota we cannot read at all.
 const mockQuotas: Record<string, any> = {
+    // Relayed by another tingly-box: percentages and reset times only.
+    'mock-provider-tingly-box': {
+        provider_uuid: 'mock-provider-tingly-box',
+        provider_name: 'Central Tingly-Box',
+        provider_type: 'tingly_box',
+        fetched_at: now.toISOString(),
+        expires_at: inOneHour,
+        windows: [
+            {
+                key: 'upstream_1/five_hour', type: 'session', kind: 'limit',
+                used: 100, limit: 100, used_percent: 100, available: 0,
+                resets_at: inOneHour, window_minutes: 300, unit: 'percent',
+                label: 'Claude Code · 5h',
+            },
+            {
+                key: 'upstream_1/seven_day', type: 'weekly', kind: 'limit',
+                used: 41, limit: 100, used_percent: 41, available: 59,
+                resets_at: inSixDays, window_minutes: 10080, unit: 'percent',
+                label: 'Claude Code · 7d',
+            },
+        ],
+    },
+
     // Nothing readable: the reason is recorded and no windows are invented.
     // The credential row still renders — quota area empty, refresh still
     // reachable — and the reason stays available via Details (raw_response).
