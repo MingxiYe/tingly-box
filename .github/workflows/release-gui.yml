@@ -265,3 +265,13 @@ jobs:
             -f tag="$TAG" -f npm_tag="$NPM_TAG" \
             -f publish_cli=false -f publish_gui=true -f build_docker=false
           echo "Dispatched npm.yml for $TAG (gui only, dist-tag $NPM_TAG); approve the production environment to publish." >> "$GITHUB_STEP_SUMMARY"
+
+  # Standalone run only (under release.yml its own verify-release-gui job runs
+  # after the release is published).
+  verify:
+    name: Verify GUI release ${{ inputs.release_tag }}
+    needs: attach
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/verify-release-gui.yml
+    with:
+      tag: ${{ inputs.release_tag }}

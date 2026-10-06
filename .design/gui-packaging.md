@@ -41,6 +41,15 @@ mismatch, `--transport-version`).
   Publisher (repo `tingly-dev/tingly-box`, workflow `npm.yml`, environment
   `production`) on npmjs.com before its first publish.
 
+## Verification
+
+The GUI has its own post-release check, `verify-release-gui.yml`, separate from
+the CLI's `verify-release.yml`. It inspects the packages already on the release
+(checksum coverage, macOS arm64 app, Windows x64 exe, deb metadata/contents and
+version, rpm format) without rebuilding. `release-gui.yml` runs it after a
+standalone attach; `release.yml` runs it when it built the GUI. The build itself
+(including installing the deb and the `ldd` check) stays in `release-gui.yml`.
+
 ## Naming
 
 Every GUI artifact carries `tingly-box-gui`, never the CLI's `tingly-box`:
