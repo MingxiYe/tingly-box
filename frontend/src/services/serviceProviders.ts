@@ -294,6 +294,12 @@ function useProviderSelector<T>(select: () => T): T {
     return select();
 }
 
+// Re-render when the provider catalog loads, without selecting anything from
+// it — for callers that read it through getServiceProvidersSync themselves.
+export function useProviderCatalogLoaded(): void {
+    useProviderSelector(() => null);
+}
+
 // React hook for provider catalog entries (API-key picker list).
 export function useProviderCatalogs(): UniqueProvider[] {
     return useProviderSelector(getAllUniqueProviders);

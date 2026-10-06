@@ -22,10 +22,9 @@ import { useHealth } from '@/contexts/HealthContext';
 import { useVersion } from '@/contexts/VersionContext';
 import { useProviderQuota } from '@/hooks/useProviderQuota';
 import ProviderIcon from '@/components/ProviderIcon';
-import { providerIconId } from '@/utils/providerIcon';
+import { providerIconId, type IconSource } from '@/utils/providerIcon';
 import { QuotaCell } from '@/components/credential/QuotaCell';
 import { quotaRemainingPercent, quotaToWindows, tightestWindow, type ProviderQuota } from '@/types/quota';
-import type { Provider } from '@/types/provider';
 import { api, fetchUIAPI } from '@/services/api';
 import { SHELL_ROUTES } from '@/routes/shellRoutes';
 
@@ -33,7 +32,7 @@ interface HubProvider {
     uuid: string;
     name?: string;
     api_base?: string;
-    oauth_detail?: Provider['oauth_detail'];
+    oauth_detail?: IconSource['oauth_detail'];
 }
 
 type QuotaSortMode = 'remaining' | 'name' | 'type';
