@@ -136,6 +136,10 @@ export const VSCode = createBrandIcon(VSCodeSvg, 'VS Code', true);
 export const Cursor = createBrandIcon(CursorSvg, 'Cursor', false, true);
 export const Pi = createBrandIcon(PiSvg, 'Pi', false, true);
 
+// Tingly-Box's own mark (full colour, so no dark-mode inversion). Marks a
+// provider that is itself another Tingly-Box gateway.
+export const TinglyBox = createBrandIcon('/assets/icon.svg', 'Tingly-Box');
+
 // Reuse Claude icon for Claude Desktop
 export const ClaudeDesktop = Claude;
 

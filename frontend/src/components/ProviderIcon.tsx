@@ -38,6 +38,8 @@ import {
     Bedrock,
     Azure,
     VertexAI,
+    Codex,
+    TinglyBox,
 } from './BrandIcons';
 import type {SxProps, Theme} from '@mui/material';
 import {Box} from '@mui/material';
@@ -65,6 +67,8 @@ const iconMap: Record<string, React.FC<BrandIconProps>> = {
     'openrouter': OpenRouter,
     'claudecode': ClaudeCode,
     'opencode': OpenCode,
+    'codex': Codex,
+    'tinglybox': TinglyBox,
 
     // Additional providers
     'groq': Groq,

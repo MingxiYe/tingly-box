@@ -19,14 +19,19 @@ import { AiAgents, BarChart, ChevronRight, Lock, Refresh, Settings, TextSnippet 
 import { useHealth } from '@/contexts/HealthContext';
 import { useVersion } from '@/contexts/VersionContext';
 import { useProviderQuota } from '@/hooks/useProviderQuota';
+import ProviderIcon from '@/components/ProviderIcon';
+import { providerIconId } from '@/utils/providerIcon';
 import { QuotaCell } from '@/components/credential/QuotaCell';
 import { quotaRemainingPercent, quotaToWindows, tightestWindow, type ProviderQuota } from '@/types/quota';
+import type { Provider } from '@/types/provider';
 import { api, fetchUIAPI } from '@/services/api';
 import { SHELL_ROUTES } from '@/routes/shellRoutes';
 
 interface HubProvider {
     uuid: string;
     name?: string;
+    api_base?: string;
+    oauth_detail?: Provider['oauth_detail'];
 }
 
 // HubPage is the tray's compact panel — a dedicated small window (see
@@ -49,7 +54,7 @@ export default function HubPage() {
                 const result = await api.getProviders();
                 if (cancelled) return;
                 const list = Array.isArray(result?.data) ? result.data : [];
-                setProviders(list.map((p: any) => ({ uuid: p.uuid, name: p.name })));
+                setProviders(list.map((p: any) => ({ uuid: p.uuid, name: p.name, api_base: p.api_base, oauth_detail: p.oauth_detail })));
             } catch {
                 // Quota is a bonus, not core function — a failed provider list
                 // just leaves the quota section empty, not the whole page broken.
@@ -218,6 +223,11 @@ export default function HubPage() {
                                             '&:hover .hub-provider-name': { color: 'primary.main' },
                                         }}
                                     >
+                                        <ProviderIcon
+                                            identifier={providerIconId(provider, quota.provider_type) ?? ''}
+                                            size={18}
+                                            sx={{ mr: 0.75 }}
+                                        />
                                         <Typography className="hub-provider-name" variant="body2" sx={{ fontWeight: 500 }} noWrap>
                                             {provider.name || provider.uuid}
                                         </Typography>
