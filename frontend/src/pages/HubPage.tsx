@@ -272,7 +272,7 @@ export default function HubPage() {
                                     key={provider.uuid}
                                     direction="row"
                                     spacing={1}
-                                    sx={{ alignItems: 'flex-start', justifyContent: 'space-between', py: 1 }}
+                                    sx={{ alignItems: 'center', justifyContent: 'space-between', py: 1 }}
                                 >
                                     {/* The name is the anchor and leads to the provider's
                                         credentials; the cell beside it refreshes on click. */}
