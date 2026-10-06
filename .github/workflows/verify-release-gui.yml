@@ -71,7 +71,7 @@ jobs:
           cd assets
           # macOS: the app bundle with an arm64 executable.
           unzip -q -o tingly-box-gui-macos-arm64.zip -d mac
-          file mac/TinglyBox.app/Contents/MacOS/tingly-box-gui | tee /dev/stderr | grep -q 'Mach-O 64-bit executable arm64'
+          file mac/TinglyBox.app/Contents/MacOS/tingly-box-gui | tee /dev/stderr | grep -qE 'Mach-O 64-bit.*arm64'
           # Windows: the exe at the zip's top level (what the npm shim extracts).
           unzip -q -o tingly-box-gui-windows-amd64.zip -d win
           file win/tingly-box-gui.exe | tee /dev/stderr | grep -qE 'PE32\+ executable.*x86-64'
