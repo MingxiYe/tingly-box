@@ -21,6 +21,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Provider } from '@/types/provider.ts';
 import { ApiStyleBadge } from '../ApiStyleBadge.tsx';
+import { ProviderLabel } from '../ProviderLogo.tsx';
 import { ProbeMenu } from '../probe';
 import type { ConfigProvider } from '../RoutingGraphTypes.ts';
 import { ServiceNodeContainer, NODE_LAYER_STYLES, ActionButtonsBox, nodeSpotlightSx } from './styles.tsx';
@@ -337,7 +338,7 @@ export const ServiceNode: React.FC<ServiceNodeProps> = ({
                             protocol tag(s) (right) so the provider name never runs under
                             them; two tags need more room than one. Symmetric, so the
                             name stays centred. */}
-                        <Box sx={{ ...NODE_LAYER_STYLES.bottomLayer, position: 'relative', px: hasDualApiStyle ? '46px' : '28px' }}>
+                        <Box sx={{ ...NODE_LAYER_STYLES.bottomLayer, flex: 1, position: 'relative', px: hasDualApiStyle ? '46px' : '28px' }}>
                             {/* Quota (left) mirrors the api style tag (right); a missing
                                 or disabled provider shows its warning instead. */}
                             {!providerWarning && (
@@ -345,16 +346,25 @@ export const ServiceNode: React.FC<ServiceNodeProps> = ({
                                     <ServiceNodeQuota providerUuid={provider.provider} />
                                 </Box>
                             )}
-                            {providerWarning && (
-                                <NodeTooltip title={providerWarning} placement="bottom">
-                                    <WarningIcon sx={{ fontSize: '1rem', color: 'warning.main', flexShrink: 0, mr: 0.5 }} />
-                                </NodeTooltip>
-                            )}
-                            <Typography variant="body2" noWrap
-                                color={providerWarning ? 'warning.main' : 'text.secondary'}
-                                sx={{ ...NODE_LAYER_STYLES.typography, fontWeight: 400, maxWidth: '100%', textAlign: 'center' }}>
-                                {providerInfo.name}
-                            </Typography>
+                            {/* The vendor mark leads the name; a missing or disabled
+                                provider shows its warning there instead. */}
+                            <ProviderLabel
+                                provider={providerInfo.provider}
+                                size={14}
+                                gap={0.5}
+                                sx={{ maxWidth: '100%' }}
+                                leading={providerWarning ? (
+                                    <NodeTooltip title={providerWarning} placement="bottom">
+                                        <WarningIcon sx={{ fontSize: '1rem', color: 'warning.main', flexShrink: 0 }} />
+                                    </NodeTooltip>
+                                ) : undefined}
+                            >
+                                <Typography variant="body2" noWrap
+                                    color={providerWarning ? 'warning.main' : 'text.secondary'}
+                                    sx={{ ...NODE_LAYER_STYLES.typography, fontWeight: 400, minWidth: 0, textAlign: 'center' }}>
+                                    {providerInfo.name}
+                                </Typography>
+                            </ProviderLabel>
                             <Box sx={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: '2px', lineHeight: 0 }}>
                                 {hasDualApiStyle ? (
                                     <>
