@@ -3,8 +3,8 @@
 **After any change under `.github/workflows/` or `.github/actions/`, lint it with actionlint before committing.** YAML parsing alone misses bad `needs`, wrong `with:` inputs, expression errors and shell mistakes.
 
 ```bash
-GOBIN=/tmp/bin go install github.com/rhysd/actionlint/cmd/actionlint@latest   # once
-/tmp/bin/actionlint -color=false .github/workflows/*.yml
+go install github.com/rhysd/actionlint/cmd/actionlint@latest   # once, if `actionlint` is not on PATH
+actionlint -color=false .github/workflows/*.yml
 ```
 
 - Lint only `workflows/*.yml`; actionlint rejects `actions/*/action.yml` (it reads them as workflows).
