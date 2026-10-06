@@ -158,7 +158,7 @@ const mockStandardProviderCatalog: MockProviderCatalogEntry[] = [
     // relay.go), each window labelled "<upstream provider> · <window>".
     {
         provider: {
-            uuid: 'mock-provider-tingly-box', name: 'Central Tingly-Box',
+            uuid: 'mock-provider-tingly-box', name: 'Tingly',
             api_base: 'https://box.example.com/tingly/claude_code', api_style: 'anthropic', auth_type: 'api_key',
             token: 'tingly-****wxyz', enabled: true, proxy_url: '',
             api_base_openai: null, api_base_anthropic: 'https://box.example.com/tingly/claude_code',
@@ -998,7 +998,7 @@ const mockQuotas: Record<string, any> = {
     // Relayed by another tingly-box: percentages and reset times only.
     'mock-provider-tingly-box': {
         provider_uuid: 'mock-provider-tingly-box',
-        provider_name: 'Central Tingly-Box',
+        provider_name: 'Tingly',
         provider_type: 'tingly_box',
         fetched_at: now.toISOString(),
         expires_at: inOneHour,
