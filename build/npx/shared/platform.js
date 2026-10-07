@@ -41,6 +41,11 @@ export const GUI_PLATFORM_PACKAGES = {
 	"win32-x64": { name: "@tingly-dev/tingly-box-gui-win32-x64", zip: "tingly-box-gui-windows-amd64.zip" },
 };
 
+// The GUI package entry for this host, or null when the app is not built for it.
+export function guiPlatformPackage() {
+	return GUI_PLATFORM_PACKAGES[`${process.platform}-${process.arch}`] || null;
+}
+
 export function platformPackageName() {
 	const entry = PLATFORM_PACKAGES[`${process.platform}-${process.arch}`];
 	return entry ? entry.name : null;

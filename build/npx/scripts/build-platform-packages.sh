@@ -30,12 +30,25 @@ esac
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NPX_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Entry names of a zip, one per line (Git Bash on Windows has no unzip).
+zip_entries() {
+	if command -v unzip >/dev/null 2>&1; then
+		unzip -l "$1" | awk '{print $NF}'
+	else
+		"${PY:-python3}" -c 'import sys, zipfile; print("\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))' "$1"
+	fi
+}
+
 mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 
+# Node on Windows wants a mixed path (C:/…), not Git Bash's /c/….
+NODE_NPX_DIR="$NPX_DIR"
+if command -v cygpath >/dev/null 2>&1; then NODE_NPX_DIR="$(cygpath -m "$NPX_DIR")"; fi
+
 # key|name|zip lines from the single source of truth in shared/platform.js.
 PLATFORMS="$(node -e '
-import("'"$NPX_DIR"'/shared/platform.js").then(m => {
+import("file:///'"${NODE_NPX_DIR#/}"'/shared/platform.js").then(m => {
   for (const [key, { name, zip }] of Object.entries(m.'"$MAP"')) console.log(`${key}|${name}|${zip}`);
 });')"
 
@@ -57,7 +70,7 @@ while IFS='|' read -r key name zip; do
 		[ "$os" = darwin ] && binary="TinglyBox.app/Contents/MacOS/tingly-box-gui"
 	fi
 	# Sanity: the zip must hold the binary at its top level (what the shim extracts).
-	unzip -l "$zip_path" | awk '{print $NF}' | grep -qx "$binary" \
+	zip_entries "$zip_path" | grep -qx "$binary" \
 		|| { echo "$zip does not contain $binary at its top level" >&2; exit 1; }
 
 	pkg_dir="$OUT_DIR/$name"

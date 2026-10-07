@@ -25,6 +25,7 @@
 | [bench.pencil.md](./bench.pencil.md) | 测试台线框；被放弃的布局明确标注 | [bench.md](./bench.md) |
 | [probe-panel.pencil.md](./probe-panel.pencil.md) | Probe 面板轴、打开状态与 cURL 流程 | [probe.md](./probe.md) |
 | [imbot-output.pencil.md](./imbot-output.pencil.md) | 消息序列及回复归属；历史图与现行降级分开 | [imbot-output.md](./imbot-output.md) |
+| [npm.pencil.md](./npm.pencil.md) | `tb gui` / `tb app` 与 `npx tingly-box-gui` 的启动、取回与缓存流程 | [npm.md](./npm.md) |
 
 ## 架构与持久化
 
@@ -130,6 +131,7 @@
 | [harness-duo.md](./harness-duo.md) | Harness Duo — two-process memory & protocol verification | 设计说明；局部实施状态见正文 |
 | [harness-remote.md](./harness-remote.md) | Harness Remote — in-process IM chat e2e for remote/control/remoteagent | 设计说明；局部实施状态见正文 |
 | [harness-agent-testing.md](./harness-agent-testing.md) | Runbook — tingly-box 阶段验收基线 | 设计说明；局部实施状态见正文 |
+| [harness-npm.md](./harness-npm.md) | Harness npm — 用本地 registry 和虚拟版本号，从当前源码演练整条 npm 发布与安装链路 | 脚本 `build/npx/harness-npm.sh`；CI 里只有手动触发的 `harness-npm.yml`（Linux、macOS、Windows 三平台） |
 | [rule-flag-testing.md](./rule-flag-testing.md) | Rule-Flag Behavior Testing | 设计说明；局部实施状态见正文 |
 | [vmodel.md](./vmodel.md) | vmodel — design index | 入口索引 |
 | [vmodel-benchmark.md](./vmodel-benchmark.md) | vmodel as a shared real-world benchmark | Phase 1–3 已完成 |
