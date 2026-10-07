@@ -102,6 +102,9 @@ func (ph *ProtocolHandler) SetupMixinEndpoints(group *gin.RouterGroup, modelAuth
 	// Embeddings endpoint (OpenAI compatible)
 	group.POST("/embeddings", ph.modelAuthChain(modelAuth, ph.teamScopeMiddleware, DeclareOperation("embeddings"), ph.HandleOpenAIEmbeddings)...)
 
+	// Decisions endpoint (OpenAI Decisions API, opaque passthrough)
+	group.POST("/decisions", ph.modelAuthChain(modelAuth, ph.teamScopeMiddleware, DeclareOperation("decisions"), ph.HandleOpenAIDecisions)...)
+
 	// Image generation endpoint (OpenAI compatible).
 	// Routed directly to upstream POST /v1/images/generations; the Responses API
 	// (POST /responses with the image_generation tool) is exposed in parallel via
