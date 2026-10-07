@@ -30,6 +30,12 @@ waits for the `production` environment approval):
   Linux ones are the GTK3 bare binary; the shim checks system libraries first), same
   scheme as the cli. Intel Macs and Windows arm64 exit pointing at
   the release assets (`gui-packaging.md`).
+  The install-and-launch logic is `shared/gui.js`; the `tingly-box` shim also
+  routes `tb gui` / `tb app` to it (shell launch is an npm-only need, so the Go
+  CLI has no such command). With no platform package next to it, `tb gui`
+  installs `<gui platform package>@<its own version>` from the npm registry on
+  demand; a version that was never published is an error, never a fallback.
+  Flow diagram: [`npm.pencil.md`](./npm.pencil.md).
 
 `tingly-box-bundle` (all platform zips inside one ~70 MB package) is retired
 as of 2026-09; see F below. Its published versions stay on npm because
@@ -77,6 +83,10 @@ the path to re-enable global installs.
   packaged zips).
 - B is `cleanupRetiredInstallDirs()` and E is `cleanupStaleBinaryCaches()`,
   both in `build/npx/shared/cleanup.js`, called by all three shims.
+- `build/npx/harness-npm.sh` rehearses the whole release from the current source
+  against a local registry under a virtual version (see
+  [`harness-npm.md`](./harness-npm.md)); `test-shim.sh` below instead runs the
+  shims against an existing release.
 - `build/npx/test-shim.sh <release-tag>` codifies the verification: it builds
   the published artifact the same way CI does (pin tag, esbuild bundle) and
   runs the matrix — sweep skipped under a fresh `node_modules` mtime, exact
@@ -86,6 +96,14 @@ the path to re-enable global installs.
   untouched; Linux only, where `XDG_CACHE_HOME` sandboxes the cache root),
   the structured download-failure output, and the platform-package install
   path with its version-mismatch fallback (T6, linux/x86_64 only).
+  Section G exercises `shared/gui.js` through `tb gui` / `tb app` and the
+  pinned gui shim on pretend Windows x64 / macOS arm64 hosts (a preload
+  overrides `process.platform`/`arch`; `open` and `codesign` are fakes): cache
+  hit and detached launch, `open -a`, install from a fake GUI platform package
+  and cache reuse, exit 1 with guidance on unsupported platforms, and no `npm`
+  on PATH. Section E extracts a ~20 MB executable and execs it immediately 30
+  times (the `ETXTBSY` race), and T7 has a stub that logs to stderr after the
+  shim returned (the app must not die of SIGPIPE). None of it needs the network.
   It also esbuild-bundles the gui shim and parse-checks it, so a broken
   `shared/` import fails the harness for every package. Run it before
   touching the shims or the publish workflow. CI runs it too: the

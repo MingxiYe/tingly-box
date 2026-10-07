@@ -9,6 +9,7 @@ import { cleanupRetiredInstallDirs, cleanupStaleBinaryCaches } from "../shared/c
 import { downloadAndExtractZip, extractZipFile } from "../shared/download.js";
 import { DEFAULT_ARGS, downloadFailureHints, sourceArgs } from "../shared/entry.js";
 import { execBinary } from "../shared/exec.js";
+import { launchGui } from "../shared/gui.js";
 import { findPlatformPackage, platformPackageName } from "../shared/platform.js";
 import { parseTransportVersion } from "../shared/transport.js";
 
@@ -96,6 +97,22 @@ async function getPlatformArchAndBinary() {
 }
 
 (async () => {
+	// `tb gui` / `tb app` start the desktop app instead of the CLI binary. This
+	// lives in the shim, not the Go binary: only npm users launch the app from
+	// a shell (everyone else opens it like any other app), and the shim already
+	// knows how to fetch, cache and start it.
+	if (remainingArgs[0] === "gui" || remainingArgs[0] === "app") {
+		await launchGui({
+			shimUrl: import.meta.url,
+			ownVersion: OWN_VERSION,
+			version: VERSION,
+			releaseTag: BINARY_RELEASE_BRANCH,
+			retryCmd: `npx tingly-box ${remainingArgs.join(" ")}`,
+			fromRegistry: true,
+		});
+		return;
+	}
+
 	cleanupRetiredInstallDirs(dirname(fileURLToPath(import.meta.url)));
 
 	const platformInfo = await getPlatformArchAndBinary();

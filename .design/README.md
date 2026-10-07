@@ -25,6 +25,7 @@
 | [bench.pencil.md](./bench.pencil.md) | 测试台线框；被放弃的布局明确标注 | [bench.md](./bench.md) |
 | [probe-panel.pencil.md](./probe-panel.pencil.md) | Probe 面板轴、打开状态与 cURL 流程 | [probe.md](./probe.md) |
 | [imbot-output.pencil.md](./imbot-output.pencil.md) | 消息序列及回复归属；历史图与现行降级分开 | [imbot-output.md](./imbot-output.md) |
+| [npm.pencil.md](./npm.pencil.md) | `tb gui` / `tb app` 与 `npx tingly-box-gui` 的启动、取回与缓存流程 | [npm.md](./npm.md) |
 
 ## 架构与持久化
 

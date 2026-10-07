@@ -3,7 +3,9 @@
 # artifact like .github/workflows/npm.yml does (pin tag, esbuild single-file
 # bundle), then verify the retired-dir sweep guards, an end-to-end
 # download + `version` run, the failure output, and the platform-package
-# install path. Details: .design/npm.md.
+# install path. The G section covers `tb gui` / `tb app` and the gui shim on
+# pretend macOS/Windows hosts (no network). The npm release itself, from a local
+# registry and from source, is rehearsed by harness-npm.sh. Details: .design/npm.md.
 #
 # Usage:   ./test-shim.sh <release-tag>
 # Example: ./test-shim.sh v0.260819.0
@@ -263,6 +265,149 @@ fs.writeFileSync(dst, JSON.stringify({ ...JSON.parse(fs.readFileSync(src, "utf8"
 else
 	echo "==> [T7] skipped (needs linux/x86_64 and zip)"
 fi
+
+# --- G: `tb gui` / `tb app` and the tingly-box-gui shim (shared/gui.js) -----
+# The app only runs on macOS arm64 and Windows x64, so these tests pretend to
+# be those platforms: a preload overrides process.platform/arch (the shims read
+# them at call time), `open` / `codesign` are fakes on PATH, and the "app" is a
+# script. Nothing here touches the network — every launch is a cache hit or an
+# install from a fake platform package — and nothing depends on the host OS.
+echo "==> [G] build the gui shim pinned to $TAG and plant the test fixtures"
+GENTRY="$SCRIPT_DIR/tingly-box-gui/.bin.test-entry.js"
+trap 'rm -rf "$WORK" "$ENTRY" "$GENTRY"' EXIT
+sed "s|const BINARY_RELEASE_BRANCH = .*|const BINARY_RELEASE_BRANCH = '$TAG';|" \
+	"$SCRIPT_DIR/tingly-box-gui/bin.js" > "$GENTRY"
+npx --yes "esbuild@$ESBUILD_VERSION" "$GENTRY" --bundle --platform=node --target=node18 \
+	--format=esm --external:@aws-sdk/client-s3 \
+	--banner:js="import{createRequire as __cr}from'module';const require=__cr(import.meta.url);" \
+	--outfile="$WORK/gui-pinned.js" --log-level=warning
+GUI_NM="$WORK/gui-g/node_modules"
+mkdir -p "$GUI_NM/tingly-box-gui" "$WORK/gui-bin" "$WORK/gui-home" "$WORK/gui-out"
+cp "$WORK/gui-pinned.js" "$GUI_NM/tingly-box-gui/bin.js"
+node -e '
+const fs = require("fs"), [src, dst, version] = process.argv.slice(1);
+fs.writeFileSync(dst, JSON.stringify({ ...JSON.parse(fs.readFileSync(src, "utf8")), version }, null, 2));
+' "$SCRIPT_DIR/tingly-box-gui/package.json" "$GUI_NM/tingly-box-gui/package.json" "$VERSION"
+
+cat > "$WORK/spoof.mjs" <<'EOF'
+const [plat, arch] = (process.env.SPOOF || "").split("-");
+if (plat) {
+	Object.defineProperty(process, "platform", { value: plat });
+	Object.defineProperty(process, "arch", { value: arch });
+}
+EOF
+printf '#!/bin/sh\necho "open $*" >> "$GUI_LOG"\n' > "$WORK/gui-bin/open"
+printf '#!/bin/sh\nexit 0\n' > "$WORK/gui-bin/codesign"
+chmod +x "$WORK/gui-bin/open" "$WORK/gui-bin/codesign"
+
+# run_gui <os-arch> <shim.js> [args...] — output in $WORK/gui.log, status returned.
+GUI_LOG="$WORK/gui-open.log"; export GUI_LOG
+run_gui() {
+	local spoof="$1" shim="$2"; shift 2
+	SPOOF="$spoof" PATH="$WORK/gui-bin:$PATH" HOME="$WORK/gui-home" \
+		LOCALAPPDATA="$WORK/gui-home/AppData" \
+		node --import "$WORK/spoof.mjs" "$shim" "$@" > "$WORK/gui.log" 2>&1
+}
+# wait_for <file> — the app is launched detached, so poll briefly for its marker.
+wait_for() { for _ in $(seq 1 30); do [ -f "$1" ] && return 0; sleep 0.1; done; return 1; }
+
+# A "Windows" app already in the cache for $TAG: a script that records its pid
+# and keeps running, so we can check the shim returned without waiting for it.
+WIN_APP_DIR="$WORK/gui-home/AppData/tingly-box-gui/$TAG/bin"
+mkdir -p "$WIN_APP_DIR"
+printf '#!/bin/sh\necho $$ > "%s/app.pid"\nsleep 5\n' "$WORK/gui-out" > "$WIN_APP_DIR/tingly-box-gui.exe"
+chmod +x "$WIN_APP_DIR/tingly-box-gui.exe"
+
+echo "==> [G1] Windows x64: tb gui / tb app / tingly-box-gui launch the cached app, detached"
+for launcher in "gui:$NM/tingly-box/bin.js" "app:$NM/tingly-box/bin.js" "-:$GUI_NM/tingly-box-gui/bin.js"; do
+	sub="${launcher%%:*}"; shim="${launcher#*:}"; label="tb $sub"
+	[ "$sub" = "-" ] && { sub=""; label="tingly-box-gui"; }
+	rm -f "$WORK/gui-out/app.pid"
+	rc=0; run_gui win32-x64 "$shim" $sub || rc=$?
+	[ "$rc" -eq 0 ] && pass "G1: $label exit 0" || { fail "G1: $label exit $rc:"; tail -5 "$WORK/gui.log"; }
+	grep -q "Tingly Box desktop app $TAG" "$WORK/gui.log" \
+		&& pass "G1: $label prints the app version ($TAG)" \
+		|| fail "G1: $label did not print the app version"
+	if wait_for "$WORK/gui-out/app.pid"; then
+		pid="$(cat "$WORK/gui-out/app.pid")"
+		kill -0 "$pid" 2>/dev/null \
+			&& pass "G1: $label returned while the app is still running (detached)" \
+			|| fail "G1: $label waited for the app to exit"
+		kill "$pid" 2>/dev/null || true
+	else
+		fail "G1: $label never started the app"
+	fi
+done
+
+echo "==> [G2] macOS arm64: tb gui opens the cached TinglyBox.app"
+MAC_BIN="$WORK/gui-home/Library/Caches/tingly-box-gui/$TAG/bin/TinglyBox.app/Contents/MacOS"
+mkdir -p "$MAC_BIN"; : > "$MAC_BIN/tingly-box-gui"
+: > "$GUI_LOG"; rc=0; run_gui darwin-arm64 "$NM/tingly-box/bin.js" gui || rc=$?
+[ "$rc" -eq 0 ] && grep -q "open -a .*TinglyBox.app" "$GUI_LOG" \
+	&& pass "G2: tb gui ran 'open -a TinglyBox.app'" \
+	|| { fail "G2: expected 'open -a TinglyBox.app' (exit $rc):"; tail -5 "$WORK/gui.log"; }
+
+echo "==> [G3] unsupported platforms exit 1 with guidance, never a stack trace"
+for plat in linux-ia32 win32-arm64 darwin-x64; do
+	rc=0; run_gui "$plat" "$NM/tingly-box/bin.js" gui || rc=$?
+	if [ "$rc" -eq 1 ] && grep -q "is not supported by npx tingly-box-gui" "$WORK/gui.log" \
+		&& ! grep -q "Stack:\|at .*node:" "$WORK/gui.log"; then
+		pass "G3: $plat -> exit 1 with guidance"
+	else
+		fail "G3: $plat (exit $rc):"; tail -5 "$WORK/gui.log"
+	fi
+done
+
+echo "==> [G4] platform package at a matching version: installed from it, no download"
+PKG="$GUI_NM/tingly-box-gui/node_modules/@tingly-dev/tingly-box-gui-darwin-arm64"
+mkdir -p "$PKG/bin" "$WORK/gui-stage/TinglyBox.app/Contents/MacOS"
+printf '{"name":"@tingly-dev/tingly-box-gui-darwin-arm64","version":"%s"}\n' "$VERSION" > "$PKG/package.json"
+: > "$WORK/gui-stage/TinglyBox.app/Contents/MacOS/tingly-box-gui"
+python3 - "$PKG/bin/tingly-box-gui-macos-arm64.zip" "$WORK/gui-stage" <<'EOF'
+import os, sys, zipfile
+out, root = sys.argv[1:]
+with zipfile.ZipFile(out, "w") as z:
+    for d, _, files in os.walk(root):
+        for f in files:
+            full = os.path.join(d, f)
+            z.write(full, os.path.relpath(full, root))
+EOF
+rm -rf "$WORK/gui-home/Library/Caches/tingly-box-gui"; : > "$GUI_LOG"
+rc=0; run_gui darwin-arm64 "$GUI_NM/tingly-box-gui/bin.js" || rc=$?
+[ "$rc" -eq 0 ] && pass "G4: shim ran (exit 0)" || { fail "G4: shim failed (exit $rc):"; tail -5 "$WORK/gui.log"; }
+grep -q "Installing the app from @tingly-dev/tingly-box-gui-darwin-arm64@$VERSION" "$WORK/gui.log" \
+	&& ! grep -q "Downloading" "$WORK/gui.log" \
+	&& pass "G4: app came from the platform package, nothing downloaded" \
+	|| { fail "G4: expected the platform package path:"; head -6 "$WORK/gui.log"; }
+grep -q "Tingly Box desktop app v$VERSION" "$WORK/gui.log" \
+	&& pass "G4: version line uses the package version (v$VERSION)" \
+	|| fail "G4: version line missing"
+[ -d "$WORK/gui-home/Library/Caches/tingly-box-gui/v$VERSION/bin/TinglyBox.app" ] \
+	&& pass "G4: app extracted into the versioned cache dir" \
+	|| fail "G4: cache dir missing"
+[ -x "$WORK/gui-home/Library/Caches/tingly-box-gui/v$VERSION/bin/TinglyBox.app/Contents/MacOS/tingly-box-gui" ] \
+	&& pass "G4: inner binary made executable" \
+	|| fail "G4: inner binary is not executable"
+grep -q "open -a .*TinglyBox.app" "$GUI_LOG" \
+	&& pass "G4: app launched via open -a" || fail "G4: app was not launched"
+: > "$GUI_LOG"; rc=0; run_gui darwin-arm64 "$GUI_NM/tingly-box-gui/bin.js" || rc=$?
+! grep -q "Installing the app from\|Extracting" "$WORK/gui.log" \
+	&& pass "G4: second run reuses the cache (no re-extract)" \
+	|| fail "G4: second run extracted again"
+
+# --- G5: tb gui with no npm on PATH -----------------------------------------
+# The app is fetched with npm when it is not cached. The real registry flow
+# (install at tb's own version, an unpublished version as an error) is rehearsed
+# end to end by harness-npm.sh; what is checked here is the one case that needs
+# no registry at all.
+echo "==> [G5] tb gui without npm on PATH: a clear error, nothing installed"
+mkdir -p "$WORK/nonpm"; ln -sf "$(command -v node)" "$WORK/nonpm/node"
+rc=0
+SPOOF=darwin-arm64 PATH="$WORK/nonpm" HOME="$WORK/gui-home-nonpm" \
+	node --import "$WORK/spoof.mjs" "$NM/tingly-box/bin.js" gui > "$WORK/gui.log" 2>&1 || rc=$?
+[ "$rc" -eq 1 ] && grep -q "npm was not found on PATH" "$WORK/gui.log" \
+	&& pass "G5: no npm on PATH -> exit 1 with a clear message" \
+	|| { fail "G5: expected 'npm was not found' (exit $rc):"; tail -5 "$WORK/gui.log"; }
 
 echo
 if [ "$FAILED" -eq 0 ]; then
