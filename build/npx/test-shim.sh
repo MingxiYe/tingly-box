@@ -262,6 +262,17 @@ fs.writeFileSync(dst, JSON.stringify({ ...JSON.parse(fs.readFileSync(src, "utf8"
 	DISPLAY=:99 gui_shim > "$WORK/gui-handoff.log" 2>&1 \
 		&& pass "T7: instant exit 0 (single-instance handoff) is not reported as a failure" \
 		|| { fail "T7: handoff treated as failure:"; tail -5 "$WORK/gui-handoff.log"; }
+	# The app logs to stderr for as long as it runs. If the shim gave it a pipe and
+	# closed that pipe on exit, the app would be killed by SIGPIPE on its first log
+	# line after that (a Go program exits on a broken stderr): it opened and then
+	# vanished. This stub writes to stderr 3 s in, after the shim's 2 s watch ended.
+	rm -f "$WORK/late-ok"
+	printf '#!/bin/sh\nsleep 3\necho "late log line" >&2\necho survived > "%s/late-ok"\nsleep 1\n' "$WORK" > "$XDG_CACHE_HOME/tingly-box-gui/v$GUI_VERSION/bin/tingly-box-gui"
+	DISPLAY=:99 gui_shim > "$WORK/gui-late.log" 2>&1 || true
+	for _ in $(seq 1 80); do [ -f "$WORK/late-ok" ] && break; sleep 0.1; done
+	[ -f "$WORK/late-ok" ] \
+		&& pass "T7: the app survives logging to stderr after the shim has returned" \
+		|| fail "T7: the app died when it logged after the shim returned (stderr must not be a pipe)"
 else
 	echo "==> [T7] skipped (needs linux/x86_64 and zip)"
 fi

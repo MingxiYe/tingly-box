@@ -13,7 +13,7 @@
 //          published is an error, not a fallback to another version }
 
 import { execFileSync, spawn, spawnSync } from "child_process";
-import { chmodSync, existsSync, mkdirSync, rmSync } from "fs";
+import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { cacheDir } from "./cachedir.js";
@@ -141,11 +141,19 @@ function preflightLinux(releasesUrl) {
 // Start the app detached so the shell prompt returns, but watch the first
 // moments: a binary that dies at startup (a library the preflight could not
 // see, a display it cannot open) would otherwise vanish silently.
+//
+// The app's stderr goes to a file, never a pipe to this process. A pipe is
+// closed when the shim exits, and a Go program that writes to a closed stderr
+// is killed by SIGPIPE: the app logs there all the time, so it used to die on
+// its first log line after the shim let go of the pipe. The file also tells
+// the user where to look when the app misbehaves later.
 function launchLinux(appPath, cacheRoot) {
 	console.log(`🚀 Launching ${appPath}...`);
-	const child = spawn(appPath, [], { detached: true, stdio: ["ignore", "ignore", "pipe"] });
-	let stderr = "";
-	child.stderr.on("data", (d) => { if (stderr.length < 4096) stderr += d; });
+	mkdirSync(cacheRoot, { recursive: true });
+	const logPath = join(cacheRoot, "app.log");
+	const errFd = openSync(logPath, "w");
+	const child = spawn(appPath, [], { detached: true, stdio: ["ignore", "ignore", errFd] });
+	closeSync(errFd); // the child holds its own copy
 	child.on("error", (e) => {
 		console.error(`\n❌ Failed to launch ${appPath}: ${e.message}`);
 		console.error(`   Clear the cache and retry: rm -rf "${cacheRoot}"`);
@@ -155,14 +163,16 @@ function launchLinux(appPath, cacheRoot) {
 		// Exit 0: a running instance took over (the app is single-instance).
 		if (code === 0) process.exit(0);
 		console.error(`\n❌ ${appPath} exited right after start (${signal || `code ${code}`})`);
+		let stderr = "";
+		try { stderr = readFileSync(logPath, "utf8").slice(0, 4096); } catch { /* no log to show */ }
 		if (stderr.trim()) console.error(stderr.trim().split("\n").map((l) => `   ${l}`).join("\n"));
 		console.error(`\n💡 Use the CLI instead: npx tingly-box`);
 		process.exit(code || 1);
 	});
 	setTimeout(() => {
 		child.removeAllListeners("exit");
-		child.stderr.destroy();
 		child.unref();
+		console.log(`📝 App log: ${logPath}`);
 	}, 2000);
 }
 
