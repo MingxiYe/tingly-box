@@ -2,7 +2,7 @@
 // cli shim also extracts the same zip from the platform package npm
 // installed next to it (extractZipFile), so both sources share one path.
 
-import { chmodSync, createWriteStream, existsSync, mkdirSync, readFileSync, statSync } from "fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs";
 import { join } from "path";
 import { Readable } from "stream";
 import { ProxyAgent } from "undici";
@@ -147,18 +147,13 @@ export async function extractZipBuffer(zipBuffer, extractDir) {
 				continue;
 			}
 
-			// Extract file
+			// Extract file. writeFileSync returns only once the descriptor is
+			// closed; a stream's write() callback fires before that, and
+			// executing the file while it is still open for writing fails with
+			// ETXTBSY on Linux (EBUSY on Windows). The binaries are launched
+			// right after extraction, so this must be closed by then.
 			const content = await file.buffer();
-			const fileStream = createWriteStream(filePath);
-			await new Promise((resolve, reject) => {
-				fileStream.write(content, (err) => {
-					if (err) reject(err);
-					else {
-						fileStream.end();
-						resolve();
-					}
-				});
-			});
+			writeFileSync(filePath, content);
 			// Set file permissions after writing
 			if (process.platform !== "win32") {
 				// Use ZIP permissions if available, otherwise default to 0o755 (executable)

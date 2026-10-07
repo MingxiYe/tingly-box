@@ -409,6 +409,52 @@ SPOOF=darwin-arm64 PATH="$WORK/nonpm" HOME="$WORK/gui-home-nonpm" \
 	&& pass "G5: no npm on PATH -> exit 1 with a clear message" \
 	|| { fail "G5: expected 'npm was not found' (exit $rc):"; tail -5 "$WORK/gui.log"; }
 
+# --- E: an extracted binary can be executed right away (no ETXTBSY) --------
+# The shims launch the binary the moment extraction returns. A write stream's
+# callback fires before its descriptor is closed, and exec-ing a file that is
+# still open for writing fails with ETXTBSY on Linux (EBUSY on Windows): about
+# 1 in 7 extractions of a ~20 MB binary, so 30 in a row would almost surely
+# catch a regression. Linux/macOS only: the check needs a script that executes.
+if [ "$(uname -s)" = "Linux" ]; then
+	echo "==> [E] extract a ~20 MB executable and exec it immediately, 30 times"
+	E_DIR="$WORK/etxtbsy"; mkdir -p "$E_DIR"
+	python3 - "$E_DIR/app.zip" <<'EOF'
+import sys, zipfile
+body = b"#!/bin/sh\nexit 0\n" + b"#" * (20 * 1024 * 1024) + b"\n"
+zi = zipfile.ZipInfo("app"); zi.external_attr = 0o755 << 16; zi.compress_type = zipfile.ZIP_STORED
+with zipfile.ZipFile(sys.argv[1], "w") as z:
+    z.writestr(zi, body)
+EOF
+	cat > "$E_DIR/run.mjs" <<EOF
+import { readFileSync, mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import { spawn } from "child_process";
+const { extractZipBuffer } = await import("$SCRIPT_DIR/shared/download.js");
+const zip = readFileSync("$E_DIR/app.zip");
+console.log = () => {};
+let busy = 0, other = 0;
+const N = 30;
+for (let i = 0; i < N; i++) {
+  const dir = mkdtempSync(join(tmpdir(), "etxt-"));
+  await extractZipBuffer(zip, dir);
+  const r = await new Promise((resolve) => {
+    try { const c = spawn(join(dir, "app"), [], { stdio: "ignore" }); c.on("exit", (code) => resolve(code === 0 ? "ok" : "exit" + code)); c.on("error", (e) => resolve(e.code)); }
+    catch (e) { resolve(e.code); }
+  });
+  if (r === "ETXTBSY" || r === "EBUSY") busy++; else if (r !== "ok") other++;
+  rmSync(dir, { recursive: true, force: true });
+}
+process.stdout.write("busy=" + busy + " other=" + other + "\n");
+EOF
+	E_RES="$(node "$E_DIR/run.mjs" 2>&1 | tail -1)"
+	[ "$E_RES" = "busy=0 other=0" ] \
+		&& pass "E: 30/30 extractions were executable immediately ($E_RES)" \
+		|| fail "E: an extracted binary was not executable right away ($E_RES)"
+else
+	echo "==> [E] skipped (needs Linux)"
+fi
+
 echo
 if [ "$FAILED" -eq 0 ]; then
 	echo "🎉 All shim tests passed for $TAG"
