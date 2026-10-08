@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -154,8 +155,30 @@ func (c *OpenAIClient) EmbeddingsNew(ctx context.Context, req openai.EmbeddingNe
 // returned as *openai.Error and keep their HTTP status.
 func (c *OpenAIClient) DecisionsNew(ctx context.Context, body []byte) ([]byte, error) {
 	var out []byte
-	err := c.client.Post(ctx, "decisions", nil, &out, option.WithRequestBody("application/json", body))
+	path, override := decisionsTarget(c.provider.APIBase)
+	opts := append([]option.RequestOption{option.WithRequestBody("application/json", body)}, override...)
+	err := c.client.Post(ctx, path, nil, &out, opts...)
 	return out, err
+}
+
+// decisionsTarget resolves where a provider serves decisions. Most vendors expose
+// {APIBase}/decisions (override is nil). Two host the same body elsewhere, so
+// they override the base URL for this request (the SDK ignores absolute paths):
+//   - TypeSafe (Jev native): https://api.typesafe.ai/v1/systemone
+//   - OpenRouter (alpha):    https://openrouter.ai/api/alpha/decisions
+func decisionsTarget(apiBase string) (path string, override []option.RequestOption) {
+	u, err := url.Parse(apiBase)
+	if err != nil {
+		return "decisions", nil
+	}
+	root := u.Scheme + "://" + u.Host
+	switch strings.ToLower(u.Hostname()) {
+	case "api.typesafe.ai":
+		return "systemone", []option.RequestOption{option.WithBaseURL(root + "/v1/")}
+	case "openrouter.ai":
+		return "decisions", []option.RequestOption{option.WithBaseURL(root + "/api/alpha/")}
+	}
+	return "decisions", nil
 }
 
 // ImagesGenerate creates a new image generation request. Most providers speak
