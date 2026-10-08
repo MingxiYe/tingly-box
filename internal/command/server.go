@@ -355,10 +355,8 @@ func runSwagger(appManager *app.AppManager, output string, stdout bool) error {
 
 const (
 	// URL templates for displaying to users
-	webUITpl             = "http://localhost:%d/"
-	webUILoginTpl        = "http://localhost:%d/login/%s"
-	openAIEndpointTpl    = "http://localhost:%d/tingly/openai/v1/chat/completions"
-	anthropicEndpointTpl = "http://localhost:%d/tingly/anthropic/v1/messages"
+	webUITpl      = "http://localhost:%d/"
+	webUILoginTpl = "http://localhost:%d/login/%s"
 )
 
 // BannerConfig holds configuration for banner display
@@ -385,56 +383,38 @@ func printBanner(cfg BannerConfig) {
 		highlight = lipgloss.Color("#60A5FA")
 	)
 
-	labelStyle := lipgloss.NewStyle().Foreground(muted).Width(14).Align(lipgloss.Right)
-	urlStyle := lipgloss.NewStyle().Foreground(success)
-	tokenStyle := lipgloss.NewStyle().Foreground(highlight)
 	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(primary)
 	versionStyle := lipgloss.NewStyle().Foreground(muted)
+	labelStyle := lipgloss.NewStyle().Foreground(muted)
+	urlStyle := lipgloss.NewStyle().Foreground(success)
+	tokenStyle := lipgloss.NewStyle().Foreground(highlight)
+	hintStyle := lipgloss.NewStyle().Foreground(muted).Italic(true)
 
-	var lines []string
-	addLine := func(label, value string, valueStyle lipgloss.Style) {
-		lines = append(lines, fmt.Sprintf("%s  %s", labelStyle.Render(label), valueStyle.Render(value)))
-	}
-
+	webUI := fmt.Sprintf(webUITpl, cfg.Port)
 	if cfg.GlobalConfig.HasUserToken() {
-		addLine("Web UI", fmt.Sprintf("http://localhost:%d/login/%s", cfg.Port, cfg.GlobalConfig.GetUserToken()), urlStyle)
-	} else {
-		addLine("Web UI", fmt.Sprintf("http://localhost:%d/", cfg.Port), urlStyle)
-	}
-	addLine("OpenAI API", fmt.Sprintf("http://localhost:%d/tingly/openai/v1/chat/completions", cfg.Port), urlStyle)
-	addLine("Anthropic API", fmt.Sprintf("http://localhost:%d/tingly/anthropic/v1/messages", cfg.Port), urlStyle)
-
-	if cfg.GlobalConfig.HasUserToken() {
-		lines = append(lines, "")
-		addLine("Login Token", cfg.GlobalConfig.GetUserToken(), tokenStyle)
+		webUI = fmt.Sprintf(webUILoginTpl, cfg.Port, cfg.GlobalConfig.GetUserToken())
 	}
 
-	// Title: product name on one line, version on the next — nothing else.
-	titleText := titleStyle.Render("Tingly-Box")
-	versionText := versionStyle.Render(formatVersion(BuildVersion))
-
-	// Compute visual width for centering the title lines
-	maxWidth := lipgloss.Width(titleText)
-	if w := lipgloss.Width(versionText); w > maxWidth {
-		maxWidth = w
-	}
-	for _, line := range lines {
-		if w := lipgloss.Width(line); w > maxWidth {
-			maxWidth = w
-		}
-	}
-
-	title := lipgloss.PlaceHorizontal(maxWidth, lipgloss.Center, titleText)
-	version := lipgloss.PlaceHorizontal(maxWidth, lipgloss.Center, versionText)
-	allLines := append([]string{title, version, ""}, lines...)
-
-	box := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
+	// No box: a left accent bar keeps the block recognisable without
+	// breaking when the (long) login URL is wider than the terminal.
+	bar := lipgloss.NewStyle().
+		Border(lipgloss.ThickBorder(), false, false, false, true).
 		BorderForeground(primary).
-		Padding(1, 2)
+		PaddingLeft(2)
+
+	rows := []string{
+		titleStyle.Render("Tingly-Box") + "  " + versionStyle.Render(formatVersion(BuildVersion)),
+		"",
+		labelStyle.Render("WebUI   ") + urlStyle.Render(webUI),
+	}
+	if cfg.GlobalConfig.HasUserToken() {
+		rows = append(rows, labelStyle.Render("Token   ")+tokenStyle.Render(cfg.GlobalConfig.GetUserToken()))
+	}
+	rows = append(rows, "", hintStyle.Render("Open the WebUI to get started"))
+	body := strings.Join(rows, "\n")
 
 	fmt.Println()
-	fmt.Println(box.Render(strings.Join(allLines, "\n")))
+	fmt.Println(bar.Render(body))
 	fmt.Println()
 
 	if cfg.IsDaemon {
