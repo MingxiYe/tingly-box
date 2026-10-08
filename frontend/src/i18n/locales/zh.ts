@@ -70,6 +70,7 @@ export default {
       "useVSCode": "VS Code",
       "useCursor": "Cursor",
       "useEmbed": "Embedding",
+      "useDecisions": "Decisions",
       "useImageGen": "Image API",
       "useTeam": "Team",
       "useCustom": "Custom",
@@ -1736,6 +1737,11 @@ export default {
     "closeAriaLabel": "关闭快速开始",
     "description": "调用图像生成或编辑接口，然后将 base64 响应解码为图像文件。模型令牌可通过 GET /api/v1/token 获取。"
   },
+  "decisionsGuide": {
+    "title": "Decisions API 快速开始",
+    "closeAriaLabel": "关闭快速开始",
+    "description": "从你定义的选项中选出一个答案。请求体原样透传给服务商，网关只路由 `model`。openai 和 team 端点的用法相同。"
+  },
   "templatePage": {
     "noProviders": {
       "title": "尚未配置提供商",
@@ -2222,6 +2228,7 @@ export default {
     "sharingKeys": "Team 密钥",
     "modelRules": "模型规则",
     "embedModelRules": "向量模型规则",
+    "decisionsModelRules": "决策模型规则",
     "imageGenModelRules": "图像模型规则",
     "tooltip": {
       "claude_code": "命令行 AI 开发助手，可用于编码实现、测试与 git 操作",

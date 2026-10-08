@@ -70,6 +70,7 @@ export default {
       "useVSCode": "VS Code",
       "useCursor": "Cursor",
       "useEmbed": "Embedding",
+      "useDecisions": "Decisions",
       "useImageGen": "Image API",
       "useTeam": "Team",
       "useCustom": "Custom",
@@ -1742,6 +1743,11 @@ export default {
     "closeAriaLabel": "Close quick start",
     "description": "Call the image generation or edit endpoint, then decode the base64 response into an image file. The model token is available from GET /api/v1/token."
   },
+  "decisionsGuide": {
+    "title": "Decisions API Quick Start",
+    "closeAriaLabel": "Close quick start",
+    "description": "Pick one answer from options you define. The body is passed through to the provider as-is; only `model` is routed. Works the same on the openai and team endpoints."
+  },
   "templatePage": {
     "noProviders": {
       "title": "No Providers Configured",
@@ -2228,6 +2234,7 @@ export default {
     "sharingKeys": "Team Keys",
     "modelRules": "Model Rules",
     "embedModelRules": "Embedding Model Rules",
+    "decisionsModelRules": "Decisions Model Rules",
     "imageGenModelRules": "Image Model Rules",
     "tooltip": {
       "claude_code": "AI-powered CLI development agent for implementation, testing, and git operations",
@@ -2308,6 +2315,7 @@ export default {
       "openai": "Drop-in OpenAI-compatible SDK endpoint.",
       "anthropic": "Drop-in Anthropic-compatible SDK endpoint.",
       "embed": "Route embedding requests to your provider.",
+      "decisions": "Route decision requests to your provider.",
       "imagegen": "Route image generation and editing through Tingly Box.",
       "custom": "Bring your own request model name — a generic catch-all scenario. Hidden by default.",
       "team": "Shared central model deployment for your whole team."
