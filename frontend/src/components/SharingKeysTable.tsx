@@ -1,4 +1,4 @@
-import { Key as IconKey, DeleteOutline as IconDeleteOutline, ContentCopy as IconCopy, AccessTime as IconClock, Person as IconUser, Visibility as IconEye, VisibilityOff as IconEyeOff, CompareArrows as IconMove } from '@/components/icons';
+import { Key as IconKey, DeleteOutline as IconDeleteOutline, ContentCopy as IconCopy, AccessTime as IconClock, Person as IconUser, Visibility as IconEye, VisibilityOff as IconEyeOff, CompareArrows as IconMove, Speed as IconSpeed } from '@/components/icons';
 import {
     Box,
     Stack,
@@ -26,6 +26,8 @@ export interface SharingKey {
     last_used_at?: string;
     created_at: string;
     created_by?: string;
+    /** Requests per minute allowed on /tingly/team; 0 = unlimited. */
+    rpm_limit: number;
 }
 
 const maskToken = (token: string): string => {
@@ -48,6 +50,7 @@ interface SharingKeysTableProps {
     onToggleEnabled: (token: SharingKey) => void;
     onDelete: (token: SharingKey) => void;
     onMove: (token: SharingKey) => void;
+    onEditRateLimit: (token: SharingKey) => void;
 }
 
 const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
@@ -59,9 +62,10 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
     onToggleEnabled,
     onDelete,
     onMove,
+    onEditRateLimit,
 }) => {
     const { t } = useTranslation();
-    const colSpan = 7;
+    const colSpan = 8;
 
     return (
         <TableContainer>
@@ -69,14 +73,15 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                 page (one per Team) line their columns up; minWidth keeps the
                 columns readable and lets narrow screens scroll the table
                 instead of the page. */}
-            <Table sx={{ tableLayout: 'fixed', minWidth: 760 }}>
+            <Table sx={{ tableLayout: 'fixed', minWidth: 860 }}>
                 <colgroup>
-                    <col style={{ width: '20%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '22%' }} />
-                    <col style={{ width: 88 }} />
                     <col style={{ width: '18%' }} />
-                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '9%' }} />
+                    <col style={{ width: '21%' }} />
+                    <col style={{ width: 80 }} />
+                    <col style={{ width: 120 }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '16%' }} />
                     <col style={{ width: 96 }} />
                 </colgroup>
                 <TableHead>
@@ -99,6 +104,7 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                         <TableCell>{t('sharingKeys.table.user')}</TableCell>
                         <TableCell>{t('sharingKeys.table.token')}</TableCell>
                         <TableCell>{t('sharingKeys.table.status')}</TableCell>
+                        <TableCell>{t('sharingKeys.table.rateLimit')}</TableCell>
                         <TableCell>{t('sharingKeys.table.created')}</TableCell>
                         <TableCell>{t('sharingKeys.table.lastUsed')}</TableCell>
                         <TableCell align="right">{t('sharingKeys.table.actions')}</TableCell>
@@ -241,6 +247,32 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                                             onChange={() => onToggleEnabled(key)}
                                             color="success"
                                         />
+                                    </Tooltip>
+                                </TableCell>
+                                <TableCell>
+                                    {/* Concrete value, not a "limited" badge: the number is
+                                        what the key holder will hit. Click-to-edit keeps the
+                                        budget adjustable after creation. */}
+                                    <Tooltip title={t('sharingKeys.table.rateLimitTooltip')} placement="top">
+                                        <Stack
+                                            direction="row"
+                                            spacing={0.5}
+                                            onClick={() => onEditRateLimit(key)}
+                                            sx={{
+                                                alignItems: 'center',
+                                                width: 'fit-content',
+                                                cursor: 'pointer',
+                                                color: 'text.secondary',
+                                                '&:hover': { color: 'text.primary' },
+                                            }}
+                                        >
+                                            <IconSpeed sx={{ fontSize: 13, opacity: 0.4, flexShrink: 0 }} />
+                                            <Typography variant="caption" noWrap sx={{ fontFamily: fontMono }}>
+                                                {key.rpm_limit > 0
+                                                    ? t('sharingKeys.table.perMinute', { n: key.rpm_limit })
+                                                    : t('sharingKeys.table.unlimited')}
+                                            </Typography>
+                                        </Stack>
                                     </Tooltip>
                                 </TableCell>
                                 <TableCell>

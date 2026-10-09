@@ -24,7 +24,18 @@ type APITokenRecord struct {
 	CreatedBy    string     `gorm:"column:created_by;size:64"`
 	RevokedAt    *time.Time `gorm:"column:revoked_at"`
 	RevokeReason string     `gorm:"column:revoke_reason;size:512"`
+	// RPMLimit is the per-key request budget in requests per minute enforced
+	// on /tingly/team (TEP-1851). 0 means unlimited. Rows that predate the
+	// column get the SQL default 0, and keys created without an explicit
+	// value get DefaultSharingKeyRPMLimit, so a key is only ever limited
+	// because an operator chose a number for it.
+	RPMLimit int `gorm:"column:rpm_limit;not null;default:0"`
 }
+
+// DefaultSharingKeyRPMLimit is the requests-per-minute budget a sharing key
+// gets when it is created without an explicit value (TEP-1851). 0 means
+// unlimited: limiting is opt-in per key.
+const DefaultSharingKeyRPMLimit = 0
 
 // TableName specifies the table name for GORM
 func (APITokenRecord) TableName() string {
@@ -154,7 +165,7 @@ func ensureAPITokenSchema(db *gorm.DB) error {
 
 // createTokenRecord is a private helper that creates a token record with the given parameters.
 // The caller must hold s.mu.Lock() before calling this function.
-func (s *APITokenStore) createTokenRecord(userID, tokenID, teamID, displayName, createdBy string, expiresAt *time.Time) (*APITokenRecord, error) {
+func (s *APITokenStore) createTokenRecord(userID, tokenID, teamID, displayName, createdBy string, expiresAt *time.Time, rpmLimit int) (*APITokenRecord, error) {
 	now := time.Now()
 	record := &APITokenRecord{
 		TokenID:     tokenID,
@@ -165,6 +176,7 @@ func (s *APITokenStore) createTokenRecord(userID, tokenID, teamID, displayName, 
 		ExpiresAt:   expiresAt,
 		CreatedAt:   now,
 		CreatedBy:   createdBy,
+		RPMLimit:    rpmLimit,
 	}
 
 	if err := s.db.Create(record).Error; err != nil {
@@ -181,8 +193,18 @@ func (s *APITokenStore) CreateTokenWithTokenID(userID, tokenID, displayName, cre
 	return s.CreateTokenForTeam(userID, tokenID, DefaultTeamID, displayName, createdBy, expiresAt)
 }
 
-// CreateTokenForTeam creates a sharing key bound to exactly one enabled team.
+// CreateTokenForTeam creates a sharing key bound to exactly one enabled team
+// with the default RPM budget (DefaultSharingKeyRPMLimit).
 func (s *APITokenStore) CreateTokenForTeam(userID, tokenID, teamID, displayName, createdBy string, expiresAt *time.Time) (*APITokenRecord, error) {
+	return s.CreateTokenForTeamWithRPMLimit(userID, tokenID, teamID, displayName, createdBy, expiresAt, DefaultSharingKeyRPMLimit)
+}
+
+// CreateTokenForTeamWithRPMLimit is CreateTokenForTeam with an explicit
+// requests-per-minute budget; 0 means unlimited.
+func (s *APITokenStore) CreateTokenForTeamWithRPMLimit(userID, tokenID, teamID, displayName, createdBy string, expiresAt *time.Time, rpmLimit int) (*APITokenRecord, error) {
+	if rpmLimit < 0 {
+		return nil, errors.New("rpm limit cannot be negative")
+	}
 	if userID == "" {
 		return nil, errors.New("user ID cannot be empty")
 	}
@@ -206,7 +228,39 @@ func (s *APITokenStore) CreateTokenForTeam(userID, tokenID, teamID, displayName,
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.createTokenRecord(userID, tokenID, teamID, displayName, createdBy, expiresAt)
+	return s.createTokenRecord(userID, tokenID, teamID, displayName, createdBy, expiresAt, rpmLimit)
+}
+
+// SetTokenRPMLimit changes a sharing key's requests-per-minute budget; 0
+// means unlimited. The cache is updated before returning, so the next request
+// through the auth middleware observes the new value.
+func (s *APITokenStore) SetTokenRPMLimit(tokenID string, rpmLimit int) error {
+	if tokenID == "" {
+		return errors.New("token ID cannot be empty")
+	}
+	if rpmLimit < 0 {
+		return errors.New("rpm limit cannot be negative")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result := s.db.Model(&APITokenRecord{}).
+		Where("token_id = ?", tokenID).
+		Update("rpm_limit", rpmLimit)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update token rpm limit: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("token with ID '%s' not found", tokenID)
+	}
+
+	if record, ok := s.cache[tokenID]; ok {
+		record.RPMLimit = rpmLimit
+	}
+
+	logrus.Debugf("Token %s rpm limit set to: %d", tokenID, rpmLimit)
+	return nil
 }
 
 // ValidateToken validates a token ID and returns the associated token record
