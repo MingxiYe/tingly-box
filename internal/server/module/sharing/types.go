@@ -10,12 +10,13 @@ type TokenCreateRequest struct {
 	TeamID      string `json:"team_id,omitempty"`
 	// RPMLimit is the key's requests-per-minute budget on /tingly/team.
 	// Omitted → db.DefaultSharingKeyRPMLimit (0); 0 → unlimited.
-	RPMLimit *int `json:"rpm_limit,omitempty" binding:"omitempty,min=0" description:"Requests per minute allowed for this key; 0 or omitted = unlimited" example:"60"`
+	RPMLimit *int `json:"rpm_limit,omitempty" binding:"omitempty,min=0,max=1000000" description:"Requests per minute allowed for this key; 0 or omitted = unlimited; at most 1000000" example:"60"`
 }
 
 // TokenRateLimitRequest sets an existing key's requests-per-minute budget.
+// The max mirrors db.MaxSharingKeyRPMLimit (binding tags must be literals).
 type TokenRateLimitRequest struct {
-	RPMLimit *int `json:"rpm_limit" binding:"required,min=0" description:"Requests per minute allowed for this key; 0 = unlimited" example:"60"`
+	RPMLimit *int `json:"rpm_limit" binding:"required,min=0,max=1000000" description:"Requests per minute allowed for this key; 0 = unlimited; at most 1000000" example:"60"`
 }
 
 // TokenListQuery describes the optional filters accepted by GET /tokens.

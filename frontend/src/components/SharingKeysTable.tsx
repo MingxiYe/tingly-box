@@ -1,6 +1,7 @@
 import { Key as IconKey, DeleteOutline as IconDeleteOutline, ContentCopy as IconCopy, AccessTime as IconClock, Person as IconUser, Visibility as IconEye, VisibilityOff as IconEyeOff, CompareArrows as IconMove, Speed as IconSpeed } from '@/components/icons';
 import {
     Box,
+    ButtonBase,
     Stack,
     Table,
     TableBody,
@@ -73,13 +74,14 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                 page (one per Team) line their columns up; minWidth keeps the
                 columns readable and lets narrow screens scroll the table
                 instead of the page. */}
-            <Table sx={{ tableLayout: 'fixed', minWidth: 860 }}>
+            <Table sx={{ tableLayout: 'fixed', minWidth: 890 }}>
                 <colgroup>
                     <col style={{ width: '18%' }} />
                     <col style={{ width: '9%' }} />
                     <col style={{ width: '21%' }} />
                     <col style={{ width: 80 }} />
-                    <col style={{ width: 120 }} />
+                    {/* Wide enough for the longest "unlimited" string (ru) plus icon. */}
+                    <col style={{ width: 150 }} />
                     <col style={{ width: '16%' }} />
                     <col style={{ width: '16%' }} />
                     <col style={{ width: 96 }} />
@@ -251,29 +253,42 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                                 </TableCell>
                                 <TableCell>
                                     {/* Concrete value, not a "limited" badge: the number is
-                                        what the key holder will hit. Click-to-edit keeps the
-                                        budget adjustable after creation. */}
-                                    <Tooltip title={t('sharingKeys.table.rateLimitTooltip')} placement="top">
-                                        <Stack
-                                            direction="row"
-                                            spacing={0.5}
-                                            onClick={() => onEditRateLimit(key)}
-                                            sx={{
-                                                alignItems: 'center',
-                                                width: 'fit-content',
-                                                cursor: 'pointer',
-                                                color: 'text.secondary',
-                                                '&:hover': { color: 'text.primary' },
-                                            }}
-                                        >
-                                            <IconSpeed sx={{ fontSize: 13, opacity: 0.4, flexShrink: 0 }} />
-                                            <Typography variant="caption" noWrap sx={{ fontFamily: fontMono }}>
-                                                {key.rpm_limit > 0
-                                                    ? t('sharingKeys.table.perMinute', { n: key.rpm_limit })
-                                                    : t('sharingKeys.table.unlimited')}
-                                            </Typography>
-                                        </Stack>
-                                    </Tooltip>
+                                        what the key holder will hit. A real button (not a
+                                        clickable Stack) so it is focusable, Enter/Space
+                                        activate it and the tooltip shows on focus too; the
+                                        dotted underline marks it as the one editable caption
+                                        in the row. */}
+                                    {(() => {
+                                        const label = key.rpm_limit > 0
+                                            ? t('sharingKeys.table.perMinute', { n: key.rpm_limit })
+                                            : t('sharingKeys.table.unlimited');
+                                        return (
+                                            <Tooltip title={t('sharingKeys.table.rateLimitTooltip')} placement="top">
+                                                <ButtonBase
+                                                    onClick={() => onEditRateLimit(key)}
+                                                    aria-label={`${t('sharingKeys.table.rateLimitTooltip')}: ${label}`}
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 0.5,
+                                                        maxWidth: '100%',
+                                                        px: 0.5,
+                                                        mx: -0.5,
+                                                        borderRadius: 0.5,
+                                                        color: 'text.secondary',
+                                                        textDecoration: 'underline dotted',
+                                                        textUnderlineOffset: 3,
+                                                        '&:hover, &.Mui-focusVisible': { color: 'text.primary', bgcolor: 'action.hover' },
+                                                    }}
+                                                >
+                                                    <IconSpeed sx={{ fontSize: 13, opacity: 0.4, flexShrink: 0 }} />
+                                                    <Typography variant="caption" noWrap sx={{ fontFamily: fontMono, minWidth: 0 }}>
+                                                        {label}
+                                                    </Typography>
+                                                </ButtonBase>
+                                            </Tooltip>
+                                        );
+                                    })()}
                                 </TableCell>
                                 <TableCell>
                                     <Stack direction="row" spacing={0.5} sx={{

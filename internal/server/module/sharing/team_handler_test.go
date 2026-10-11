@@ -131,9 +131,15 @@ func TestHandler_RateLimit_CreateDefaultAndSet(t *testing.T) {
 		t.Fatalf("unlimited create = %d rpm_limit=%d", unlimited.Code, unlimitedResponse.RPMLimit)
 	}
 
-	// Negative is rejected by binding.
+	// Out-of-range values are rejected by binding.
 	if bad := sharingRequest(router, http.MethodPost, "/tokens", `{"display_name":"bad","rpm_limit":-1}`); bad.Code != http.StatusBadRequest {
 		t.Fatalf("negative rpm_limit status = %d, want 400", bad.Code)
+	}
+	if huge := sharingRequest(router, http.MethodPost, "/tokens", `{"display_name":"huge","rpm_limit":1000001}`); huge.Code != http.StatusBadRequest {
+		t.Fatalf("rpm_limit above max status = %d, want 400", huge.Code)
+	}
+	if huge := sharingRequest(router, http.MethodPut, "/tokens/"+createResponse.TokenID+"/rate-limit", `{"rpm_limit":9223372036854775807}`); huge.Code != http.StatusBadRequest {
+		t.Fatalf("set rpm_limit above max status = %d, want 400", huge.Code)
 	}
 
 	// Set on an existing key and read back through GET.

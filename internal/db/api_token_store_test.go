@@ -109,6 +109,11 @@ func TestAPITokenStore_RPMLimit_DefaultAndSet(t *testing.T) {
 
 	_, err = store.CreateTokenForTeamWithRPMLimit("user-3", "token-neg", DefaultTeamID, "display", "admin", nil, -1)
 	assert.Error(t, err)
+	_, err = store.CreateTokenForTeamWithRPMLimit("user-4", "token-huge", DefaultTeamID, "display", "admin", nil, MaxSharingKeyRPMLimit+1)
+	assert.Error(t, err)
+	rec, err = store.CreateTokenForTeamWithRPMLimit("user-5", "token-max", DefaultTeamID, "display", "admin", nil, MaxSharingKeyRPMLimit)
+	assert.NoError(t, err)
+	assert.Equal(t, MaxSharingKeyRPMLimit, rec.RPMLimit)
 
 	// SetTokenRPMLimit updates both SQLite and the cache ValidateToken reads.
 	assert.NoError(t, store.SetTokenRPMLimit("token-default", 7))
@@ -116,6 +121,7 @@ func TestAPITokenStore_RPMLimit_DefaultAndSet(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 7, got.RPMLimit)
 	assert.Error(t, store.SetTokenRPMLimit("token-default", -5))
+	assert.Error(t, store.SetTokenRPMLimit("token-default", MaxSharingKeyRPMLimit+1))
 	assert.Error(t, store.SetTokenRPMLimit("missing", 3))
 
 	// Persisted: a fresh store over the same directory sees the value.

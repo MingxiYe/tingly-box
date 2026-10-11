@@ -113,6 +113,69 @@ func TestRPMLimiter_LimitChangeResetsBucket(t *testing.T) {
 	}
 }
 
+func TestRPMLimiter_WaitingExactlyRetryAfterAdmits(t *testing.T) {
+	// Across many limits the refill-per-token is not representable exactly
+	// in float64; RetryAfter must be rounded up so honouring it is enough.
+	for limit := 1; limit <= 200; limit++ {
+		l, clk := newTestLimiter()
+		for i := 0; i < limit; i++ {
+			l.Allow("k", limit)
+		}
+		d := l.Allow("k", limit)
+		if d.Allowed {
+			t.Fatalf("limit %d: bucket should be empty", limit)
+		}
+		if d.RetryAfter <= 0 {
+			t.Fatalf("limit %d: RetryAfter = %v, want > 0", limit, d.RetryAfter)
+		}
+		clk.advance(d.RetryAfter)
+		if got := l.Allow("k", limit); !got.Allowed {
+			t.Fatalf("limit %d: denied after waiting exactly RetryAfter=%v (next RetryAfter=%v)", limit, d.RetryAfter, got.RetryAfter)
+		}
+	}
+}
+
+func TestRPMLimiter_LimitOne(t *testing.T) {
+	l, clk := newTestLimiter()
+	if !l.Allow("k", 1).Allowed {
+		t.Fatal("first request under limit 1 must be allowed")
+	}
+	d := l.Allow("k", 1)
+	if d.Allowed || d.RetryAfter != time.Minute {
+		t.Fatalf("second request: allowed=%v RetryAfter=%v, want denied / 1m", d.Allowed, d.RetryAfter)
+	}
+	clk.advance(time.Minute)
+	if !l.Allow("k", 1).Allowed {
+		t.Fatal("one token must have refilled after 60s")
+	}
+}
+
+func TestRPMLimiter_ClockStepBackDoesNotInflateBucket(t *testing.T) {
+	// A clock that moves backwards (only possible with an injected clock —
+	// time.Now is monotonic) must neither credit tokens nor move lastSeen
+	// back, otherwise the next forward step is credited twice.
+	l, clk := newTestLimiter()
+	for i := 0; i < 60; i++ {
+		l.Allow("k", 60)
+	}
+	clk.advance(1 * time.Second)
+	if !l.Allow("k", 60).Allowed { // consumes the single refilled token; lastSeen = t+1s
+		t.Fatal("expected one refilled token")
+	}
+	clk.advance(-1 * time.Second) // back to t+0s
+	if l.Allow("k", 60).Allowed {
+		t.Fatal("stepping the clock back must not credit tokens")
+	}
+	clk.advance(1 * time.Second) // forward to t+1s again: no time has passed since lastSeen
+	if l.Allow("k", 60).Allowed {
+		t.Fatal("lastSeen regressed: the same second was credited twice")
+	}
+	clk.advance(1 * time.Second) // t+2s: exactly one new token
+	if !l.Allow("k", 60).Allowed {
+		t.Fatal("one token should refill for one genuinely new second")
+	}
+}
+
 func TestRPMLimiter_SweepDropsIdleKeys(t *testing.T) {
 	l, clk := newTestLimiter()
 	l.Allow("old", 10)

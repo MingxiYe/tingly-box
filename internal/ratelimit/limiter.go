@@ -69,11 +69,16 @@ func (l *RPMLimiter) Allow(key string, limit int) Decision {
 	if limit <= 0 {
 		return Decision{Allowed: true}
 	}
-	now := l.now()
 	ratePerSec := float64(limit) / 60.0
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
+	// Read the clock under the lock. Two callers that read it before
+	// contending for the lock can apply their timestamps out of order, and
+	// the later-acquiring caller would move lastSeen backwards — crediting
+	// the next caller a refill it already received.
+	now := l.now()
 
 	b, ok := l.buckets[key]
 	if !ok || b.limit != limit {
@@ -83,11 +88,11 @@ func (l *RPMLimiter) Allow(key string, limit int) Decision {
 		// promises.
 		b = &bucket{tokens: float64(limit), limit: limit, lastSeen: now}
 		l.buckets[key] = b
-	} else {
-		elapsed := now.Sub(b.lastSeen).Seconds()
-		if elapsed > 0 {
-			b.tokens = math.Min(float64(limit), b.tokens+elapsed*ratePerSec)
-		}
+	} else if elapsed := now.Sub(b.lastSeen).Seconds(); elapsed > 0 {
+		// lastSeen only ever advances. time.Now is monotonic, so with the
+		// read under the lock elapsed cannot be negative; the guard keeps an
+		// injected test clock stepping backwards from inflating the bucket.
+		b.tokens = math.Min(float64(limit), b.tokens+elapsed*ratePerSec)
 		b.lastSeen = now
 	}
 
@@ -95,11 +100,10 @@ func (l *RPMLimiter) Allow(key string, limit int) Decision {
 		b.tokens--
 		return Decision{Allowed: true}
 	}
-	// Time until one whole token has refilled.
-	wait := time.Duration((1 - b.tokens) / ratePerSec * float64(time.Second))
-	if wait <= 0 {
-		wait = time.Millisecond
-	}
+	// Time until one whole token has refilled, rounded up to the nanosecond
+	// so a caller that waits exactly RetryAfter is admitted rather than
+	// landing a few nanoseconds short of the token.
+	wait := time.Duration(math.Ceil((1 - b.tokens) / ratePerSec * float64(time.Second)))
 	return Decision{Allowed: false, RetryAfter: wait}
 }
 

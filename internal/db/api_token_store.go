@@ -37,6 +37,22 @@ type APITokenRecord struct {
 // unlimited: limiting is opt-in per key.
 const DefaultSharingKeyRPMLimit = 0
 
+// MaxSharingKeyRPMLimit caps rpm_limit. Anything above it is
+// indistinguishable from unlimited in practice, and values past 2^53 would
+// not round-trip through the JavaScript number the Web UI holds.
+const MaxSharingKeyRPMLimit = 1_000_000
+
+// validateRPMLimit checks the range shared by create and update.
+func validateRPMLimit(rpmLimit int) error {
+	if rpmLimit < 0 {
+		return errors.New("rpm limit cannot be negative")
+	}
+	if rpmLimit > MaxSharingKeyRPMLimit {
+		return fmt.Errorf("rpm limit cannot exceed %d", MaxSharingKeyRPMLimit)
+	}
+	return nil
+}
+
 // TableName specifies the table name for GORM
 func (APITokenRecord) TableName() string {
 	return "api_tokens"
@@ -202,8 +218,8 @@ func (s *APITokenStore) CreateTokenForTeam(userID, tokenID, teamID, displayName,
 // CreateTokenForTeamWithRPMLimit is CreateTokenForTeam with an explicit
 // requests-per-minute budget; 0 means unlimited.
 func (s *APITokenStore) CreateTokenForTeamWithRPMLimit(userID, tokenID, teamID, displayName, createdBy string, expiresAt *time.Time, rpmLimit int) (*APITokenRecord, error) {
-	if rpmLimit < 0 {
-		return nil, errors.New("rpm limit cannot be negative")
+	if err := validateRPMLimit(rpmLimit); err != nil {
+		return nil, err
 	}
 	if userID == "" {
 		return nil, errors.New("user ID cannot be empty")
@@ -238,8 +254,8 @@ func (s *APITokenStore) SetTokenRPMLimit(tokenID string, rpmLimit int) error {
 	if tokenID == "" {
 		return errors.New("token ID cannot be empty")
 	}
-	if rpmLimit < 0 {
-		return errors.New("rpm limit cannot be negative")
+	if err := validateRPMLimit(rpmLimit); err != nil {
+		return err
 	}
 
 	s.mu.Lock()

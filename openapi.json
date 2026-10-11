@@ -17308,7 +17308,8 @@
           "rpm_limit": {
             "type": "integer",
             "format": "int64",
-            "description": "Requests per minute allowed for this key; 0 or omitted = unlimited",
+            "description": "Requests per minute allowed for this key; 0 or omitted = unlimited; at most 1000000",
+            "maximum": 1000000,
             "minimum": 0,
             "example": 60
           },
@@ -17455,7 +17456,8 @@
           "rpm_limit": {
             "type": "integer",
             "format": "int64",
-            "description": "Requests per minute allowed for this key; 0 = unlimited",
+            "description": "Requests per minute allowed for this key; 0 = unlimited; at most 1000000",
+            "maximum": 1000000,
             "minimum": 0,
             "example": 60
           }

@@ -59,8 +59,8 @@ export const tokenApi = {
             params: {query: params as any}
         })),
 
-    // Create a new API token. rpm_limit: omit for the server default (60),
-    // 0 for unlimited.
+    // Create a new API token. rpm_limit: omit or 0 = unlimited (the server
+    // default is 0; limiting is opt-in per key).
     createAPIToken: async (data: {
         display_name: string;
         team_id?: string;
