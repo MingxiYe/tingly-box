@@ -74,14 +74,18 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                 page (one per Team) line their columns up; minWidth keeps the
                 columns readable and lets narrow screens scroll the table
                 instead of the page. */}
-            <Table sx={{ tableLayout: 'fixed', minWidth: 890 }}>
+            {/* minWidth 880 keeps the table inside the Team dialog's content box
+                (lg paper 936 − 2×24 padding) at narrow viewports. */}
+            <Table sx={{ tableLayout: 'fixed', minWidth: 880 }}>
                 <colgroup>
-                    <col style={{ width: '18%' }} />
-                    <col style={{ width: '9%' }} />
+                    <col style={{ width: '17%' }} />
+                    <col style={{ width: '10%' }} />
                     <col style={{ width: '21%' }} />
                     <col style={{ width: 80 }} />
-                    {/* Wide enough for the longest "unlimited" string (ru) plus icon. */}
-                    <col style={{ width: 150 }} />
+                    {/* The longest "unlimited" string (ru "Без ограничения") plus the
+                        icon needs ~130px of content with a fallback monospace font;
+                        168 leaves slack for wider system fonts. */}
+                    <col style={{ width: 168 }} />
                     <col style={{ width: '16%' }} />
                     <col style={{ width: '16%' }} />
                     <col style={{ width: 96 }} />
@@ -99,6 +103,11 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                                 borderBottom: '2px solid',
                                 borderColor: 'divider',
                                 py: 1.5,
+                                // Long translated headers (ru "Пользователь") must
+                                // not run into the next column in fixed layout.
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
                             },
                         }}
                     >
@@ -185,11 +194,15 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                                             spacing={0.5}
                                             sx={{
                                                 alignItems: "center",
-                                                width: 'fit-content',
+                                                // Clip inside the cell instead of running under the
+                                                // token chip when the column is narrow.
+                                                maxWidth: '100%',
+                                                minWidth: 0,
+                                                overflow: 'hidden',
                                                 cursor: 'default'
                                             }}>
                                             <IconUser sx={{ fontSize: 13, opacity: 0.4, flexShrink: 0 }} />
-                                            <Typography variant="caption" noWrap sx={{ fontFamily: fontMono, color: 'text.secondary' }}>
+                                            <Typography variant="caption" noWrap sx={{ fontFamily: fontMono, color: 'text.secondary', minWidth: 0 }}>
                                                 {key.user_id.slice(0, 8)}…
                                             </Typography>
                                         </Stack>
@@ -278,7 +291,15 @@ const SharingKeysTable: React.FC<SharingKeysTableProps> = ({
                                                         color: 'text.secondary',
                                                         textDecoration: 'underline dotted',
                                                         textUnderlineOffset: 3,
-                                                        '&:hover, &.Mui-focusVisible': { color: 'text.primary', bgcolor: 'action.hover' },
+                                                        '&:hover': { color: 'text.primary', bgcolor: 'action.hover' },
+                                                        // Keyboard focus needs a cue stronger than the hover
+                                                        // pill: ButtonBase disables the UA outline.
+                                                        '&.Mui-focusVisible': {
+                                                            color: 'text.primary',
+                                                            outline: '2px solid',
+                                                            outlineColor: 'primary.main',
+                                                            outlineOffset: 1,
+                                                        },
                                                     }}
                                                 >
                                                     <IconSpeed sx={{ fontSize: 13, opacity: 0.4, flexShrink: 0 }} />

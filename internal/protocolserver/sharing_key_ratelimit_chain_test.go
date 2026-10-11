@@ -59,11 +59,7 @@ func TestModelAuthChain_SharingKeyRateLimit(t *testing.T) {
 		if method == http.MethodGet {
 			path = "/tingly/team/v1/models"
 		}
-		req := httptest.NewRequest(method, path, nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-		return rec
+		return callPath(method, path, token)
 	}
 
 	// Limited key: a burst of exactly rpm_limit, then 429 with Retry-After,

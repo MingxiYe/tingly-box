@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"strings"
+	"strconv"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -59,28 +59,27 @@ func SharingKeyRateLimitMiddleware(limiter ratelimit.Limiter) gin.HandlerFunc {
 		if retryAfter < 1 {
 			retryAfter = 1
 		}
-		c.Header("Retry-After", fmt.Sprintf("%d", retryAfter))
+		c.Header("Retry-After", strconv.Itoa(retryAfter))
 		abortWithError(c, http.StatusTooManyRequests,
 			fmt.Sprintf("Sharing key rate limit exceeded (%d requests/minute). Retry after %d second(s).", limit, retryAfter),
 			"rate_limit_error")
 	}
 }
 
-// rateLimitExemptRouteSuffixes lists POST routes that do not invoke a model
-// and therefore do not consume the budget. Matched against the registered
-// route template (gin FullPath), not the raw URL, so a client cannot dress a
-// model call up as one of these.
-var rateLimitExemptRouteSuffixes = []string{
-	"/messages/count_tokens",
+// rateLimitExemptRoutes lists the registered route templates of POST
+// endpoints that do not invoke a model and therefore do not consume the
+// budget. Matched exactly against gin's FullPath (the template, not the raw
+// URL), so a client cannot dress a model call up as one of these and a
+// future route that merely ends in the same suffix is not exempted by
+// accident. Both the bare and the /v1 shape of the model surface are listed
+// (see SetupMixinEndpoints in internal/protocolserver/routes.go).
+var rateLimitExemptRoutes = map[string]bool{
+	"/tingly/:scenario/messages/count_tokens":    true,
+	"/tingly/:scenario/v1/messages/count_tokens": true,
 }
 
 func isRateLimitExemptRoute(fullPath string) bool {
-	for _, suffix := range rateLimitExemptRouteSuffixes {
-		if strings.HasSuffix(fullPath, suffix) {
-			return true
-		}
-	}
-	return false
+	return rateLimitExemptRoutes[fullPath]
 }
 
 // rpmLimitTypeWarning fires once per process: the contract with auth.go is

@@ -4,18 +4,22 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	logtest "github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/tingly-dev/tingly-box/internal/constant"
 	"github.com/tingly-dev/tingly-box/internal/ratelimit"
 )
 
-// rlFixedLimiter denies every call with a fixed RetryAfter and records what
-// it was asked, so the middleware's routing/scoping logic is tested without
-// depending on bucket math (covered in package ratelimit).
+// rlFixedLimiter answers every call with a fixed decision (allow, or deny
+// with retryAfter) and records what it was asked, so the middleware's
+// routing/scoping logic is tested without depending on bucket math (covered
+// in package ratelimit).
 type rlFixedLimiter struct {
 	allow      bool
 	retryAfter time.Duration
@@ -57,9 +61,14 @@ func rlRouter(l ratelimit.Limiter, authKind, keyID string, rpm any, reached *boo
 		}
 		c.Status(http.StatusOK)
 	}
-	r.POST("/tingly/team/v1/messages", seed, SharingKeyRateLimitMiddleware(l), terminal)
-	r.POST("/tingly/team/v1/messages/count_tokens", seed, SharingKeyRateLimitMiddleware(l), terminal)
-	r.GET("/tingly/team/v1/models", seed, SharingKeyRateLimitMiddleware(l), terminal)
+	// Registered with the same templates as production (routes.go) so the
+	// exact-match exemption is exercised, not a lookalike.
+	r.POST("/tingly/:scenario/v1/messages", seed, SharingKeyRateLimitMiddleware(l), terminal)
+	r.POST("/tingly/:scenario/v1/messages/count_tokens", seed, SharingKeyRateLimitMiddleware(l), terminal)
+	r.POST("/tingly/:scenario/messages/count_tokens", seed, SharingKeyRateLimitMiddleware(l), terminal)
+	// A lookalike route that only shares the suffix must NOT be exempt.
+	r.POST("/other/messages/count_tokens", seed, SharingKeyRateLimitMiddleware(l), terminal)
+	r.GET("/tingly/:scenario/v1/models", seed, SharingKeyRateLimitMiddleware(l), terminal)
 	return r
 }
 
@@ -159,18 +168,23 @@ func TestSharingKeyRateLimit_SkipsUnlimitedKeyAndGET(t *testing.T) {
 
 func TestSharingKeyRateLimit_SkipsCountTokens(t *testing.T) {
 	// count_tokens tokenizes without invoking the model; it must not spend
-	// the budget even for an exhausted key.
+	// the budget even for an exhausted key — on both route shapes.
 	l := &rlFixedLimiter{allow: false, retryAfter: time.Second}
 	r := rlRouter(l, constant.AuthKindSharingKey, "tb-share-abc", 1, nil)
-	if w := rlRequest(r, http.MethodPost, "/tingly/team/v1/messages/count_tokens"); w.Code != http.StatusOK {
-		t.Fatalf("count_tokens must bypass the limiter; status = %d", w.Code)
+	for _, path := range []string{"/tingly/team/v1/messages/count_tokens", "/tingly/team/messages/count_tokens"} {
+		if w := rlRequest(r, http.MethodPost, path); w.Code != http.StatusOK {
+			t.Fatalf("%s must bypass the limiter; status = %d", path, w.Code)
+		}
 	}
 	if len(l.calls) != 0 {
 		t.Fatalf("limiter must not be consulted, got %d calls", len(l.calls))
 	}
-	// …while the sibling /messages route on the same key is still limited.
-	if w := rlRequest(r, http.MethodPost, "/tingly/team/v1/messages"); w.Code != http.StatusTooManyRequests {
-		t.Fatalf("/messages must still be limited; status = %d", w.Code)
+	// …while the sibling /messages route on the same key is still limited,
+	// and a route that merely ends in the same suffix is limited too.
+	for _, path := range []string{"/tingly/team/v1/messages", "/other/messages/count_tokens"} {
+		if w := rlRequest(r, http.MethodPost, path); w.Code != http.StatusTooManyRequests {
+			t.Fatalf("%s must still be limited; status = %d", path, w.Code)
+		}
 	}
 }
 
@@ -188,18 +202,35 @@ func TestSharingKeyRateLimit_SkipsWhenKeyIDMissing(t *testing.T) {
 }
 
 func TestSharingKeyRateLimit_NonIntLimitFailsOpen(t *testing.T) {
-	// The auth.go contract is an int. Any other dynamic type must not be
-	// silently read as 0 by accident; it is reported and treated as
-	// unlimited (fail-open), so the limiter is not consulted.
-	for _, rpm := range []any{int64(5), float64(5), "5"} {
+	// The auth.go contract is an int. Any other dynamic type (including a
+	// nil stored under the key) must not be silently read as 0 by accident;
+	// it is reported exactly once per process and treated as unlimited
+	// (fail-open), so the limiter is not consulted.
+	rpmLimitTypeWarning = sync.Once{} // fresh for this test
+	hook := logtest.NewGlobal()
+	defer hook.Reset()
+
+	for _, rpm := range []any{int64(5), float64(5), "5", nil} {
 		l := &rlFixedLimiter{allow: false, retryAfter: time.Second}
 		r := rlRouter(l, constant.AuthKindSharingKey, "tb-share-abc", rpm, nil)
-		if w := rlRequest(r, http.MethodPost, "/tingly/team/v1/messages"); w.Code != http.StatusOK {
-			t.Fatalf("rpm %T: status = %d, want 200 (fail-open)", rpm, w.Code)
+		for i := 0; i < 3; i++ {
+			if w := rlRequest(r, http.MethodPost, "/tingly/team/v1/messages"); w.Code != http.StatusOK {
+				t.Fatalf("rpm %T: status = %d, want 200 (fail-open)", rpm, w.Code)
+			}
 		}
 		if len(l.calls) != 0 {
 			t.Fatalf("rpm %T: limiter must not be consulted, got %d calls", rpm, len(l.calls))
 		}
+	}
+
+	warnings := 0
+	for _, e := range hook.AllEntries() {
+		if e.Level == logrus.WarnLevel && strings.Contains(e.Message, constant.CtxKeySharingKeyRPMLimit) {
+			warnings++
+		}
+	}
+	if warnings != 1 {
+		t.Fatalf("type-mismatch warning logged %d times across 12 requests, want exactly 1", warnings)
 	}
 }
 

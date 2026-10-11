@@ -4,7 +4,7 @@ Status: implemented for requests-per-minute (RPM). Tracks
 https://github.com/tingly-dev/tingly-box/issues/1851.
 
 Related: `.design/team.md` (what a Sharing Key is and where it may call),
-`.design/failover.pencil.md` (upstream 429 handling, which this is not).
+`.design/request-failover.pencil.md` (upstream 429 handling, which this is not).
 
 ## 1. Problem
 
@@ -57,7 +57,11 @@ every other member saw upstream 429s with no indication of who caused them.
 | Sharing Key with `rpm_limit = 0` | no (never reaches the limiter) |
 
 A denied request is not a model invocation: it is not recorded as usage, not
-reported to the health monitor, and does not count against the bucket.
+reported to the health monitor, and does not count against the bucket. The
+converse does not hold: an **admitted** request consumes its token even if the
+handler later rejects it (400 for an unknown model, upstream failure, …) —
+the budget is on requests the key sends, which also keeps a misconfigured or
+probing client from spending the Team's upstream quota for free.
 
 ## 4. Request flow
 
@@ -81,7 +85,11 @@ auth middleware covers; it decides from context only and never touches the
 token store. The limit is passed on every call, so an edit in the UI applies
 on the next request — the limiter keeps no copy of the budget to invalidate.
 When a key's limit changes, its bucket is rebuilt full under the new limit
-(a key must not keep a burst allowance from a larger old limit).
+(a key must not keep a burst allowance from a larger old limit). The
+operational corollary: **editing the number also resets that key's budget**,
+including toggling between two values — an admin can use it deliberately to
+unblock a key, and should not be surprised that a key at its cap gets a full
+minute of burst right after an edit.
 
 Two details that matter for correctness:
 

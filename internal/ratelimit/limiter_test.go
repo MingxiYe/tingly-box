@@ -115,22 +115,27 @@ func TestRPMLimiter_LimitChangeResetsBucket(t *testing.T) {
 
 func TestRPMLimiter_WaitingExactlyRetryAfterAdmits(t *testing.T) {
 	// Across many limits the refill-per-token is not representable exactly
-	// in float64; RetryAfter must be rounded up so honouring it is enough.
-	for limit := 1; limit <= 200; limit++ {
+	// in float64; RetryAfter must be rounded up so honoring it is enough —
+	// not only from an empty bucket but also on the next wait, where the
+	// residual fraction left by the first admit exposes one-ulp differences
+	// between the refill and the RetryAfter arithmetic (limit 4096 did).
+	for limit := 1; limit <= 5000; limit++ {
 		l, clk := newTestLimiter()
 		for i := 0; i < limit; i++ {
 			l.Allow("k", limit)
 		}
-		d := l.Allow("k", limit)
-		if d.Allowed {
-			t.Fatalf("limit %d: bucket should be empty", limit)
-		}
-		if d.RetryAfter <= 0 {
-			t.Fatalf("limit %d: RetryAfter = %v, want > 0", limit, d.RetryAfter)
-		}
-		clk.advance(d.RetryAfter)
-		if got := l.Allow("k", limit); !got.Allowed {
-			t.Fatalf("limit %d: denied after waiting exactly RetryAfter=%v (next RetryAfter=%v)", limit, d.RetryAfter, got.RetryAfter)
+		for round := 1; round <= 3; round++ {
+			d := l.Allow("k", limit)
+			if d.Allowed {
+				t.Fatalf("limit %d round %d: bucket should be empty", limit, round)
+			}
+			if d.RetryAfter <= 0 {
+				t.Fatalf("limit %d round %d: RetryAfter = %v, want > 0", limit, round, d.RetryAfter)
+			}
+			clk.advance(d.RetryAfter)
+			if got := l.Allow("k", limit); !got.Allowed {
+				t.Fatalf("limit %d round %d: denied after waiting exactly RetryAfter=%v (next RetryAfter=%v)", limit, round, d.RetryAfter, got.RetryAfter)
+			}
 		}
 	}
 }

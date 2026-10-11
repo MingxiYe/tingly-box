@@ -96,7 +96,13 @@ func (l *RPMLimiter) Allow(key string, limit int) Decision {
 		b.lastSeen = now
 	}
 
-	if b.tokens >= 1 {
+	// admitEpsilon absorbs the one-ulp difference between the refill
+	// arithmetic (elapsed*rate) and the RetryAfter arithmetic ((1-tokens)/rate):
+	// a caller that waits exactly RetryAfter can land at 0.99999999999999989
+	// tokens, which must still count as a whole token. It is far below any
+	// fraction a real request could represent.
+	const admitEpsilon = 1e-9
+	if b.tokens >= 1-admitEpsilon {
 		b.tokens--
 		return Decision{Allowed: true}
 	}
@@ -111,9 +117,12 @@ func (l *RPMLimiter) Allow(key string, limit int) Decision {
 // that old is full again anyway, so dropping it changes no decision; it only
 // bounds memory to the set of recently active keys.
 func (l *RPMLimiter) Sweep(idle time.Duration) int {
-	cutoff := l.now().Add(-idle)
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	// Read under the lock for the same reason as Allow. Here a stale cutoff
+	// could only under-sweep (keep a bucket one more round), never change a
+	// decision, but one rule is easier to keep than two.
+	cutoff := l.now().Add(-idle)
 	removed := 0
 	for k, b := range l.buckets {
 		if b.lastSeen.Before(cutoff) {
