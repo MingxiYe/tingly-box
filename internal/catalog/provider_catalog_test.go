@@ -186,15 +186,16 @@ func TestLatestOpenAIAndCodexModels(t *testing.T) {
 	}
 
 	// openai-com carries the API figure; codex carries the Codex default window
-	// from openai/codex models.json (context_window 272000). Users can widen it
-	// with Codex's 1M switch (max_context_window 872000), so it is not the catalog value.
+	// from openai/codex models.json (context_window 272000) and, as max_context,
+	// the ceiling Codex's 1M switch widens it to (max_context_window 872000).
 	tests := []struct {
 		providerID string
 		modelIDs   []string
 		context    int
+		maxContext int
 	}{
 		{providerID: "openai-com", modelIDs: []string{"gpt-6-astra", "gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna"}, context: 1050000},
-		{providerID: "codex", modelIDs: []string{"gpt-6-astra", "gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna"}, context: 272000},
+		{providerID: "codex", modelIDs: []string{"gpt-6-astra", "gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna", "gpt-6-sol:fast", "gpt-5.6-sol"}, context: 272000, maxContext: 872000},
 	}
 
 	for _, tt := range tests {
@@ -214,9 +215,9 @@ func TestLatestOpenAIAndCodexModels(t *testing.T) {
 					t.Errorf("provider %q is missing %q", tt.providerID, modelID)
 					continue
 				}
-				if model.Context != tt.context || model.MaxOutput != 128000 {
-					t.Errorf("provider %q model %q limits = (%d, %d), want (%d, 128000)",
-						tt.providerID, modelID, model.Context, model.MaxOutput, tt.context)
+				if model.Context != tt.context || model.MaxOutput != 128000 || model.MaxContext != tt.maxContext {
+					t.Errorf("provider %q model %q limits = (%d, %d, max %d), want (%d, 128000, max %d)",
+						tt.providerID, modelID, model.Context, model.MaxOutput, model.MaxContext, tt.context, tt.maxContext)
 				}
 			}
 		})
@@ -645,15 +646,16 @@ func TestEmbeddedTemplatesLastUpdatedSourcesPaired(t *testing.T) {
 }
 
 // TestEmbeddedTokenLimitsAreDecimal enforces the unit convention in
-// providers.json _naming_rules.token_limit_units: context / max_output use
+// providers.json _naming_rules.token_limit_units: context / max_output / max_context use
 // decimal K/M (1M = 1000000, 256K = 256000), never powers of two.
 func TestEmbeddedTokenLimitsAreDecimal(t *testing.T) {
 	var raw struct {
 		Providers map[string]struct {
 			Models []struct {
-				ID        string `json:"id"`
-				Context   int    `json:"context"`
-				MaxOutput int    `json:"max_output"`
+				ID         string `json:"id"`
+				Context    int    `json:"context"`
+				MaxOutput  int    `json:"max_output"`
+				MaxContext int    `json:"max_context"`
 			} `json:"models"`
 		} `json:"providers"`
 	}
@@ -662,7 +664,7 @@ func TestEmbeddedTokenLimitsAreDecimal(t *testing.T) {
 	}
 	for id, p := range raw.Providers {
 		for _, m := range p.Models {
-			for field, v := range map[string]int{"context": m.Context, "max_output": m.MaxOutput} {
+			for field, v := range map[string]int{"context": m.Context, "max_output": m.MaxOutput, "max_context": m.MaxContext} {
 				if v != 0 && v%1024 == 0 && v%1000 != 0 {
 					t.Errorf("provider %q model %q %s=%d looks binary; write it as decimal K/M (e.g. %d)", id, m.ID, field, v, v/1024*1000)
 				}

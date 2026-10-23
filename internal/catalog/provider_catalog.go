@@ -38,6 +38,12 @@ type ModelInfo struct {
 	Context     int    `json:"context,omitempty"`
 	MaxOutput   int    `json:"max_output,omitempty"`
 
+	// MaxContext is the largest window a client may opt into when it is
+	// above the default Context, e.g. Codex's own 1M switch on ChatGPT-backed
+	// models (context 272000, max_context 872000). Empty means the model's
+	// ceiling is its Context.
+	MaxContext int `json:"max_context,omitempty"`
+
 	// OpenAIEndpoints declares which OpenAI endpoint(s) THIS model supports,
 	// for a template whose catalog mixes vendors (OpenCode Zen: most models
 	// are Chat-only, a few are Responses-only, and some may support both) —

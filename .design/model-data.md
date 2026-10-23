@@ -60,13 +60,19 @@
 
 ## 数值单位
 
-供给注册表里的 `context` / `max_output` 一律写**十进制整数**:K=1000、M=1000000
+供给注册表里的 `context` / `max_output` / `max_context` 一律写**十进制整数**:K=1000、M=1000000
 (`1M`=1000000、`256K`=256000、`128K`=128000、`64K`=64000),不写 2 的幂
 (1048576 / 262144 / 131072 / 65536)。原因是官方文档几乎都写 "1M / 256K / 128K",
 用十进制既能与来源逐字对上,也避免同一模型在不同 provider 下出现两种写法。
 官方给出的**精确非整数值**(如 gpt-3.5-turbo 的 16385、Perplexity Sonar 的 127072)保持原样。
 `TestEmbeddedTokenLimitsAreDecimal` 会拦住新写入的 2 的幂;规则也写在 providers.json
 `_naming_rules.token_limit_units`。
+
+`max_context` 是可选的**上限**:客户端能主动开到、但默认不用的更大窗口,只在它高于
+`context` 时写(`harness catalog check` 会拦住相等或更低的值)。目前只有 `codex` 模板用到:
+ChatGPT 后端的 GPT 模型 `context` 272000、`max_context` 872000,与 Codex 自带目录一致。
+Codex 的模型目录据此写 `context_window` / `max_context_window`,见
+`.design/codex-config.md` 的 "Per-model context window"。
 
 ## 消费方
 
