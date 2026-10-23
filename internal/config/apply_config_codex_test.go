@@ -9,10 +9,14 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tingly-dev/tingly-box/internal/loadbalance"
+	"github.com/tingly-dev/tingly-box/internal/protocol"
+	"github.com/tingly-dev/tingly-box/internal/routing/smartrouting"
 	"github.com/tingly-dev/tingly-box/internal/typ"
 )
 
 func TestBuildContextWindowsFromRules(t *testing.T) {
+	// No providers or catalog: every Codex rule falls back, 1M rules to 1M.
 	cfg := &Config{Rules: []typ.Rule{
 		{UUID: "c1", Scenario: typ.ScenarioCodex, RequestModel: "gpt-5-codex", Active: true,
 			Flags: typ.RuleFlags{Context1M: true}},
@@ -20,7 +24,7 @@ func TestBuildContextWindowsFromRules(t *testing.T) {
 		// up with the request models collectCodexRuleModels puts in the catalog.
 		{UUID: "c2", Scenario: typ.ScenarioCodex, RequestModel: "team/coder[1m]", Active: true,
 			Flags: typ.RuleFlags{Context1M: true}},
-		// Flag off → no entry.
+		// Flag off → the default window, still listed (the catalog lists it).
 		{UUID: "c3", Scenario: typ.ScenarioCodex, RequestModel: "plain", Active: true},
 		// Inactive → no entry.
 		{UUID: "c4", Scenario: typ.ScenarioCodex, RequestModel: "off", Active: false,
@@ -28,22 +32,192 @@ func TestBuildContextWindowsFromRules(t *testing.T) {
 		// Non-Codex scenario → no entry.
 		{UUID: "cc", Scenario: typ.ScenarioClaudeCode, RequestModel: "haiku", Active: true,
 			Flags: typ.RuleFlags{Context1M: true}},
+		// Empty request model → no entry.
+		{UUID: "c5", Scenario: typ.ScenarioCodex, RequestModel: "  ", Active: true},
 	}}
 
-	got := BuildContextWindowsFromRules(cfg)
-
-	want := map[string]int{
+	assert.Equal(t, map[string]int{
 		"gpt-5-codex":    codex1MContextWindow,
 		"team/coder[1m]": codex1MContextWindow,
+		"plain":          codexDefaultContextWindow,
+	}, BuildContextWindowsFromRules(cfg))
+	assert.Empty(t, BuildContextWindowsFromRules(nil))
+}
+
+// codexWindowTestConfig is a config with the embedded provider catalog and a
+// few real providers the catalog knows (matched by API base, not name).
+func codexWindowTestConfig(t *testing.T) (*Config, map[string]string) {
+	t.Helper()
+	cfg := newResolveTestConfig(t)
+	providers := map[string]*typ.Provider{
+		"deepseek":  {Name: "DeepSeek", APIBase: "https://api.deepseek.com/v1", APIStyle: protocol.APIStyleOpenAI, AuthType: typ.AuthTypeAPIKey, Token: "k", Enabled: true},
+		"deepseekA": {Name: "DeepSeek Anthropic", APIBase: "https://api.deepseek.com/anthropic", APIStyle: protocol.APIStyleAnthropic, AuthType: typ.AuthTypeAPIKey, Token: "k", Enabled: true},
+		"kimi":      {Name: "Moonshot", APIBase: "https://api.moonshot.ai/v1", APIStyle: protocol.APIStyleOpenAI, AuthType: typ.AuthTypeAPIKey, Token: "k", Enabled: true},
+		"anthropic": {Name: "Anthropic", APIBase: "https://api.anthropic.com", APIStyle: protocol.APIStyleAnthropic, AuthType: typ.AuthTypeAPIKey, Token: "k", Enabled: true},
+		"custom":    {Name: "My Gateway", APIBase: "https://llm.example.internal/v1", APIStyle: protocol.APIStyleOpenAI, AuthType: typ.AuthTypeAPIKey, Token: "k", Enabled: true},
+		"kimiOff":   {Name: "Moonshot (off)", APIBase: "https://api.moonshot.ai/v1", APIStyle: protocol.APIStyleOpenAI, AuthType: typ.AuthTypeAPIKey, Token: "k", Enabled: true},
 	}
-	if len(got) != len(want) {
-		t.Fatalf("context windows = %v, want %v", got, want)
+	uuids := map[string]string{}
+	for key, p := range providers {
+		require.NoError(t, cfg.AddProvider(p))
+		uuids[key] = p.UUID
 	}
-	for k, v := range want {
-		if got[k] != v {
-			t.Errorf("contextWindows[%q] = %d, want %d", k, got[k], v)
-		}
+	// The store saves new providers enabled; switch this one off afterwards.
+	off, err := cfg.GetProviderByUUID(uuids["kimiOff"])
+	require.NoError(t, err)
+	off.Enabled = false
+	require.NoError(t, cfg.UpdateProvider(off.UUID, off))
+	return cfg, uuids
+}
+
+func codexRule(model string, services []*loadbalance.Service, flags typ.RuleFlags) typ.Rule {
+	return typ.Rule{UUID: "r-" + model, Scenario: typ.ScenarioCodex, RequestModel: model, Active: true, Services: services, Flags: flags}
+}
+
+func codexSvc(provider, model string) *loadbalance.Service {
+	return &loadbalance.Service{Provider: provider, Model: model, Active: true}
+}
+
+func TestResolveCodexContextWindows(t *testing.T) {
+	cfg, p := codexWindowTestConfig(t)
+	inactive := codexSvc(p["deepseek"], "deepseek-chat")
+	inactive.Active = false
+	smart := codexRule("smart", []*loadbalance.Service{codexSvc(p["kimi"], "kimi-k2.5")}, typ.RuleFlags{})
+	smart.SmartEnabled = true
+	smart.SmartRouting = []smartrouting.SmartRouting{{Services: []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat")}}}
+	smartOff := codexRule("smart-off", []*loadbalance.Service{codexSvc(p["kimi"], "kimi-k2.5")}, typ.RuleFlags{})
+	smartOff.SmartRouting = smart.SmartRouting // routes present but smart routing off
+	cfg.Rules = []typ.Rule{
+		codexRule("ds", []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat")}, typ.RuleFlags{}),
+		// Service model empty → looked up by the request model.
+		codexRule("kimi-k2.5", []*loadbalance.Service{codexSvc(p["kimi"], "")}, typ.RuleFlags{}),
+		// Load balancing over two windows → the smaller.
+		codexRule("lb", []*loadbalance.Service{codexSvc(p["kimi"], "kimi-k2.5"), codexSvc(p["deepseek"], "deepseek-chat")}, typ.RuleFlags{}),
+		// An inactive service doesn't count.
+		codexRule("lb-inactive", []*loadbalance.Service{codexSvc(p["kimi"], "kimi-k2.5"), inactive}, typ.RuleFlags{}),
+		smart,
+		smartOff,
+		// Unknown model / unknown provider → default; with the 1M flag → 1M.
+		codexRule("unknown", []*loadbalance.Service{codexSvc(p["custom"], "house-model")}, typ.RuleFlags{}),
+		codexRule("unknown-1m", []*loadbalance.Service{codexSvc(p["custom"], "house-model")}, typ.RuleFlags{Context1M: true}),
+		codexRule("ghost", []*loadbalance.Service{codexSvc("no-such-provider", "deepseek-chat")}, typ.RuleFlags{}),
+		codexRule("no-services", nil, typ.RuleFlags{}),
+		// A known model mixed with an unknown one: the unknown counts as 200K.
+		codexRule("mixed", []*loadbalance.Service{codexSvc(p["kimi"], "kimi-k2.5"), codexSvc(p["custom"], "house-model")}, typ.RuleFlags{}),
+		// Claude over the Anthropic API: 200K without the 1M header, 1M with it.
+		codexRule("sonnet", []*loadbalance.Service{codexSvc(p["anthropic"], "claude-sonnet-4-6")}, typ.RuleFlags{}),
+		codexRule("sonnet-1m", []*loadbalance.Service{codexSvc(p["anthropic"], "claude-sonnet-4-6")}, typ.RuleFlags{Context1M: true}),
+		// An older Claude the catalog lists at 200K still gets 1M with the
+		// header: the flag is what the rule sends, so existing 1M rules keep 1M.
+		codexRule("sonnet45-1m", []*loadbalance.Service{codexSvc(p["anthropic"], "claude-sonnet-4-5-20250929")}, typ.RuleFlags{Context1M: true}),
+		// A service on a disabled provider never answers, so it doesn't count.
+		codexRule("lb-disabled", []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat"), codexSvc(p["kimiOff"], "kimi-k2.5")}, typ.RuleFlags{}),
+		codexRule("only-disabled", []*loadbalance.Service{codexSvc(p["kimiOff"], "kimi-k2.5")}, typ.RuleFlags{}),
+		// A deleted provider next to a known model doesn't drag it to 200K.
+		codexRule("lb-ghost", []*loadbalance.Service{codexSvc(p["kimi"], "kimi-k2.5"), codexSvc("no-such-provider", "x")}, typ.RuleFlags{}),
+		// A service that renames the model is looked up by its own name only;
+		// the request model happening to be in the catalog doesn't count.
+		codexRule("deepseek-chat", []*loadbalance.Service{codexSvc(p["deepseek"], "house-model")}, typ.RuleFlags{}),
+		// A non-Claude model behind an Anthropic-style endpoint is not capped,
+		// and the 1M flag doesn't override what the catalog knows.
+		codexRule("ds-anthropic", []*loadbalance.Service{codexSvc(p["deepseekA"], "deepseek-v4-pro")}, typ.RuleFlags{}),
+		codexRule("ds-1m", []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat")}, typ.RuleFlags{Context1M: true}),
+		// The rule's own window wins; an out-of-range one is ignored.
+		codexRule("override", []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat")}, typ.RuleFlags{CodexContextWindow: 100000}),
+		codexRule("override-bad", []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat")}, typ.RuleFlags{CodexContextWindow: 500}),
 	}
+
+	got := ResolveCodexContextWindows(cfg)
+	catalogW := func(window int, provider, model string) CodexContextWindow {
+		return CodexContextWindow{Window: window, Source: CodexWindowSourceCatalog, Provider: provider, Model: model}
+	}
+	def := CodexContextWindow{Window: codexDefaultContextWindow, Source: CodexWindowSourceDefault}
+	dsChat := catalogW(128000, "DeepSeek", "deepseek-chat")
+	kimi := catalogW(256000, "Moonshot", "kimi-k2.5")
+	want := map[string]CodexContextWindow{
+		"ds":            dsChat,
+		"kimi-k2.5":     kimi,
+		"lb":            dsChat,
+		"lb-inactive":   kimi,
+		"smart":         dsChat,
+		"smart-off":     kimi,
+		"unknown":       def,
+		"unknown-1m":    {Window: codex1MContextWindow, Source: CodexWindowSourceContext1M},
+		"ghost":         def,
+		"no-services":   def,
+		"mixed":         def,
+		"sonnet":        catalogW(200000, "Anthropic", "claude-sonnet-4-6"),
+		"sonnet-1m":     catalogW(1000000, "Anthropic", "claude-sonnet-4-6"),
+		"sonnet45-1m":   catalogW(1000000, "Anthropic", "claude-sonnet-4-5-20250929"),
+		"lb-disabled":   dsChat,
+		"only-disabled": def,
+		"lb-ghost":      kimi,
+		"deepseek-chat": def,
+		"ds-anthropic":  catalogW(1000000, "DeepSeek Anthropic", "deepseek-v4-pro"),
+		"ds-1m":         dsChat,
+		"override":      {Window: 100000, Source: CodexWindowSourceOverride, Derived: &dsChat},
+		"override-bad":  dsChat,
+	}
+	assert.Equal(t, want, got)
+}
+
+// A config loaded without the server's template manager (CLI / TUI agent
+// apply) still derives windows, from the embedded provider catalog.
+func TestResolveCodexContextWindows_NoTemplateManager(t *testing.T) {
+	cfg, p := codexWindowTestConfig(t)
+	cfg.SetTemplateManager(nil)
+	cfg.Rules = []typ.Rule{codexRule("ds", []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat")}, typ.RuleFlags{})}
+	got := ResolveCodexContextWindows(cfg)["ds"]
+	assert.Equal(t, 128000, got.Window)
+	assert.Equal(t, CodexWindowSourceCatalog, got.Source)
+}
+
+// Two rules publishing the same request model share one catalog entry; the
+// smaller window is the safe one.
+func TestResolveCodexContextWindows_SharedRequestModel(t *testing.T) {
+	cfg, p := codexWindowTestConfig(t)
+	a := codexRule("coder", []*loadbalance.Service{codexSvc(p["kimi"], "kimi-k2.5")}, typ.RuleFlags{})
+	b := codexRule("coder", []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat")}, typ.RuleFlags{})
+	b.UUID = "r-coder-2"
+	cfg.Rules = []typ.Rule{a, b}
+	assert.Equal(t, 128000, ResolveCodexContextWindows(cfg)["coder"].Window)
+	cfg.Rules = []typ.Rule{b, a}
+	assert.Equal(t, 128000, ResolveCodexContextWindows(cfg)["coder"].Window)
+}
+
+// The windows reach the rendered catalog: context_window and
+// max_context_window per model, and the compact line follows each window.
+func TestRenderCodexModelCatalog_ResolvedWindows(t *testing.T) {
+	cfg, p := codexWindowTestConfig(t)
+	cfg.Rules = []typ.Rule{
+		codexRule("ds", []*loadbalance.Service{codexSvc(p["deepseek"], "deepseek-chat")}, typ.RuleFlags{}),
+		codexRule("kimi", []*loadbalance.Service{codexSvc(p["kimi"], "kimi-k2.5")}, typ.RuleFlags{CodexCompactPercent: 60}),
+		codexRule("house", []*loadbalance.Service{codexSvc(p["custom"], "house-model")}, typ.RuleFlags{}),
+	}
+	prefs := DefaultCodexPrefs()
+	prefs.ModelAutoCompactPercent = BuildCompactPercentsFromRules(cfg)
+	raw, err := RenderCodexModelCatalogWithPrefs([]string{"ds", "kimi", "house"}, BuildContextWindowsFromRules(cfg), prefs)
+	require.NoError(t, err)
+
+	var catalog struct {
+		Models []struct {
+			Slug             string `json:"slug"`
+			ContextWindow    int    `json:"context_window"`
+			MaxContextWindow int    `json:"max_context_window"`
+			AutoCompact      int    `json:"auto_compact_token_limit"`
+		} `json:"models"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &catalog))
+	type entry struct{ window, max, compact int }
+	got := map[string]entry{}
+	for _, m := range catalog.Models {
+		got[m.Slug] = entry{m.ContextWindow, m.MaxContextWindow, m.AutoCompact}
+	}
+	assert.Equal(t, map[string]entry{
+		"ds":    {128000, 128000, 96000},  // 75%
+		"kimi":  {256000, 256000, 153600}, // the rule's 60%
+		"house": {200000, 200000, 150000}, // default window
+	}, got)
 }
 
 // ============================================================================
@@ -955,6 +1129,27 @@ func TestReadCodexConfig_RestoresSharedCompactDefaultDespiteOverrides(t *testing
 	prefs, _, _, err := ReadCodexConfig()
 	require.NoError(t, err)
 	assert.Equal(t, "70", prefs.AutoCompactPercent)
+}
+
+// A window that isn't a multiple of 100 floors the written limit; reading it
+// back rounds, so the percent doesn't drift down one point per apply.
+func TestReadCodexConfig_RestoresCompactOnOddWindow(t *testing.T) {
+	tempDir := t.TempDir()
+	t.Setenv("HOME", tempDir)
+	_, err := ApplyCodexConfigWithContextWindows("http://h/tingly/codex", []string{"m"},
+		&CodexPrefs{AutoCompactPercent: "70"}, true, map[string]int{"m": 131072}, "")
+	require.NoError(t, err)
+	prefs, _, _, err := ReadCodexConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "70", prefs.AutoCompactPercent)
+
+	// The default read back on an odd window stays empty (follows the default).
+	_, err = ApplyCodexConfigWithContextWindows("http://h/tingly/codex", []string{"m"},
+		DefaultCodexPrefs(), true, map[string]int{"m": 131071}, "")
+	require.NoError(t, err)
+	prefs, _, _, err = ReadCodexConfig()
+	require.NoError(t, err)
+	assert.Empty(t, prefs.AutoCompactPercent)
 }
 
 // ReadCodexConfig restores non-default headroom percentages from the catalog.

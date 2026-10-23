@@ -3917,6 +3917,10 @@ export const handlers = [
             exists: true,
             preferences: { model_reasoning_effort: 'high' },
             writeCatalog: true,
+            contextWindows: {
+                'gpt-5.6-luna': { window: 272000, source: 'catalog', provider: 'ChatGPT Codex', model: 'gpt-5.6-luna' },
+                'gpt-5.6-terra': { window: 128000, source: 'catalog', provider: 'DeepSeek', model: 'deepseek-chat' },
+            },
         })
     }),
 

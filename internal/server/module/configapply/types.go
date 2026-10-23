@@ -67,6 +67,10 @@ type CodexConfigResponse struct {
 	Exists       bool              `json:"exists"`
 	Preferences  config.CodexPrefs `json:"preferences"`
 	WriteCatalog bool              `json:"writeCatalog"`
+	// ContextWindows is what Auto Config would write for each catalog model
+	// now (request model -> window and where it comes from), derived from the
+	// current rules rather than read back from the applied files.
+	ContextWindows map[string]config.CodexContextWindow `json:"contextWindows"`
 }
 
 // ApplyOpenCodeConfigResponse is the response for ApplyOpenCodeConfigFromState

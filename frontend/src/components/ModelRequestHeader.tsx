@@ -142,6 +142,9 @@ export interface ModelRequestHeaderProps {
     // this rule's model (0 = follow Auto Config). Config-only, see CodexCompactChip.
     onCompactChange?: (percent: number) => void;
     compactPercent?: number;
+    // Codex only: the rule's own catalog window (0 = derived from its upstreams).
+    onCodexWindowChange?: (tokens: number) => void;
+    codexWindow?: number;
     // False when none of the rule's services is OpenAI-compatible: the chip stays
     // (and works) but its tooltip says it has no effect there.
     endpointApplicable?: boolean;
@@ -170,6 +173,8 @@ export const ModelRequestHeader: React.FC<ModelRequestHeaderProps> = ({
     onEndpointSelect,
     onCompactChange,
     compactPercent = 0,
+    onCodexWindowChange,
+    codexWindow = 0,
     endpointApplicable = true,
     pluginsCount = 0,
     onPluginsClick,
@@ -438,8 +443,11 @@ export const ModelRequestHeader: React.FC<ModelRequestHeaderProps> = ({
 
                 {onCompactChange && (
                     <CodexCompactChip
+                        modelName={modelName}
                         percent={compactPercent}
                         context1M={context1M}
+                        windowOverride={codexWindow}
+                        onWindowChange={onCodexWindowChange}
                         disabled={!active}
                         onChange={onCompactChange}
                         buttonSx={strategyButtonSx}

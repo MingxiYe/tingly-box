@@ -274,7 +274,7 @@ tiers — current Codex models advertise them in `supported_reasoning_levels`.
 ## Per-model auto-compact (rule flag `codex_compact_percent`)
 
 The two headroom numbers above are shared by every catalog entry. Models differ
-(200K vs a 1M rule, different upstreams), so a Codex rule can override the
+(each has its own window, see below), so a Codex rule can override the
 auto-compact percent for its own model: `RuleFlags.CodexCompactPercent`
 (50–100, `0` = follow the shared value). It is **config-only**: it is read when
 the catalog is rendered (`BuildCompactPercentsFromRules` → `CodexPrefs.ModelAutoCompactPercent`,
@@ -293,7 +293,7 @@ pipeline, so it is deliberately not in `RuleFlagRegistry` (see `rule-flags.md`).
 - **Warning is about tokens left, not a fixed percent.** What compaction needs
   (summary request, system prompt, tool output, the reply) is roughly constant,
   so the popover warns when fewer than 36,000 tokens would remain, using the
-  window the rule really has (1M with the `1M` flag, else 200K). 36,000 is the
+  window the rule's model really gets (see "Per-model context window"). 36,000 is the
   empirical limit: 82% of a 200K window. Larger windows reach it at a higher
   percent (96.4% on 1M). It is where warnings start, not a cap. The usable-window
   cut-down is explained instead of silently applied.
@@ -306,10 +306,94 @@ pipeline, so it is deliberately not in `RuleFlagRegistry` (see `rule-flags.md`).
   200K window (a rule with the `1M` flag is judged on its own chip): an info line
   when the usable window cuts it down, a warning when under 36,000 tokens would
   remain. Typed values only; nothing is rewritten.
-- **Not covered.** The agent-apply bridge (`ai/agent`, CLI/IM apply) renders its
-  own catalog from default prefs and, like the `1M` window, does not carry rule
-  overrides; the UI "Auto Config" path does. Whether the 36,000 threshold is
-  right still wants a real long-session check against Codex.
+- **Both apply paths.** The agent-apply bridge (`internal/agent/rule_bridge.go`,
+  CLI/IM apply) passes the same per-model compact percents and windows to the
+  `ai/agent` copy of the renderer as the UI "Auto Config" path. Its shared
+  headroom percentages are still the defaults (it has no prefs form).
+- **Open.** Whether the 36,000 threshold is right still wants a real
+  long-session check against Codex.
+
+## Per-model context window
+
+**Goal:** Codex through tingly-box should behave like native Codex: each model
+in `/model` gets its real window, so the context meter, auto-compaction and
+long sessions work with nothing to configure.
+
+**Before:** every catalog entry got `context_window = max_context_window =
+200000`, and the only way to change it was the rule's `context_1m` flag
+(Anthropic's 1M beta header), to 1M. A 128K model failed upstream before
+Codex's 150K compaction line; 256K–1M models were compacted at 150K. Codex
+clamps `model_context_window` to the catalog's `max_context_window`, so users
+could not raise it locally either.
+
+**Decision:** derive the window from data tingly-box already ships
+(`ResolveCodexContextWindows`, `internal/config/apply_config_codex.go`):
+
+1. The rule's own `codex_context_window` (8,000–10,000,000 tokens) wins;
+   out of range is ignored. Config-only, like `codex_compact_percent`: not in
+   `RuleFlagRegistry`, never reaches the request pipeline.
+2. Otherwise each active upstream the rule can reach (its services, plus every
+   smart-routing route's services when smart routing is on) contributes the
+   `context` of its model in the provider catalog (`providers.json`). The name
+   looked up is the service's model, or the rule's request model when the
+   service has none (that is what gets sent upstream then). Services on a
+   disabled or deleted provider never answer and don't count.
+3. An upstream the catalog doesn't know contributes 200K, or 1M when the rule
+   has the `1M` flag (the flag's old meaning, kept only for unknown models).
+4. A Claude model over an Anthropic-style endpoint gets 200K without the `1M`
+   flag and 1M with it, whatever the catalog lists: the header decides the
+   window there, and existing 1M Claude rules keep 1M. Other models behind an
+   Anthropic-style endpoint (DeepSeek's) keep their catalog window.
+5. The rule gets the **smallest** contribution: Codex can't know which upstream
+   will answer, and only the smallest is safe for all. Two rules with the same
+   request model share one catalog entry, so the smaller wins there too.
+
+The smallest-wins rule has a cost for smart routing: a route meant for long
+contexts (a token-count route to a 1M model) caps the whole rule at the
+smallest route's window, so Codex compacts before that route is ever reached.
+Pinning the rule's window is the way out; we don't guess routing intent.
+
+`context_window` and `max_context_window` are both written as that window.
+Codex's own GPT entries use a larger `max_context_window` (272K / 872K) to let
+users opt into more; we have no upstream data for a separate ceiling, so the
+ceiling is the window.
+
+The resolver uses the server's provider catalog; a config loaded without one
+(the CLI and TUI agent apply) falls back to the embedded catalog, so every
+caller derives the same windows.
+
+**Where it shows:** `GET /config/codex` returns `contextWindows` (request model
+→ window, source `override` / `catalog` / `context_1m` / `default`, the
+provider and model that decided it, and for an override the `derived` window).
+The Compact popover's first row is the window, with a caption under it naming
+where it comes from ("Detected from deepseek-chat on DeepSeek"), a "Change"
+link to pin a window for this model (accepts `128K`, `1.05M`, `128,000`) and,
+when pinned, "Use detected (128K)" to clear it. The chip label shows a pinned
+window next to the percent. The tokens-left warning and the compact line are
+computed on that window.
+
+**Every path agrees:** UI apply, preview, the drift check
+(`CompareCodexConfig`, which also compares `max_context_window`) and the
+agent/CLI bridge all read `BuildContextWindowsFromRules`, a thin map over the
+resolver. Changing a rule's upstream or window therefore shows the Codex card
+as out of date until Auto Config is re-applied. Reading the catalog back
+(`restoreCodexCatalogHeadroom`, both copies) takes the most common compact
+percent and rounds it, so per-model overrides and windows that aren't a
+multiple of 100 don't shift the shared default.
+
+**Not covered:**
+
+- The Quick tab's shared "Auto-compact at" warning still judges the shared
+  percent against 200K.
+- The default compact line stays 75% of every window. On small windows that
+  leaves little room (32K for a 128K model); a token-aware default was weighed
+  and left out until there is evidence it is needed, since it would make the
+  written limit no longer a plain percent the form can read back.
+- Team sharing keys (`/tingly/team`) get no catalog at all; a hand-configured
+  Codex there still guesses its window.
+- Compaction itself through non-OpenAI upstreams (remote compaction's
+  `compaction_trigger` item, and overflow errors Codex doesn't recognise as
+  `context_length_exceeded`) is a separate problem.
 
 ## Schema alignment: `supports_reasoning_summaries` (2026-10-19)
 

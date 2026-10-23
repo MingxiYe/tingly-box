@@ -82,3 +82,55 @@ func TestDshStatusRoundTrip(t *testing.T) {
 	state, diffs := CompareDshConfig(applied, models)
 	assert.Equal(t, ClientConfigApplied, state, "%v", diffs)
 }
+
+// A hand-edited max_context_window (the ceiling Codex lets
+// model_context_window rise to) is drift, like a changed window.
+func TestCompareCodexConfig_MaxContextWindow(t *testing.T) {
+	applied := CodexAppliedState{
+		Managed:           true,
+		BaseURL:           "http://localhost:12580/tingly/codex",
+		Model:             "ds",
+		CatalogModels:     []string{"ds"},
+		ContextWindows:    map[string]int{"ds": 128000},
+		MaxContextWindows: map[string]int{"ds": 128000},
+	}
+	state, diffs := CompareCodexConfig(applied, []string{"ds"}, map[string]int{"ds": 128000})
+	assert.Equal(t, ClientConfigApplied, state, "%v", diffs)
+
+	applied.MaxContextWindows["ds"] = 872000
+	state, diffs = CompareCodexConfig(applied, []string{"ds"}, map[string]int{"ds": 128000})
+	assert.Equal(t, ClientConfigOutdated, state)
+	assert.Equal(t, []ClientConfigDiff{{Key: "max_context_window[ds]", Applied: "872000", Expected: "128000"}}, diffs)
+
+	// A catalog without the field (older writer) is not reported.
+	applied.MaxContextWindows = map[string]int{}
+	state, _ = CompareCodexConfig(applied, []string{"ds"}, map[string]int{"ds": 128000})
+	assert.Equal(t, ClientConfigApplied, state)
+}
+
+// Reading back what the writer produced with derived windows is "applied",
+// and each model's max_context_window is read too.
+func TestCodexStatusRoundTrip_DerivedWindows(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	models := []string{"ds", "kimi", "house"}
+	windows := map[string]int{"ds": 128000, "kimi": 256000, "house": codexDefaultContextWindow}
+
+	_, err := ApplyCodexConfigWithContextWindows("http://localhost:12580/tingly/codex", models, DefaultCodexPrefs(), true, windows, "")
+	assert.NoError(t, err)
+	applied, err := ReadCodexAppliedState()
+	assert.NoError(t, err)
+	assert.Equal(t, windows, applied.MaxContextWindows)
+
+	state, diffs := CompareCodexConfig(applied, models, windows)
+	assert.Equal(t, ClientConfigApplied, state, "%v", diffs)
+
+	// The rule now routes ds to a bigger model: the catalog is stale.
+	state, diffs = CompareCodexConfig(applied, models, map[string]int{"ds": 1000000, "kimi": 256000, "house": codexDefaultContextWindow})
+	assert.Equal(t, ClientConfigOutdated, state)
+	assert.Equal(t, []ClientConfigDiff{
+		{Key: "context_window[ds]", Applied: "128000", Expected: "1000000"},
+		{Key: "max_context_window[ds]", Applied: "128000", Expected: "1000000"},
+	}, diffs)
+}

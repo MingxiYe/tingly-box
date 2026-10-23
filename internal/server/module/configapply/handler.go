@@ -96,10 +96,11 @@ func (h *Handler) GetCodexConfig(c *gin.Context) {
 		prefs = config.DefaultCodexPrefs()
 	}
 	c.JSON(http.StatusOK, CodexConfigResponse{
-		Success:      true,
-		Exists:       exists,
-		Preferences:  *prefs,
-		WriteCatalog: writeCatalog,
+		Success:        true,
+		Exists:         exists,
+		Preferences:    *prefs,
+		WriteCatalog:   writeCatalog,
+		ContextWindows: config.ResolveCodexContextWindows(h.config),
 	})
 }
 
@@ -613,7 +614,7 @@ func (h *Handler) ApplyCodexConfigFromState(c *gin.Context) {
 
 	models := collectCodexRuleModels(cfg)
 
-	// Build context windows map from rules for models with context_1m flag
+	// Per-model catalog windows derived from the rules' routed models
 	contextWindows := config.BuildContextWindowsFromRules(cfg)
 	prefs.ModelAutoCompactPercent = config.BuildCompactPercentsFromRules(cfg)
 
@@ -731,7 +732,7 @@ func (h *Handler) GetCodexConfigPreview(c *gin.Context) {
 
 	models := collectCodexRuleModels(cfg)
 
-	// Build context windows map from rules for models with context_1m flag
+	// Per-model catalog windows derived from the rules' routed models
 	contextWindows := config.BuildContextWindowsFromRules(cfg)
 	prefs.ModelAutoCompactPercent = config.BuildCompactPercentsFromRules(cfg)
 

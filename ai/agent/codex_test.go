@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,5 +167,48 @@ func TestCodexConfig_Restore_NoBackupFails(t *testing.T) {
 	}
 	if result.Success {
 		t.Fatalf("expected restore to fail with no backups, got %+v", result)
+	}
+}
+
+// CodexParams.ContextWindows reaches the written catalog (the CLI bridge's
+// path); models without an entry keep the default.
+func TestCodexConfig_Apply_ContextWindows(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	prefs := DefaultCodexPrefs()
+	prefs.ModelAutoCompactPercent = map[string]int{"ds": 60}
+	_, err := (&CodexConfig{}).Apply(&CodexParams{
+		CodexBaseURL:   "https://tingly.local/tingly/codex",
+		APIKey:         "sk-test",
+		Models:         []string{"ds", "other"},
+		Prefs:          prefs,
+		ContextWindows: map[string]int{"ds": 128000},
+		WriteCatalog:   true,
+	})
+	if err != nil {
+		t.Fatalf("Apply returned error: %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(home, ".codex", "tingly-model-catalog.json"))
+	if err != nil {
+		t.Fatalf("catalog not written: %v", err)
+	}
+	var catalog struct {
+		Models []struct {
+			Slug    string `json:"slug"`
+			Window  int    `json:"context_window"`
+			Compact int    `json:"auto_compact_token_limit"`
+		} `json:"models"`
+	}
+	if err := json.Unmarshal(raw, &catalog); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string][2]int{}
+	for _, m := range catalog.Models {
+		got[m.Slug] = [2]int{m.Window, m.Compact}
+	}
+	if got["ds"] != [2]int{128000, 76800} || got["other"] != [2]int{200000, 150000} {
+		t.Errorf("catalog windows/compact = %v", got)
 	}
 }

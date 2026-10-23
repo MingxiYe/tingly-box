@@ -1,4 +1,4 @@
-import { Box, Button, Link, Popover, Slider, Stack, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Link, Popover, Slider, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,19 +7,30 @@ import { api } from '@/services/api';
 import { fontSizes } from '@/theme/fonts';
 import {
     CODEX_COMPACT,
+    derivedWindow,
+    formatWindow,
+    isValidWindowOverride,
     lowZoneStart,
+    parseWindowInput,
     planCodexCompact,
+    resolveChipWindow,
     trackPosition,
     type CodexCompactStatus,
+    type CodexDetectedWindow,
 } from './codexCompact';
 
 interface CodexCompactChipProps {
+    /** The rule's request model: the catalog slug its window is keyed by. */
+    modelName: string;
     /** The rule's own percent; 0 = follow the Auto Config default. */
     percent: number;
-    /** Whether the rule's 1M flag is on (the catalog window is then 1M). */
+    /** Whether the rule's 1M flag is on (only a fallback until the derived window loads). */
     context1M: boolean;
+    /** The rule's own window in tokens; 0 = use the window derived from its upstreams. */
+    windowOverride?: number;
     disabled?: boolean;
     onChange: (percent: number) => void;
+    onWindowChange?: (tokens: number) => void;
     buttonSx: SxProps<Theme>;
     highlightedButtonSx: SxProps<Theme>;
 }
@@ -50,10 +61,13 @@ const NOTE_COLOR: Record<Exclude<CodexCompactStatus, 'ok'>, 'warning' | 'info'> 
  * time Auto Config is applied and never touches request routing.
  */
 export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
+    modelName,
     percent,
     context1M,
+    windowOverride = 0,
     disabled,
     onChange,
+    onWindowChange,
     buttonSx,
     highlightedButtonSx,
 }) => {
@@ -65,17 +79,28 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
         effective: CODEX_COMPACT.defaultEffectivePercent,
     });
 
+    // What the server derives for this model from the rule's upstreams, and
+    // whether that answer is in (until then the window is only a guess).
+    const [detected, setDetected] = React.useState<CodexDetectedWindow | null>(null);
+    const [windowLoad, setWindowLoad] = React.useState<'loading' | 'ready' | 'error'>('loading');
+    // Inline window editor: null = closed, else the text being typed.
+    const [windowDraft, setWindowDraft] = React.useState<string | null>(null);
+
     const open = Boolean(anchor);
     const overridden = percent > 0;
     const shown = draft ?? (overridden ? percent : shared.percent);
-    const window = context1M ? CODEX_COMPACT.window1M : CODEX_COMPACT.window;
+    const resolvedWindow = resolveChipWindow({ override: windowOverride, detected, context1M });
+    const window = resolvedWindow.window;
+    const fallbackWindow = resolveChipWindow({ override: 0, detected, context1M });
     const plan = planCodexCompact({ window, percent: shown, effectivePercent: shared.effective });
     const lowStart = lowZoneStart(window);
-    const noteKind = plan.status === 'ok' ? null : NOTE_COLOR[plan.status];
+    const noteKindForPlan = plan.status === 'ok' ? null : NOTE_COLOR[plan.status];
 
     React.useEffect(() => {
         if (!open) return;
         let cancelled = false;
+        setDetected(null);
+        setWindowLoad('loading');
         (async () => {
             try {
                 const result = await api.getAppliedCodexConfig();
@@ -85,13 +110,16 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
                         percent: parsePercent(prefs.auto_compact_percent, CODEX_COMPACT.defaultPercent),
                         effective: parsePercent(prefs.effective_context_window_percent, CODEX_COMPACT.defaultEffectivePercent),
                     });
+                    setDetected(derivedWindow(result?.contextWindows?.[modelName.trim()]));
+                    setWindowLoad('ready');
                 }
             } catch {
                 // Keep the built-in defaults; the preview is only a hint.
+                if (!cancelled) setWindowLoad('error');
             }
         })();
         return () => { cancelled = true; };
-    }, [open]);
+    }, [open, modelName]);
 
     // Arrow keys commit on every press; wait until the value settles so one
     // adjustment is one save.
@@ -118,7 +146,45 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
         flush();
         setAnchor(null);
         setDraft(null);
+        setWindowDraft(null);
     };
+
+    // Closing the editor hands focus back to "Change" instead of the popover.
+    const changeLinkRef = React.useRef<HTMLButtonElement | null>(null);
+    const closeWindowEditor = () => {
+        setWindowDraft(null);
+        requestAnimationFrame(() => changeLinkRef.current?.focus());
+    };
+    const windowDraftTokens = windowDraft === null ? Number.NaN : parseWindowInput(windowDraft);
+    const windowDraftValid = windowDraft !== null && isValidWindowOverride(windowDraftTokens);
+    const saveWindow = () => {
+        if (!windowDraftValid || !onWindowChange) return;
+        // Typing the detected value back is the same as following it — but
+        // only when the server's answer is in, not against the guess.
+        const follows = windowLoad === 'ready' && windowDraftTokens === fallbackWindow.window;
+        onWindowChange(follows ? 0 : windowDraftTokens);
+        closeWindowEditor();
+    };
+    const windowPinned = resolvedWindow.source === 'override';
+    // While loading only a pinned window is known for sure.
+    const windowKnown = windowPinned || windowLoad === 'ready';
+    // Numbers worked out from a guessed window would flash and change.
+    const showNumbers = windowKnown || windowLoad === 'error';
+    const noteKind = showNumbers ? noteKindForPlan : null;
+
+    const windowSource = !windowKnown
+        ? (windowLoad === 'error' ? t('ruleHeader.compact.windowSource.unavailable') : '')
+        : {
+            override: t('ruleHeader.compact.windowSource.override'),
+            catalog: t('ruleHeader.compact.windowSource.catalog', { model: resolvedWindow.model, provider: resolvedWindow.provider }),
+            context_1m: t('ruleHeader.compact.windowSource.context_1m'),
+            default: t('ruleHeader.compact.windowSource.default'),
+        }[resolvedWindow.source];
+    const chipValue = [
+        overridden ? `${percent}%` : t('ruleHeader.compact.auto'),
+        ...(isValidWindowOverride(windowOverride) ? [formatWindow(windowOverride)] : []),
+    ].join(' · ');
+    const chipHighlighted = overridden || isValidWindowOverride(windowOverride);
 
     const noteText = {
         low: t('ruleHeader.compact.low', { remain: fmt(plan.remain), min: fmt(CODEX_COMPACT.minRemaining) }),
@@ -133,16 +199,16 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
                     <Button
                         size="small"
                         variant="outlined"
-                        color={overridden ? 'primary' : 'inherit'}
+                        color={chipHighlighted ? 'primary' : 'inherit'}
                         endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
                         disabled={disabled}
-                        aria-label={t('ruleHeader.compact.aria', { value: overridden ? `${percent}%` : t('ruleHeader.compact.auto') })}
+                        aria-label={t('ruleHeader.compact.aria', { value: chipValue })}
                         aria-haspopup="dialog"
                         aria-expanded={open}
                         onClick={(e) => setAnchor(e.currentTarget)}
-                        sx={overridden ? highlightedButtonSx : buttonSx}
+                        sx={chipHighlighted ? highlightedButtonSx : buttonSx}
                     >
-                        {t('ruleHeader.compact.chip', { value: overridden ? `${percent}%` : t('ruleHeader.compact.auto') })}
+                        {t('ruleHeader.compact.chip', { value: chipValue })}
                     </Button>
                 </span>
             </Tooltip>
@@ -211,10 +277,78 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
                     </Box>
 
                     <Stack spacing={0.25} sx={{ fontSize: fontSizes.sm, fontVariantNumeric: 'tabular-nums' }}>
+                        {/* The window first: the other two rows follow from it. */}
+                        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+                            <Box component="span" sx={{ color: 'text.secondary' }}>{t('ruleHeader.compact.window')}</Box>
+                            <Box component="span">{showNumbers ? formatWindow(window) : '…'}</Box>
+                        </Stack>
+                        {(windowSource || (onWindowChange && windowDraft === null)) && (
+                            <Box sx={{ color: 'text.secondary', fontSize: fontSizes.xs, pb: 0.5 }}>
+                                {windowSource}
+                                {onWindowChange && windowDraft === null && showNumbers && (
+                                    <>
+                                        {windowSource && ' · '}
+                                        <Link
+                                            ref={changeLinkRef}
+                                            component="button"
+                                            type="button"
+                                            underline="hover"
+                                            disabled={disabled}
+                                            onClick={() => setWindowDraft(formatWindow(window))}
+                                            sx={{ fontSize: fontSizes.xs, verticalAlign: 'baseline' }}
+                                        >
+                                            {t('ruleHeader.compact.windowEdit')}
+                                        </Link>
+                                        {windowPinned && (
+                                            <>
+                                                {' · '}
+                                                <Link
+                                                    component="button"
+                                                    type="button"
+                                                    underline="hover"
+                                                    disabled={disabled}
+                                                    onClick={() => onWindowChange(0)}
+                                                    sx={{ fontSize: fontSizes.xs, verticalAlign: 'baseline' }}
+                                                >
+                                                    {windowLoad === 'ready'
+                                                        ? t('ruleHeader.compact.windowReset', { window: formatWindow(fallbackWindow.window) })
+                                                        : t('ruleHeader.compact.windowResetPlain')}
+                                                </Link>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+                            </Box>
+                        )}
+                        {windowDraft !== null && (
+                            <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', py: 0.5 }}>
+                                <TextField
+                                    size="small"
+                                    autoFocus
+                                    fullWidth
+                                    label={t('ruleHeader.compact.windowLabel')}
+                                    value={windowDraft}
+                                    onChange={(e) => setWindowDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') { e.preventDefault(); saveWindow(); }
+                                        if (e.key === 'Escape') { e.stopPropagation(); closeWindowEditor(); }
+                                    }}
+                                    error={windowDraft.trim() !== '' && !windowDraftValid}
+                                    helperText={windowDraft.trim() !== '' && !windowDraftValid
+                                        ? t('ruleHeader.compact.windowInvalid', { min: formatWindow(CODEX_COMPACT.windowOverrideMin), max: formatWindow(CODEX_COMPACT.windowOverrideMax) })
+                                        : windowDraftValid
+                                            ? t('ruleHeader.compact.windowParsed', { tokens: fmt(windowDraftTokens) })
+                                            : t('ruleHeader.compact.windowHint')}
+                                    slotProps={{ htmlInput: { inputMode: 'decimal' } }}
+                                />
+                                <Button size="small" variant="contained" disabled={!windowDraftValid} onClick={saveWindow} sx={{ mt: 0.25 }}>
+                                    {t('ruleHeader.compact.windowSave')}
+                                </Button>
+                            </Stack>
+                        )}
                         {[
-                            [t('ruleHeader.compact.window'), context1M ? '1M' : '200K', undefined],
-                            [t('ruleHeader.compact.line'), `${plan.applied}% · ${fmt(plan.line)} tokens`, undefined],
-                            [t('ruleHeader.compact.remain'), `${fmt(plan.remain)} tokens`, plan.status === 'low' ? 'warning.dark' : 'text.primary'],
+                            [t('ruleHeader.compact.line'), showNumbers ? `${plan.applied}% · ${fmt(plan.line)} tokens` : '…', undefined],
+                            [t('ruleHeader.compact.remain'), showNumbers ? `${fmt(plan.remain)} tokens` : '…', showNumbers && plan.status === 'low' ? 'warning.dark' : 'text.primary'],
                         ].map(([label, value, color]) => (
                             <Stack key={label} direction="row" sx={{ justifyContent: 'space-between' }}>
                                 <Box component="span" sx={{ color: 'text.secondary' }}>{label}</Box>

@@ -25,6 +25,7 @@ import {EntryGuideDialog} from '@/components/tier/EntryGuideDialog';
 import type {Provider} from '../types/provider';
 import type {ConfigRecord} from './RoutingGraphTypes';
 import {useResponsesToggle} from '@/hooks/useResponsesToggle';
+import {useCodexFlagUpdaters} from '@/components/rule-card/useCodexFlagUpdaters';
 
 // Routing mode controls display behavior
 export type RoutingMode = 'smart' | 'direct' | 'auto';
@@ -204,6 +205,7 @@ export const UnifiedRoutingGraph: React.FC<UnifiedRoutingGraphProps> = ({
 
     // Ref for the scrollable container
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const codexFlags = useCodexFlagUpdaters(record.flags, (flags) => onUpdateRecord?.('flags', flags));
 
     // Scroll to show the right portion of the graph when scrollAt is true
     useEffect(() => {
@@ -511,10 +513,10 @@ export const UnifiedRoutingGraph: React.FC<UnifiedRoutingGraphProps> = ({
                 endpointSelection={endpointSelection}
                 responsesProbing={responsesProbing}
                 onEndpointSelect={handleEndpointSelect}
-                onCompactChange={record.scenario === 'codex' ? (percent) => {
-                    onUpdateRecord?.('flags', { ...record.flags, codexCompactPercent: percent || undefined });
-                } : undefined}
+                onCompactChange={record.scenario === 'codex' ? codexFlags.setCompactPercent : undefined}
                 compactPercent={record.flags?.codexCompactPercent || 0}
+                onCodexWindowChange={record.scenario === 'codex' ? codexFlags.setContextWindow : undefined}
+                codexWindow={record.flags?.codexContextWindow || 0}
                 endpointApplicable={endpointApplicable}
                 pluginsCount={pluginsCount}
                 onPluginsClick={onPluginsClick}

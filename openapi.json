@@ -11815,6 +11815,13 @@
       "CodexConfigResponse": {
         "type": "object",
         "properties": {
+          "contextWindows": {
+            "type": "object",
+            "description": "Field contextWindows",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CodexContextWindow"
+            }
+          },
           "exists": {
             "type": "boolean",
             "description": "Field exists"
@@ -11835,7 +11842,37 @@
           "success",
           "exists",
           "preferences",
-          "writeCatalog"
+          "writeCatalog",
+          "contextWindows"
+        ]
+      },
+      "CodexContextWindow": {
+        "type": "object",
+        "properties": {
+          "derived": {
+            "$ref": "#/components/schemas/CodexContextWindow"
+          },
+          "model": {
+            "type": "string",
+            "description": "Field model"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Field provider"
+          },
+          "source": {
+            "type": "string",
+            "description": "Field source"
+          },
+          "window": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Field window"
+          }
+        },
+        "required": [
+          "window",
+          "source"
         ]
       },
       "CodexPrefs": {
@@ -17730,6 +17767,11 @@
             "format": "int64",
             "description": "Field codex_compact_percent"
           },
+          "codex_context_window": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Field codex_context_window"
+          },
           "context_1m": {
             "type": "boolean",
             "description": "Field context_1m"
@@ -19239,6 +19281,11 @@
       "ThreadCounts": {
         "type": "object",
         "properties": {
+          "failed": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Field failed"
+          },
           "idle": {
             "type": "integer",
             "format": "int64",
@@ -19268,6 +19315,7 @@
         "required": [
           "working",
           "waiting",
+          "failed",
           "ready",
           "idle",
           "resolved"

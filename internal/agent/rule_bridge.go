@@ -132,12 +132,16 @@ func (aa *AgentApply) ApplyAgent(req *ApplyAgentRequest) (*ApplyAgentResult, err
 		// Collect models with business logic
 		rawModels := aa.collectCodexRuleModels()
 		models := CollectCodexModels(rawModels)
+		// Same per-model windows and compact overrides as the UI's Auto Config.
+		prefs := aiagent.DefaultCodexPrefs()
+		prefs.ModelAutoCompactPercent = serverconfig.BuildCompactPercentsFromRules(aa.config)
 		fileResult, err = config.Apply(&aiagent.CodexParams{
-			CodexBaseURL: codexBaseURL,
-			APIKey:       apiKey,
-			Models:       models,
-			Prefs:        aiagent.DefaultCodexPrefs(),
-			WriteCatalog: true,
+			CodexBaseURL:   codexBaseURL,
+			APIKey:         apiKey,
+			Models:         models,
+			Prefs:          prefs,
+			ContextWindows: serverconfig.BuildContextWindowsFromRules(aa.config),
+			WriteCatalog:   true,
 		})
 	case AgentTypeDsh:
 		config, ok := aiagent.DefaultRegistry.Get(req.AgentType)
