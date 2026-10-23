@@ -3856,10 +3856,14 @@ export const handlers = [
         ],
     })),
 
-    // Catalog windows of the Codex rules' routed models (rule 2 is unknown).
+    // The Codex rules' Auto windows: rule 1 from the catalog (with Codex's
+    // 1M ceiling), rule 2 held to 200K by its Claude upstream without 1M.
     http.get('/api/v1/config/codex/catalog-windows', () => HttpResponse.json({
         success: true,
-        windows: { 'mock-rule-codex-1': 272_000 },
+        windows: {
+            'mock-rule-codex-1': { window: 272_000, max: 872_000, source: 'catalog', provider: 'OpenAI', model: 'gpt-5.6-luna' },
+            'mock-rule-codex-2': { window: 200_000, max: 200_000, source: 'anthropic', provider: 'Anthropic', model: 'claude-opus-4-8' },
+        },
     })),
 
     http.get('/api/v1/config/codex/status', () => HttpResponse.json({

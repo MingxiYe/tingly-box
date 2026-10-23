@@ -83,8 +83,8 @@ export function compactZones(window: number, effectivePercent: number): CodexCom
     };
 }
 
-// Mirrors codexMinContextWindow / codexMaxContextWindow and the automatic
-// window in BuildContextWindowsFromRules (internal/config/apply_config_codex.go).
+// Mirrors codexMinContextWindow / codexMaxContextWindow
+// (internal/config/apply_config_codex.go).
 export const CODEX_CONTEXT = {
     min: 8_000,
     max: 10_000_000,
@@ -92,22 +92,54 @@ export const CODEX_CONTEXT = {
     presets: [128_000, 200_000, 256_000, 400_000, 1_000_000],
 } as const;
 
-export type CodexWindowSource = 'rule' | '1m' | 'catalog' | 'default';
-
 /**
- * The window Codex is told about and where it comes from: the rule's own value,
- * else 1M with the 1M flag, else what the provider catalog records for the
- * routed model, else 200K. Mirrors BuildContextWindowsFromRules.
+ * Where a Codex rule's window comes from (CodexWindowSource* in
+ * internal/config/apply_config_codex.go): the rule's own value, the routed
+ * model's catalog entry, 200K for a Claude model on an Anthropic endpoint
+ * without 1M, 1M with the 1M flag (that Claude model, or one the catalog
+ * doesn't know), or 200K for an unknown model.
  */
-export function resolveCodexWindowSource(manual: number, context1M: boolean, catalog = 0): { window: number; source: CodexWindowSource } {
-    if (manual >= CODEX_CONTEXT.min && manual <= CODEX_CONTEXT.max) return { window: manual, source: 'rule' };
-    if (context1M) return { window: CODEX_COMPACT.window1M, source: '1m' };
-    if (catalog > 0) return { window: catalog, source: 'catalog' };
-    return { window: CODEX_COMPACT.window, source: 'default' };
+export type CodexWindowSource = 'rule' | 'catalog' | 'anthropic' | '1m' | 'default';
+
+/** A rule's Auto window as GET /config/codex/catalog-windows reports it. */
+export interface CodexAutoWindow {
+    window: number;
+    /** The most Codex can be told to use (its model_context_window override). */
+    max: number;
+    source: Exclude<CodexWindowSource, 'rule'>;
+    /** The routed upstream the window comes from (the smallest one reachable). */
+    provider?: string;
+    model?: string;
 }
 
-export function resolveCodexWindow(manual: number, context1M: boolean, catalog = 0): number {
-    return resolveCodexWindowSource(manual, context1M, catalog).window;
+/**
+ * Auto before the server has answered, or when it can't: what the server
+ * gives a model it doesn't know (1M with the 1M flag, else 200K).
+ */
+export function fallbackCodexAutoWindow(context1M: boolean): CodexAutoWindow {
+    const window = context1M ? CODEX_COMPACT.window1M : CODEX_COMPACT.window;
+    return { window, max: window, source: context1M ? '1m' : 'default' };
+}
+
+export interface CodexResolvedWindow {
+    window: number;
+    max: number;
+    source: CodexWindowSource;
+}
+
+/**
+ * The window Codex is told about, its ceiling and where it comes from: the
+ * rule's own value (also its ceiling), else Auto. Mirrors CodexContextWindowFor.
+ */
+export function resolveCodexWindowSource(manual: number, auto: CodexAutoWindow): CodexResolvedWindow {
+    if (manual >= CODEX_CONTEXT.min && manual <= CODEX_CONTEXT.max) {
+        return { window: manual, max: manual, source: 'rule' };
+    }
+    return { window: auto.window, max: Math.max(auto.window, auto.max), source: auto.source };
+}
+
+export function resolveCodexWindow(manual: number, auto: CodexAutoWindow): number {
+    return resolveCodexWindowSource(manual, auto).window;
 }
 
 /** 200000 → "200K", 1000000 → "1M", 1500000 → "1.5M", 131072 → "131K". */

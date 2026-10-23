@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { CODEX_COMPACT, compactZones, formatTokens, lowZoneStart, parseTokens, planCodexCompact, resolveCodexWindow } from './codexCompact';
+import {
+    CODEX_COMPACT,
+    compactZones,
+    fallbackCodexAutoWindow,
+    formatTokens,
+    lowZoneStart,
+    parseTokens,
+    planCodexCompact,
+    resolveCodexWindow,
+    resolveCodexWindowSource,
+    type CodexAutoWindow,
+} from './codexCompact';
 
 const { window, window1M } = CODEX_COMPACT;
 
@@ -62,11 +73,22 @@ describe('compactZones', () => {
 });
 
 describe('context window helpers', () => {
-    it('resolves manual > 1M flag > 200K', () => {
-        expect(resolveCodexWindow(256_000, true)).toBe(256_000);
-        expect(resolveCodexWindow(0, true)).toBe(1_000_000);
-        expect(resolveCodexWindow(0, false)).toBe(200_000);
-        expect(resolveCodexWindow(100, false)).toBe(200_000);
+    const catalog: CodexAutoWindow = { window: 272_000, max: 872_000, source: 'catalog', provider: 'ChatGPT', model: 'gpt-6-sol' };
+
+    it('Auto is what the server resolved; an own window is also its ceiling', () => {
+        expect(resolveCodexWindowSource(0, catalog)).toEqual({ window: 272_000, max: 872_000, source: 'catalog' });
+        expect(resolveCodexWindowSource(128_000, catalog)).toEqual({ window: 128_000, max: 128_000, source: 'rule' });
+        expect(resolveCodexWindowSource(1_000_000, catalog)).toEqual({ window: 1_000_000, max: 1_000_000, source: 'rule' });
+        // Out of range is not an own window.
+        expect(resolveCodexWindowSource(100, catalog)).toEqual({ window: 272_000, max: 872_000, source: 'catalog' });
+        expect(resolveCodexWindow(256_000, catalog)).toBe(256_000);
+    });
+
+    it('falls back like the server does for a model the catalog does not know', () => {
+        expect(fallbackCodexAutoWindow(true)).toEqual({ window: 1_000_000, max: 1_000_000, source: '1m' });
+        expect(fallbackCodexAutoWindow(false)).toEqual({ window: 200_000, max: 200_000, source: 'default' });
+        expect(resolveCodexWindow(0, fallbackCodexAutoWindow(true))).toBe(1_000_000);
+        expect(resolveCodexWindow(100, fallbackCodexAutoWindow(false))).toBe(200_000);
     });
 
     it('formats windows the way people say them', () => {

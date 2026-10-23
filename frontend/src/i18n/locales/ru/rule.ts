@@ -308,10 +308,13 @@ export default {
       "equals": "= {{tokens}} токенов. Enter — задать.",
       "invalid": "Введите размер от {{min}} до {{max}}.",
       "set": "Задать",
-      "autoDefault": "Авто — 200K: этой модели нет в каталоге.",
-      "autoCatalog": "Авто берёт {{value}} из каталога моделей.",
-      "auto1M": "Пока включён 1M, авто — 1M.",
-      "footer": "{{auto}} {{apply}}"
+      "autoCatalog": "Авто — {{value}}: окно {{model}} у {{provider}} из каталога моделей.",
+      "autoAnthropic": "Авто — {{value}}: {{model}} у {{provider}} получает 1M, только пока включён 1M.",
+      "autoUnknown": "Авто — 200K: {{model}} у {{provider}} нет в каталоге моделей.",
+      "ignores1M": "1M здесь ничего не меняет: он расширяет только модели Claude на эндпоинте Anthropic.",
+      "ceiling": "В Codex его можно поднять до {{max}} через model_context_window.",
+      "autoDefault": "Авто — 200K: у этого правила нет включённого провайдера.",
+      "auto1M": "Пока включён 1M, авто — 1M."
     },
     "compact": {
       "chip": "Сжатие: {{value}}",

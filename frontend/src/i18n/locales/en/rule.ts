@@ -308,10 +308,13 @@ export default {
       "equals": "= {{tokens}} tokens. Press Enter to set.",
       "invalid": "Enter a size between {{min}} and {{max}}.",
       "set": "Set",
-      "autoDefault": "Auto is 200K: this model is not in the catalog.",
-      "autoCatalog": "Auto uses {{value}} from the model catalog.",
-      "auto1M": "Auto is 1M while 1M is on.",
-      "footer": "{{auto}} {{apply}}"
+      "autoCatalog": "Auto is {{value}}: the model catalog's window for {{model}} on {{provider}}.",
+      "autoAnthropic": "Auto is {{value}}: {{model}} on {{provider}} gets 1M only while 1M is on.",
+      "autoUnknown": "Auto is 200K: {{model}} on {{provider}} is not in the model catalog.",
+      "ignores1M": "1M doesn't change this: it only widens Claude models on an Anthropic endpoint.",
+      "ceiling": "Codex can be raised to {{max}} with model_context_window in its config.",
+      "autoDefault": "Auto is 200K: no enabled provider serves this rule.",
+      "auto1M": "Auto is 1M while 1M is on."
     },
     "compact": {
       "chip": "Compact: {{value}}",

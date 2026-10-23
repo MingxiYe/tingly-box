@@ -14,13 +14,13 @@ import {
     trackPosition,
     type CodexCompactStatus,
 } from './codexCompact';
-import { useCodexCatalogWindow } from './useCodexCatalogWindow';
+import { useCodexAutoWindow } from './useCodexAutoWindow';
 
 interface CodexCompactChipProps {
     /** The rule's own percent; 0 = follow the Auto Config default. */
     percent: number;
     /** The rule's own context window (0 = automatic) and 1M flag; with the
-     * catalog window they give the window this model has (resolveCodexWindow). */
+     * rule's Auto window they give the window this model has (resolveCodexWindow). */
     contextWindow: number;
     context1M: boolean;
     ruleUuid?: string;
@@ -85,8 +85,8 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     const open = Boolean(anchor);
     const overridden = percent > 0;
     const shown = draft ?? (overridden ? percent : shared.percent);
-    const catalog = useCodexCatalogWindow(ruleUuid, open);
-    const window = resolveCodexWindow(contextWindow, context1M, catalog);
+    const auto = useCodexAutoWindow(ruleUuid, open, context1M);
+    const window = resolveCodexWindow(contextWindow, auto);
     const plan = planCodexCompact({ window, percent: shown, effectivePercent: shared.effective });
     const zones = compactZones(window, shared.effective);
     const noteKind = plan.status === 'ok' ? null : NOTE_COLOR[plan.status];

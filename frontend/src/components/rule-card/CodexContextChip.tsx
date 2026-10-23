@@ -4,15 +4,16 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExpandMore as ExpandMoreIcon } from '@/components/icons';
 import { fontSizes } from '@/theme/fonts';
-import { CODEX_CONTEXT, formatTokens, parseTokens, resolveCodexWindow, resolveCodexWindowSource } from './codexCompact';
-import { useCodexCatalogWindow } from './useCodexCatalogWindow';
+import { CODEX_CONTEXT, formatTokens, parseTokens, resolveCodexWindowSource } from './codexCompact';
+import { useCodexAutoWindow } from './useCodexAutoWindow';
 
 interface CodexContextChipProps {
     /** The rule's own window in tokens; 0 = automatic. */
     window: number;
-    /** Whether the rule's 1M flag is on (the automatic window is then 1M). */
+    /** Whether the rule's 1M flag is on (it widens Claude on an Anthropic
+     * endpoint, and a model the catalog doesn't know, to 1M). */
     context1M: boolean;
-    /** The rule, to read the catalog window its routed model has. */
+    /** The rule, to read what its Auto window resolves to. */
     ruleUuid?: string;
     disabled?: boolean;
     onChange: (window: number) => void;
@@ -43,11 +44,10 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     const [text, setText] = React.useState('');
     const open = Boolean(anchor);
 
-    const catalog = useCodexCatalogWindow(ruleUuid, open);
-    const auto = resolveCodexWindowSource(0, context1M, catalog);
+    const auto = useCodexAutoWindow(ruleUuid, open, context1M);
     const autoWindow = auto.window;
     const manual = window >= CODEX_CONTEXT.min && window <= CODEX_CONTEXT.max;
-    const shown = resolveCodexWindow(window, context1M, catalog);
+    const resolved = resolveCodexWindowSource(window, auto);
     const typed = text.trim() === '' ? undefined : parseTokens(text);
 
     const choose = (next: number) => {
@@ -58,12 +58,24 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
         if (typed) choose(typed);
     };
 
-    const AUTO_NOTE = {
-        '1m': () => t('ruleHeader.context.auto1M'),
-        catalog: (n: number) => t('ruleHeader.context.autoCatalog', { value: formatTokens(n) }),
-        default: () => t('ruleHeader.context.autoDefault'),
-        rule: () => '',
-    } as const;
+    // Where Auto comes from, naming the routed model and provider so a wrong
+    // number can be traced to the upstream it was read from.
+    const upstream = { model: auto.model ?? '', provider: auto.provider ?? '', value: formatTokens(autoWindow) };
+    const autoNote = (() => {
+        switch (auto.source) {
+            case 'catalog': return t('ruleHeader.context.autoCatalog', upstream);
+            case 'anthropic': return t('ruleHeader.context.autoAnthropic', upstream);
+            case '1m': return t('ruleHeader.context.auto1M');
+            default: return auto.provider ? t('ruleHeader.context.autoUnknown', upstream) : t('ruleHeader.context.autoDefault');
+        }
+    })();
+    const notes = [
+        autoNote,
+        // The 1M flag used to set this window; say so where it no longer does.
+        context1M && auto.source === 'catalog' ? t('ruleHeader.context.ignores1M') : '',
+        resolved.max > resolved.window ? t('ruleHeader.context.ceiling', { max: formatTokens(resolved.max) }) : '',
+        t('ruleHeader.compact.needsApply'),
+    ].filter(Boolean);
 
     const label = manual ? formatTokens(window) : t('ruleHeader.context.auto');
 
@@ -114,7 +126,7 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                     <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
                         <Typography sx={{ fontSize: fontSizes.md, fontWeight: 600 }}>{t('ruleHeader.context.title')}</Typography>
                         <Typography sx={{ fontSize: fontSizes.lg, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                            {formatTokens(shown)}
+                            {formatTokens(resolved.window)}
                         </Typography>
                     </Stack>
                     <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: fontSizes.sm }}>
@@ -161,9 +173,13 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                         </Typography>
                     </Box>
 
-                    <Typography sx={{ pt: 1, borderTop: 1, borderColor: 'divider', fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                        {t('ruleHeader.context.footer', { auto: AUTO_NOTE[auto.source](autoWindow), apply: t('ruleHeader.compact.needsApply') })}
-                    </Typography>
+                    <Stack spacing={0.5} sx={{ pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                        {notes.map((note) => (
+                            <Typography key={note} sx={{ fontSize: fontSizes.xs, color: 'text.secondary', overflowWrap: 'anywhere' }}>
+                                {note}
+                            </Typography>
+                        ))}
+                    </Stack>
                 </Stack>
             </Popover>
         </Box>

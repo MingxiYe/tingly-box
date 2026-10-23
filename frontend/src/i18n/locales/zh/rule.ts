@@ -308,10 +308,13 @@ export default {
       "equals": "= {{tokens}} tokens，回车即设置。",
       "invalid": "请输入 {{min}} 到 {{max}} 之间的大小。",
       "set": "设置",
-      "autoDefault": "自动为 200K：模型目录里没有这个模型。",
-      "autoCatalog": "自动取模型目录里的 {{value}}。",
-      "auto1M": "开启 1M 时自动为 1M。",
-      "footer": "{{auto}}{{apply}}"
+      "autoCatalog": "自动为 {{value}}：模型目录里 {{provider}} 上 {{model}} 的窗口。",
+      "autoAnthropic": "自动为 {{value}}：{{provider}} 上的 {{model}} 只有开启 1M 时才是 1M。",
+      "autoUnknown": "自动为 200K：模型目录里没有 {{provider}} 上的 {{model}}。",
+      "ignores1M": "1M 开关不影响这里：它只扩大 Anthropic 端点上 Claude 模型的窗口。",
+      "ceiling": "在 Codex 配置里用 model_context_window 最多可调到 {{max}}。",
+      "autoDefault": "自动为 200K：这条规则还没有可用的供应商。",
+      "auto1M": "开启 1M 时自动为 1M。"
     },
     "compact": {
       "chip": "压缩：{{value}}",
