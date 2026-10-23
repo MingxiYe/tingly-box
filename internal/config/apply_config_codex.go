@@ -12,7 +12,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	tomlpkg "github.com/pelletier/go-toml/v2"
@@ -658,15 +657,18 @@ const (
 	// CodexWindowSourceCatalog is the routed model's entry in the provider
 	// catalog (context, and max_context for the ceiling).
 	CodexWindowSourceCatalog = "catalog"
-	// CodexWindowSourceAnthropic is a Claude model on an Anthropic-style
-	// endpoint without the rule's 1M flag: it answers with 200K, whatever
-	// larger window the catalog lists, until the 1M header is sent.
+	// CodexWindowSourceAnthropic is a Claude model on a provider with an
+	// Anthropic-style endpoint, sent without the context-1m header (the rule's
+	// 1M flag is off, or the request goes to the provider's OpenAI URL, which
+	// never carries it): it answers with 200K, whatever larger window the
+	// catalog lists.
 	CodexWindowSourceAnthropic = "anthropic"
-	// CodexWindowSource1M is the rule's 1M flag: the window of a Claude model
-	// on an Anthropic-style endpoint, and the old meaning kept for a model the
-	// catalog doesn't know.
+	// CodexWindowSource1M is a Claude model on an Anthropic-style endpoint
+	// with the rule's 1M flag: the header it adds opens 1M.
 	CodexWindowSource1M = "1m"
-	// CodexWindowSourceDefault is nothing known: the 200K default.
+	// CodexWindowSourceDefault is a model the catalog doesn't know: 200K, or
+	// 1M with the rule's 1M flag (its old meaning, kept where nothing better
+	// is known). Both are guesses.
 	CodexWindowSourceDefault = "default"
 )
 
@@ -675,7 +677,8 @@ const (
 // around: its context meter and when it compacts); Max as max_context_window
 // (how far Codex's own model_context_window setting may raise it). Provider
 // and Model name the routed upstream that decided it, the smallest one when a
-// rule can reach several; both are empty for the rule and default sources.
+// rule can reach several; both are empty for the rule source and when the
+// rule reaches no upstream.
 type CodexContextWindow struct {
 	Window   int    `json:"window"`
 	Max      int    `json:"max"`
@@ -696,8 +699,9 @@ const codexAnthropicStandardWindow = 200000
 // smart routing on, each route's. Services on a disabled or deleted provider
 // never answer and don't. Each upstream contributes:
 //
-//   - a Claude model on an Anthropic-style endpoint: 1M with the rule's 1M flag
-//     (the header that flag adds is what opens it), else 200K;
+//   - a Claude model on a provider with an Anthropic-style endpoint: 1M when
+//     the request goes there with the rule's 1M flag (the header that flag
+//     adds is what opens it), else 200K;
 //   - a model the provider catalog knows: its context, and its max_context as
 //     the ceiling when the catalog has one. The 1M flag doesn't change it: the
 //     flag only adds Anthropic's 1M header;
@@ -710,12 +714,9 @@ const codexAnthropicStandardWindow = 200000
 func (c *Config) CodexAutoContextWindow(rule typ.Rule) CodexContextWindow {
 	unknown := CodexContextWindow{Window: codexDefaultContextWindow, Max: codexDefaultMaxContextWindow, Source: CodexWindowSourceDefault}
 	if rule.Flags.Context1M {
-		unknown = CodexContextWindow{Window: codex1MContextWindow, Max: codex1MContextWindow, Source: CodexWindowSource1M}
+		unknown.Window, unknown.Max = codex1MContextWindow, codex1MContextWindow
 	}
-	tm := c.GetTemplateManager()
-	if tm == nil {
-		tm = embeddedProviderCatalog()
-	}
+	tm := c.codexCatalog()
 
 	services := slices.Clone(rule.GetServices())
 	if rule.SmartEnabled {
@@ -756,19 +757,20 @@ func (c *Config) CodexAutoContextWindow(rule typ.Rule) CodexContextWindow {
 // the /v1/models listing does.
 func codexUpstreamWindow(tm *catalog.ProviderCatalogManager, provider *typ.Provider, rule typ.Rule, serviceModel string, unknown CodexContextWindow) CodexContextWindow {
 	model := serviceModel
+	requestModel := strings.TrimSpace(rule.RequestModel)
 	info, known := tm.GetModelInfoForProvider(provider, model)
 	if !known || info.Context <= 0 {
-		if alt, ok := tm.GetModelInfoForProvider(provider, rule.RequestModel); ok && alt.Context > 0 {
-			model, info, known = rule.RequestModel, alt, true
+		if alt, ok := tm.GetModelInfoForProvider(provider, requestModel); ok && alt.Context > 0 {
+			model, info, known = requestModel, alt, true
 		}
 	}
 	if model == "" {
-		model = rule.RequestModel
+		model = requestModel
 	}
 	known = known && info.Context > 0
 
-	if codexAnthropicClaude(provider, rule, model) {
-		if rule.Flags.Context1M {
+	if claude, header := codexClaudeEndpoint(provider, rule, model); claude {
+		if header && rule.Flags.Context1M {
 			return CodexContextWindow{Window: codex1MContextWindow, Max: codex1MContextWindow, Source: CodexWindowSource1M, Provider: provider.Name, Model: model}
 		}
 		w := CodexContextWindow{Window: codexAnthropicStandardWindow, Max: codexAnthropicStandardWindow, Source: CodexWindowSourceAnthropic, Provider: provider.Name, Model: model}
@@ -784,38 +786,39 @@ func codexUpstreamWindow(tm *catalog.ProviderCatalogManager, provider *typ.Provi
 	return unknown
 }
 
-// codexAnthropicClaude reports whether a Codex request for model reaches a
-// Claude model on an Anthropic-style endpoint, where the context-1m beta header
-// (the rule's 1M flag) decides the window. Codex speaks OpenAI, so a provider
-// with a dual OpenAI URL serves it there unless the rule forces the Anthropic
-// endpoint. Other models behind an Anthropic-style endpoint (DeepSeek's) keep
-// their own window.
-func codexAnthropicClaude(provider *typ.Provider, rule typ.Rule, model string) bool {
-	_, style := provider.ResolveEndpoint(ai.APIStyleOpenAI)
-	if rule.Flags.AnthropicEndpointOverride == "anthropic" {
-		if _, s := provider.ResolveEndpoint(ai.APIStyleAnthropic); s == ai.APIStyleAnthropic {
-			style = s
-		}
+// codexClaudeEndpoint reports whether a Codex request for model reaches a
+// Claude model on a provider with an Anthropic-style endpoint (claude), where
+// the context-1m beta header decides the window, and whether the request is
+// sent to that endpoint (header), the only one the rule's 1M flag can add the
+// header on. Codex speaks OpenAI, so a provider with a dual OpenAI URL serves
+// it there unless the rule forces the Anthropic endpoint. Other models behind
+// an Anthropic-style endpoint (DeepSeek's) keep their own window.
+func codexClaudeEndpoint(provider *typ.Provider, rule typ.Rule, model string) (claude, header bool) {
+	if !strings.Contains(strings.ToLower(model), "claude") {
+		return false, false
 	}
-	return style == ai.APIStyleAnthropic && strings.Contains(strings.ToLower(model), "claude")
+	if _, s := provider.ResolveEndpoint(ai.APIStyleAnthropic); s != ai.APIStyleAnthropic {
+		return false, false
+	}
+	_, style := provider.ResolveEndpoint(ai.APIStyleOpenAI)
+	return true, style == ai.APIStyleAnthropic || rule.Flags.AnthropicEndpointOverride == "anthropic"
 }
 
-var (
-	embeddedCatalogOnce sync.Once
-	embeddedCatalog     *catalog.ProviderCatalogManager
-)
-
-// embeddedProviderCatalog is the built-in provider catalog, for a config loaded
-// without the server's template manager (the CLI and TUI agent apply), so those
-// paths derive the same windows as the server.
-func embeddedProviderCatalog() *catalog.ProviderCatalogManager {
-	embeddedCatalogOnce.Do(func() {
-		tm := catalog.NewProviderCatalogManager(catalog.EmbeddedOnly())
+// codexCatalog is the provider catalog the Codex windows are read from: the
+// server's template manager, or for a config loaded without it (the CLI and
+// TUI agent apply) the last catalog the server synced, else the embedded one,
+// so those paths derive the same windows as the server.
+func (c *Config) codexCatalog() *catalog.ProviderCatalogManager {
+	if tm := c.GetTemplateManager(); tm != nil {
+		return tm
+	}
+	c.localCatalogOnce.Do(func() {
+		tm := catalog.NewProviderCatalogManager(catalog.LastSynced())
 		if tm.Initialize(context.Background()) == nil {
-			embeddedCatalog = tm
+			c.localCatalog = tm
 		}
 	})
-	return embeddedCatalog
+	return c.localCatalog
 }
 
 // CodexContextWindowFor is the window a Codex rule's catalog entry gets: its
@@ -847,8 +850,13 @@ func ResolveCodexContextWindows(cfg *Config) map[string]CodexContextWindow {
 			continue
 		}
 		w := cfg.CodexContextWindowFor(rule)
-		if prev, ok := out[model]; ok && prev.Window <= w.Window {
-			continue
+		if prev, ok := out[model]; ok {
+			// One entry for both: the smaller window and the smaller ceiling,
+			// whatever the rule order.
+			if prev.Window <= w.Window {
+				prev, w = w, prev
+			}
+			w.Max = max(w.Window, min(w.Max, prev.Max))
 		}
 		out[model] = w
 	}
@@ -856,14 +864,14 @@ func ResolveCodexContextWindows(cfg *Config) map[string]CodexContextWindow {
 }
 
 // BuildContextWindowsFromRules maps each Codex catalog model to the window
-// (context_window) ResolveCodexContextWindows gives it. Models whose window is
-// only the default are absent: the catalog writes the default for them anyway.
+// (context_window) ResolveCodexContextWindows gives it. Models at the default
+// 200K are absent: the catalog writes the default for them anyway.
 // Keys are the rules' request models verbatim — exactly the names
 // collectCodexRuleModels feeds into the catalog.
 func BuildContextWindowsFromRules(cfg *Config) map[string]int {
 	windows := make(map[string]int)
 	for model, w := range ResolveCodexContextWindows(cfg) {
-		if w.Source != CodexWindowSourceDefault {
+		if w.Window != codexDefaultContextWindow {
 			windows[model] = w.Window
 		}
 	}

@@ -99,7 +99,7 @@ func (aa *AgentApply) ApplyAgent(req *ApplyAgentRequest) (*ApplyAgentResult, err
 	case AgentTypeClaudeCode:
 		config, ok := aiagent.DefaultRegistry.Get(req.AgentType)
 		if !ok {
-			return nil, fmt.Errorf("claude code config not registered")
+			return nil, routing.fileError(fmt.Errorf("claude code config not registered"))
 		}
 		// Build env vars with business logic
 		modelConfig := BuildClaudeCodeModelConfig(aa.config)
@@ -107,7 +107,7 @@ func (aa *AgentApply) ApplyAgent(req *ApplyAgentRequest) (*ApplyAgentResult, err
 		if req.InstallStatusLine {
 			statusLineScript, err = internal.ScriptAssets.ReadFile("script/tingly-statusline.sh")
 			if err != nil {
-				return nil, fmt.Errorf("failed to read status line script asset: %w", err)
+				return nil, routing.fileError(fmt.Errorf("failed to read status line script asset: %w", err))
 			}
 		}
 		fileResult, err = config.Apply(&aiagent.ClaudeCodeParams{
@@ -122,7 +122,7 @@ func (aa *AgentApply) ApplyAgent(req *ApplyAgentRequest) (*ApplyAgentResult, err
 	case AgentTypeOpenCode:
 		config, ok := aiagent.DefaultRegistry.Get(req.AgentType)
 		if !ok {
-			return nil, fmt.Errorf("opencode config not registered")
+			return nil, routing.fileError(fmt.Errorf("opencode config not registered"))
 		}
 		configBaseURL := baseURL + "/tingly/opencode"
 		// Build config object with business logic
@@ -134,7 +134,7 @@ func (aa *AgentApply) ApplyAgent(req *ApplyAgentRequest) (*ApplyAgentResult, err
 	case AgentTypeCodex:
 		config, ok := aiagent.DefaultRegistry.Get(req.AgentType)
 		if !ok {
-			return nil, fmt.Errorf("codex config not registered")
+			return nil, routing.fileError(fmt.Errorf("codex config not registered"))
 		}
 		codexBaseURL := baseURL + "/tingly/codex"
 		// Collect models with business logic
@@ -156,7 +156,7 @@ func (aa *AgentApply) ApplyAgent(req *ApplyAgentRequest) (*ApplyAgentResult, err
 	case AgentTypeDsh:
 		config, ok := aiagent.DefaultRegistry.Get(req.AgentType)
 		if !ok {
-			return nil, fmt.Errorf("dsh config not registered")
+			return nil, routing.fileError(fmt.Errorf("dsh config not registered"))
 		}
 		dshBaseURL := baseURL + "/tingly/dsh"
 		// Collect models with business logic
@@ -171,7 +171,7 @@ func (aa *AgentApply) ApplyAgent(req *ApplyAgentRequest) (*ApplyAgentResult, err
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, routing.fileError(err)
 	}
 
 	fileResult.ProviderName = routing.providerName
@@ -191,6 +191,15 @@ type routingOutcome struct {
 	providerName, providerUUID, model string
 	created, updated                  int
 	warnings                          []string
+}
+
+// fileError is a failure to write the agent's files, saying when the routing
+// rules were already changed: they are saved before the files are written.
+func (r routingOutcome) fileError(err error) error {
+	if r.created+r.updated == 0 {
+		return err
+	}
+	return fmt.Errorf("routing rules now use %s / %s, but writing the config files failed: %w", r.providerName, r.model, err)
 }
 
 // applyRouting points the agent's rules at one provider + model. Problems are
@@ -285,6 +294,10 @@ func (aa *AgentApply) getBaseURLAndToken() (string, string) {
 // buildResultMessage builds a human-readable result message
 func (aa *AgentApply) buildResultMessage(result *ApplyAgentResult) string {
 	if !result.Success {
+		// The routing rules are saved before the files are written.
+		if result.RulesCreated+result.RulesUpdated > 0 {
+			return fmt.Sprintf("Configuration application failed; routing rules now use %s / %s", result.ProviderName, result.Model)
+		}
 		return "Configuration application failed"
 	}
 

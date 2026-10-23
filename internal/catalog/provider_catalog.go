@@ -183,6 +183,8 @@ const (
 	PreferenceEmbedded
 	// PreferenceEmbeddedFirst: Embedded -> Cache -> GitHub
 	PreferenceEmbeddedFirst
+	// PreferenceLastSynced: Cache of any age -> Embedded (no network requests)
+	PreferenceLastSynced
 )
 
 // ProviderCatalogManager manages provider templates with -tier fallback
@@ -234,6 +236,17 @@ func EmbeddedOnly() ProviderCatalogManagerOption {
 	return func(m *ProviderCatalogManager) {
 		m.githubURL = ""
 		m.sourcePreference = PreferenceEmbedded
+	}
+}
+
+// LastSynced resolves against the last catalog synced from GitHub — the disk
+// cache a running server keeps, whatever its age — else the embedded one, and
+// never fetches. For offline callers (the CLI) that must see the same catalog
+// the server does.
+func LastSynced() ProviderCatalogManagerOption {
+	return func(m *ProviderCatalogManager) {
+		m.githubURL = ""
+		m.sourcePreference = PreferenceLastSynced
 	}
 }
 
@@ -419,6 +432,12 @@ type CatalogCacheData struct {
 
 // loadCache loads templates from cache file if valid
 func (tm *ProviderCatalogManager) loadCache() (*ProviderCatalogRegistry, error) {
+	return tm.readCache(tm.cacheTTL)
+}
+
+// readCache loads templates from the cache file when it is younger than
+// maxAge; maxAge <= 0 accepts any age.
+func (tm *ProviderCatalogManager) readCache(maxAge time.Duration) (*ProviderCatalogRegistry, error) {
 	cacheFile := filepath.Join(tm.cachePath, CatalogCacheFileName)
 
 	data, err := os.ReadFile(cacheFile)
@@ -435,7 +454,7 @@ func (tm *ProviderCatalogManager) loadCache() (*ProviderCatalogRegistry, error) 
 	}
 
 	// Check if cache is still valid
-	if time.Since(cacheData.CachedAt) > tm.cacheTTL {
+	if maxAge > 0 && time.Since(cacheData.CachedAt) > maxAge {
 		return nil, nil // Cache expired
 	}
 
@@ -498,6 +517,17 @@ func (tm *ProviderCatalogManager) Initialize(ctx context.Context) error {
 		// Use embedded templates only, skip all network requests
 		tm.sourceMu.Lock()
 		tm.source = CatalogSourceLocal
+		tm.sourceMu.Unlock()
+		return nil
+
+	case PreferenceLastSynced:
+		source := CatalogSourceLocal
+		if cached, err := tm.readCache(0); err == nil && cached != nil {
+			tm.setExternalTemplates(cached)
+			source = CatalogSourceGitHub
+		}
+		tm.sourceMu.Lock()
+		tm.source = source
 		tm.sourceMu.Unlock()
 		return nil
 

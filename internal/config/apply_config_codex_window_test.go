@@ -3,7 +3,10 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,6 +25,10 @@ type codexWindowProviders struct {
 
 func newCodexWindowConfig(t *testing.T, withTemplateManager bool) (*Config, codexWindowProviders) {
 	t.Helper()
+	// Without a template manager the catalog last synced under ~/.tingly-box
+	// is read: keep the real one out.
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cfg, err := NewConfig(WithConfigDir(t.TempDir()))
 	require.NoError(t, err)
 	if withTemplateManager {
@@ -95,9 +102,13 @@ func TestCodexAutoContextWindow_PerUpstream(t *testing.T) {
 			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceCatalog, Provider: "Claude Code", Model: "claude-sonnet-4-5"}},
 		{"Claude subscription with 1M", codexRule("opus", on, codexSvc(p.claudeCode, "claude-opus-4-6")),
 			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSource1M, Provider: "Claude Code", Model: "claude-opus-4-6"}},
-		{"Claude reached over a dual provider's OpenAI URL keeps its catalog window", codexRule("sonnet", off, codexSvc(p.dual, "claude-sonnet-4-6")),
-			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceCatalog, Provider: "Anthropic dual", Model: "claude-sonnet-4-6"}},
-		{"forcing the Anthropic endpoint brings the header rule back", codexRule("sonnet", typ.RuleFlags{AnthropicEndpointOverride: "anthropic"}, codexSvc(p.dual, "claude-sonnet-4-6")),
+		{"Claude over a dual provider's OpenAI URL gets no 1M header: 200K", codexRule("sonnet", off, codexSvc(p.dual, "claude-sonnet-4-6")),
+			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceAnthropic, Provider: "Anthropic dual", Model: "claude-sonnet-4-6"}},
+		{"… even with the 1M flag", codexRule("sonnet", on, codexSvc(p.dual, "claude-sonnet-4-6")),
+			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceAnthropic, Provider: "Anthropic dual", Model: "claude-sonnet-4-6"}},
+		{"forcing the Anthropic endpoint lets the 1M flag open it", codexRule("sonnet", typ.RuleFlags{AnthropicEndpointOverride: "anthropic", Context1M: true}, codexSvc(p.dual, "claude-sonnet-4-6")),
+			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSource1M, Provider: "Anthropic dual", Model: "claude-sonnet-4-6"}},
+		{"forcing the Anthropic endpoint without 1M", codexRule("sonnet", typ.RuleFlags{AnthropicEndpointOverride: "anthropic"}, codexSvc(p.dual, "claude-sonnet-4-6")),
 			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceAnthropic, Provider: "Anthropic dual", Model: "claude-sonnet-4-6"}},
 		{"ChatGPT-backed model: 272K, up to 872K", codexRule("sol", off, codexSvc(p.chatgpt, "gpt-6-sol")),
 			CodexContextWindow{Window: 272000, Max: 872000, Source: CodexWindowSourceCatalog, Provider: "ChatGPT", Model: "gpt-6-sol"}},
@@ -105,16 +116,16 @@ func TestCodexAutoContextWindow_PerUpstream(t *testing.T) {
 			CodexContextWindow{Window: 272000, Max: 872000, Source: CodexWindowSourceCatalog, Provider: "ChatGPT", Model: "gpt-6-sol"}},
 		{"unknown model", codexRule("house", off, codexSvc(p.house, "house-model")),
 			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceDefault, Provider: "House", Model: "house-model"}},
-		{"unknown model keeps the old 1M meaning", codexRule("house", on, codexSvc(p.house, "house-model")),
-			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSource1M, Provider: "House", Model: "house-model"}},
-		{"service without a model sends the request model upstream", codexRule("deepseek-chat", off, codexSvc(p.deepseek, "")),
+		{"unknown model keeps the old 1M meaning, still a guess", codexRule("house", on, codexSvc(p.house, "house-model")),
+			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceDefault, Provider: "House", Model: "house-model"}},
+		{"service without a model is looked up by the request model", codexRule("deepseek-chat", off, codexSvc(p.deepseek, "")),
 			CodexContextWindow{Window: 128000, Max: 128000, Source: CodexWindowSourceCatalog, Provider: "DeepSeek", Model: "deepseek-chat"}},
 		{"request model is looked up when the service model is unknown", codexRule("deepseek-reasoner", off, codexSvc(p.deepseek, "ds-custom")),
 			CodexContextWindow{Window: 128000, Max: 128000, Source: CodexWindowSourceCatalog, Provider: "DeepSeek", Model: "deepseek-reasoner"}},
 		{"no services", codexRule("empty", off),
 			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceDefault}},
 		{"no services with 1M", codexRule("empty", on),
-			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSource1M}},
+			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceDefault}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -176,9 +187,29 @@ func TestCodexAutoContextWindow_EmbeddedCatalogFallback(t *testing.T) {
 		cfg.CodexAutoContextWindow(codexRule("sol", typ.RuleFlags{}, codexSvc(p.chatgpt, "gpt-6-sol"))))
 }
 
-// The rule's own window wins; the derived ceiling stays when it is higher so
-// Codex's model_context_window can still reach it, and an own window above
-// the ceiling becomes the ceiling.
+// …but when the server has synced a newer catalog, that one, whatever its age,
+// so the CLI resolves what the running server does.
+func TestCodexAutoContextWindow_LastSyncedCatalog(t *testing.T) {
+	cfg, p := newCodexWindowConfig(t, false)
+	var registry catalog.ProviderCatalogRegistry
+	require.NoError(t, json.Unmarshal(catalog.EmbeddedCatalogJSON()[catalog.KindProviders], &registry))
+	models := registry.Providers["deepseek-com"].Models
+	for i := range models {
+		if models[i].ID == "deepseek-chat" {
+			models[i].Context = 64000
+		}
+	}
+	raw, err := json.Marshal(catalog.CatalogCacheData{Registry: registry, CachedAt: time.Now().AddDate(0, -1, 0)})
+	require.NoError(t, err)
+	dir := filepath.Join(os.Getenv("HOME"), ".tingly-box")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, catalog.CatalogCacheFileName), raw, 0o644))
+
+	assert.Equal(t, CodexContextWindow{Window: 64000, Max: 64000, Source: CodexWindowSourceCatalog, Provider: "DeepSeek", Model: "deepseek-chat"},
+		cfg.CodexAutoContextWindow(codexRule("ds", typ.RuleFlags{}, codexSvc(p.deepseek, "deepseek-chat"))))
+}
+
+// The rule's own window wins and is also its ceiling.
 func TestCodexContextWindowFor_OwnWindow(t *testing.T) {
 	cfg, p := newCodexWindowConfig(t, true)
 	sol := codexSvc(p.chatgpt, "gpt-6-sol")
@@ -221,6 +252,31 @@ func TestBuildContextWindowsFromRules_Maps(t *testing.T) {
 	assert.Equal(t, CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceDefault, Provider: "House", Model: "house-model"},
 		ResolveCodexContextWindows(cfg)["house"])
 	assert.Empty(t, ResolveCodexContextWindows(nil))
+
+	// An unknown model at 1M is a guess, but still not the default window.
+	cfg.Rules = []typ.Rule{codexRule("house", typ.RuleFlags{Context1M: true}, codexSvc(p.house, "house-model"))}
+	assert.Equal(t, map[string]int{"house": 1000000}, BuildContextWindowsFromRules(cfg))
+}
+
+// Two rules sharing a request model share one catalog entry: the smaller
+// window and the smaller ceiling, in either order.
+func TestResolveCodexContextWindows_SharedModel(t *testing.T) {
+	cfg, p := newCodexWindowConfig(t, true)
+	sol := codexRule("dup", typ.RuleFlags{}, codexSvc(p.chatgpt, "gpt-6-sol"))
+	pinned := codexRule("dup", typ.RuleFlags{CodexContextWindow: 272000}, codexSvc(p.chatgpt, "gpt-6-sol"))
+	pinned.UUID = "r-dup-2"
+	for _, rules := range [][]typ.Rule{{sol, pinned}, {pinned, sol}} {
+		cfg.Rules = rules
+		got := ResolveCodexContextWindows(cfg)["dup"]
+		assert.Equal(t, [2]int{272000, 272000}, [2]int{got.Window, got.Max})
+	}
+	ds := codexRule("dup", typ.RuleFlags{}, codexSvc(p.deepseek, "deepseek-chat"))
+	ds.UUID = "r-dup-3"
+	for _, rules := range [][]typ.Rule{{sol, ds}, {ds, sol}} {
+		cfg.Rules = rules
+		assert.Equal(t, CodexContextWindow{Window: 128000, Max: 128000, Source: CodexWindowSourceCatalog, Provider: "DeepSeek", Model: "deepseek-chat"},
+			ResolveCodexContextWindows(cfg)["dup"])
+	}
 }
 
 // The rendered catalog carries the window and the ceiling separately.

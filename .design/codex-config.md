@@ -338,17 +338,20 @@ apply, the out-of-date check and the compact preview all see the same window.
 
   | Upstream | Window | Ceiling | Source |
   |---|---|---|---|
-  | Claude on an Anthropic-style endpoint, 1M on | 1M | 1M | `1m` |
-  | Claude on an Anthropic-style endpoint, 1M off | catalog, at most 200K | same | `anthropic` (`catalog` when the catalog is lower) |
+  | Claude sent to an Anthropic-style endpoint, 1M on | 1M | 1M | `1m` |
+  | Claude on a provider with an Anthropic-style endpoint, 1M off or sent to its OpenAI URL | catalog, at most 200K | same | `anthropic` (`catalog` when the catalog is lower) |
   | model the provider catalog knows | `context` | `max_context`, else `context` | `catalog` |
-  | model the catalog doesn't know | 1M with the 1M flag, else 200K | same | `1m` / `default` |
+  | model the catalog doesn't know | 1M with the 1M flag, else 200K (a guess) | same | `default` |
 
   The model looked up is the service's, then the request model (rules that
   keep the upstream name), on the provider's matched template, like
   `/v1/models`. "Anthropic-style" is the endpoint a Codex (OpenAI-style)
   request is actually sent to (`Provider.ResolveEndpoint`), or the Anthropic
-  one when the rule forces it; DeepSeek's Anthropic endpoint serving
-  `deepseek-chat` is not Claude and keeps its catalog window.
+  one when the rule forces it. Only that endpoint can carry the context-1m
+  header, so Claude through a dual provider's OpenAI URL stays at 200K even
+  with 1M on. DeepSeek's Anthropic endpoint serving `deepseek-chat` is not
+  Claude and keeps its catalog window. Two rules sharing a request model share
+  one catalog entry: the smaller window and the smaller ceiling.
 - **The 1M flag means one thing again.** It used to set every Codex model's
   window to 1M; it now only does that where it changes what the upstream
   accepts (the context-1m header on Claude) and, as before, for models the
@@ -367,15 +370,21 @@ apply, the out-of-date check and the compact preview all see the same window.
   windows) and `BuildMaxContextWindowsFromRules` (ceilings above the window)
   feed apply, preview and the out-of-date check, which compares
   `max_context_window` too. The CLI / IM / TUI apply (`internal/agent`) uses
-  the same maps; without the server's template manager it falls back to the
-  embedded provider catalog. `tb agent apply codex --provider … --model …`
-  updates the `tingly-codex` rule before writing the files, so the first apply
-  already carries that model's window.
+  the same maps and writes the same catalog file. Without the server's
+  template manager it reads the catalog the server last synced
+  (`~/.tingly-box/provider_catalog.json`, any age, `catalog.LastSynced`), else
+  the embedded one, so a CLI apply isn't reported out of date just because the
+  binary's catalog is older than GitHub's. `tb agent apply codex --provider …
+  --model …` updates the `tingly-codex` rule before writing the files, so the
+  first apply already carries that model's window; if the files then fail, the
+  result says the rule already changed.
 - **What the editor reads.** `GET /config/codex/catalog-windows` returns each active Codex
   rule's Auto as `{window, max, source, provider, model}`. The Context popover
-  names the model and provider Auto comes from, the ceiling when it is above
-  the window, and the 1M note above; the Compact popover reads the same window.
-  Until the call answers the editor shows the unknown-model fallback.
+  names the model and provider Auto comes from, marks an unknown model's window
+  as a guess, offers the upstream's ceiling as one click ("Use 872K": an own
+  window, so compaction follows it), and with an own window only warns when it
+  is above a known ceiling. Until the call answers it shows no number, and the
+  Compact popover only the percent. Answers are kept per rule and 1M flag.
 
 - **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
   Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
@@ -387,9 +396,12 @@ apply, the out-of-date check and the compact preview all see the same window.
   a wrong window, so the manual value stays as the override even after detection
   lands; the upstream model list (#1774) would only add a source to what Auto
   resolves to.
-- **Open.** Template matching for an API-key provider on `api.anthropic.com`
-  can pick `anthropic-com` or `claude-code` (map order); both cap Claude at
-  200K here, but the `catalog` value can differ between them.
+- **Open.** The 1M flag is taken at its word for Claude: the catalog doesn't
+  record which Claude models accept the 1M header (`claude-sonnet-4-5` lists
+  200K and takes 1M with it; `claude-haiku-4-5` doesn't). Template matching for
+  an API-key provider on `api.anthropic.com` can pick `anthropic-com` or
+  `claude-code` (map order); both cap Claude at 200K here, but the source can
+  read `catalog` or `anthropic`.
 
 ## Schema alignment: `supports_reasoning_summaries` (2026-10-19)
 

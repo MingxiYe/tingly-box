@@ -128,6 +128,10 @@ type Config struct {
 	providerStore      *db.ProviderStore
 	imbotSettingsStore *db.ImBotSettingsStore
 	templateManager    *catalog.ProviderCatalogManager
+	// localCatalog stands in for templateManager in a Config loaded without
+	// the server (the CLI / TUI): built on first use, see codexCatalog.
+	localCatalog     *catalog.ProviderCatalogManager
+	localCatalogOnce sync.Once
 
 	// credentialStore backs the guardrails protected-credential database,
 	// which is a separate file from tingly.db. Built lazily by

@@ -83,3 +83,38 @@ func TestApplyAgent_UnknownProviderStillWritesFiles(t *testing.T) {
 	assert.Empty(t, result.ProviderName)
 	assert.Nil(t, cfg.GetRuleByRequestModelAndScenario("tingly-codex", typ.ScenarioCodex))
 }
+
+// The rule is saved before the files are written; when writing them fails the
+// result (or error) says the rule already changed.
+func TestApplyAgent_FileFailureSaysRulesChanged(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	// ~/.codex can't be created: a file is in the way.
+	require.NoError(t, os.WriteFile(filepath.Join(home, ".codex"), nil, 0o644))
+	cfg, err := serverconfig.NewConfigWithDir(t.TempDir())
+	require.NoError(t, err)
+	require.NoError(t, cfg.AddProvider(&typ.Provider{
+		UUID: "ds", Name: "DeepSeek", APIBase: "https://api.deepseek.com/v1",
+		APIStyle: protocol.APIStyleOpenAI, AuthType: typ.AuthTypeAPIKey, Token: "t", Enabled: true,
+	}))
+	aa := NewAgentApply(cfg, "localhost")
+
+	result, err := aa.ApplyAgent(&ApplyAgentRequest{AgentType: AgentTypeCodex, Provider: "ds", Model: "deepseek-chat"})
+	require.NoError(t, err)
+	assert.False(t, result.Success)
+	assert.Equal(t, "Configuration application failed; routing rules now use DeepSeek / deepseek-chat", result.Message)
+	assert.NotNil(t, cfg.GetRuleByRequestModelAndScenario("tingly-codex", typ.ScenarioCodex))
+
+	// Nothing routed: no mention of rules.
+	result, err = aa.ApplyAgent(&ApplyAgentRequest{AgentType: AgentTypeCodex})
+	require.NoError(t, err)
+	assert.Equal(t, "Configuration application failed", result.Message)
+
+	// A failure that comes back as an error says it too.
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	_, err = aa.ApplyAgent(&ApplyAgentRequest{AgentType: AgentTypeCodex, Provider: "ds", Model: "deepseek-v4-flash"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "routing rules now use DeepSeek / deepseek-v4-flash, but writing the config files failed")
+}

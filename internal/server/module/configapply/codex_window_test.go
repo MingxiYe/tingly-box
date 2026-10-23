@@ -172,14 +172,18 @@ func TestCodexAgentApply_MatchesAutoConfig(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 
 	cfg, _ := codexWindowConfig(t, true)
+	catalogPath := filepath.Join(home, ".codex", "tingly-model-catalog.json")
 	serveCodex(t, http.MethodPost, "/config/apply/codex", NewHandler(cfg, "localhost").ApplyCodexConfigFromState)
-	fromUI := readCodexCatalogFile(t, home)
-	require.Len(t, fromUI, 4)
+	require.Len(t, readCodexCatalogFile(t, home), 4)
+	fromUI, err := os.ReadFile(catalogPath)
+	require.NoError(t, err)
 
 	// The CLI loads the config without a template manager.
 	cfg.SetTemplateManager(nil)
 	result, err := agent.NewAgentApply(cfg, "localhost").ApplyAgent(&agent.ApplyAgentRequest{AgentType: agent.AgentTypeCodex})
 	require.NoError(t, err)
 	require.True(t, result.Success, result.Message)
-	assert.Equal(t, fromUI, readCodexCatalogFile(t, home))
+	fromCLI, err := os.ReadFile(catalogPath)
+	require.NoError(t, err)
+	assert.JSONEq(t, string(fromUI), string(fromCLI))
 }
