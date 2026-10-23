@@ -43,6 +43,13 @@ type ModelInfo struct {
 	// may also set it directly. Read it through InputLimit.
 	MaxInput int `json:"max_input,omitempty"`
 
+	// MaxContext is the largest window a client may opt into when it is
+	// above the default Context, counted the same way as Context: Codex lets
+	// a user raise ChatGPT-backed models from 272000 to 872000 (the codex
+	// template's context and max_context). Empty means the ceiling is
+	// Context. Read its input limit through InputCeiling.
+	MaxContext int `json:"max_context,omitempty"`
+
 	// OpenAIEndpoints declares which OpenAI endpoint(s) THIS model supports,
 	// for a template whose catalog mixes vendors (OpenCode Zen: most models
 	// are Chat-only, a few are Responses-only, and some may support both) —
@@ -939,6 +946,19 @@ func (m ModelInfo) InputLimit() int {
 		return m.MaxInput
 	}
 	return m.Context
+}
+
+// InputCeiling is the most input tokens one request may carry when a client
+// opts into the larger window (MaxContext), with the output share taken off
+// as InputLimit takes it off Context. 0 when the model has no larger window.
+func (m ModelInfo) InputCeiling() int {
+	if m.MaxContext <= m.Context {
+		return 0
+	}
+	if m.MaxInput > 0 && m.Context > m.MaxInput {
+		return m.MaxContext - (m.Context - m.MaxInput)
+	}
+	return m.MaxContext
 }
 
 // GetOpenAIEndpointOverrideForModel looks up ModelInfo.OpenAIEndpoints for

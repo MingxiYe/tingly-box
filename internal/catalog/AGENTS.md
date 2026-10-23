@@ -12,7 +12,8 @@ Static model data and its loaders. Read `.design/model-data.md` before editing d
 - New Claude model: add it to `claude.models.json` first, then `providers.json`.
 - `claude.models.json` allows only `id` and `reasoning`; dialects `budget|adaptive`, efforts `low|medium|high|xhigh|max`.
 - `providers.json`: map key == `id`; non-OAuth, non-cloud entries need a base URL; OAuth entries need `oauth_provider`.
-- `context` / `max_output` are decimal (1M=1000000), never powers of two.
+- `context` / `max_output` / `max_input` / `max_context` are decimal (1M=1000000), never powers of two.
+- `max_context` (a larger window a client may opt into) must be above `context`; `harness catalog check` enforces it.
 - `sources` / `note` / `last_updated` are human-only metadata; Go drops them.
 - Omit values you can't source.
 
