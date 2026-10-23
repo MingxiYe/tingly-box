@@ -308,7 +308,8 @@ export default {
       "equals": "= {{tokens}} tokens. Press Enter to set.",
       "invalid": "Enter a size between {{min}} and {{max}}.",
       "set": "Set",
-      "autoDefault": "Auto is 200K for now.",
+      "autoDefault": "Auto is 200K: this model is not in the catalog.",
+      "autoCatalog": "Auto uses {{value}} from the model catalog.",
       "auto1M": "Auto is 1M while 1M is on.",
       "footer": "{{auto}} {{apply}}"
     },

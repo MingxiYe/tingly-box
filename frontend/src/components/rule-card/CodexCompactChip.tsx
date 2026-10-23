@@ -10,15 +10,20 @@ import {
     compactZones,
     formatTokens,
     planCodexCompact,
+    resolveCodexWindow,
     trackPosition,
     type CodexCompactStatus,
 } from './codexCompact';
+import { useCodexCatalogWindow } from './useCodexCatalogWindow';
 
 interface CodexCompactChipProps {
     /** The rule's own percent; 0 = follow the Auto Config default. */
     percent: number;
-    /** The context window the catalog gives this model (see resolveCodexWindow). */
-    window: number;
+    /** The rule's own context window (0 = automatic) and 1M flag; with the
+     * catalog window they give the window this model has (resolveCodexWindow). */
+    contextWindow: number;
+    context1M: boolean;
+    ruleUuid?: string;
     disabled?: boolean;
     onChange: (percent: number) => void;
     buttonSx: SxProps<Theme>;
@@ -61,7 +66,9 @@ const NOTE_COLOR: Record<Exclude<CodexCompactStatus, 'ok'>, 'warning' | 'info'> 
  */
 export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     percent,
-    window,
+    contextWindow,
+    context1M,
+    ruleUuid,
     disabled,
     onChange,
     buttonSx,
@@ -78,6 +85,8 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     const open = Boolean(anchor);
     const overridden = percent > 0;
     const shown = draft ?? (overridden ? percent : shared.percent);
+    const catalog = useCodexCatalogWindow(ruleUuid, open);
+    const window = resolveCodexWindow(contextWindow, context1M, catalog);
     const plan = planCodexCompact({ window, percent: shown, effectivePercent: shared.effective });
     const zones = compactZones(window, shared.effective);
     const noteKind = plan.status === 'ok' ? null : NOTE_COLOR[plan.status];

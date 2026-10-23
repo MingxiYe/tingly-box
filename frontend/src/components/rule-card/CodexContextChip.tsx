@@ -4,13 +4,16 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExpandMore as ExpandMoreIcon } from '@/components/icons';
 import { fontSizes } from '@/theme/fonts';
-import { CODEX_CONTEXT, formatTokens, parseTokens, resolveCodexWindow } from './codexCompact';
+import { CODEX_CONTEXT, formatTokens, parseTokens, resolveCodexWindow, resolveCodexWindowSource } from './codexCompact';
+import { useCodexCatalogWindow } from './useCodexCatalogWindow';
 
 interface CodexContextChipProps {
     /** The rule's own window in tokens; 0 = automatic. */
     window: number;
     /** Whether the rule's 1M flag is on (the automatic window is then 1M). */
     context1M: boolean;
+    /** The rule, to read the catalog window its routed model has. */
+    ruleUuid?: string;
     disabled?: boolean;
     onChange: (window: number) => void;
     buttonSx: SxProps<Theme>;
@@ -29,6 +32,7 @@ const PRESETS: readonly number[] = CODEX_CONTEXT.presets;
 export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     window,
     context1M,
+    ruleUuid,
     disabled,
     onChange,
     buttonSx,
@@ -39,9 +43,11 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     const [text, setText] = React.useState('');
     const open = Boolean(anchor);
 
-    const autoWindow = resolveCodexWindow(0, context1M);
+    const catalog = useCodexCatalogWindow(ruleUuid, open);
+    const auto = resolveCodexWindowSource(0, context1M, catalog);
+    const autoWindow = auto.window;
     const manual = window >= CODEX_CONTEXT.min && window <= CODEX_CONTEXT.max;
-    const shown = resolveCodexWindow(window, context1M);
+    const shown = resolveCodexWindow(window, context1M, catalog);
     const typed = text.trim() === '' ? undefined : parseTokens(text);
 
     const choose = (next: number) => {
@@ -51,6 +57,13 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     const submitTyped = () => {
         if (typed) choose(typed);
     };
+
+    const AUTO_NOTE = {
+        '1m': () => t('ruleHeader.context.auto1M'),
+        catalog: (n: number) => t('ruleHeader.context.autoCatalog', { value: formatTokens(n) }),
+        default: () => t('ruleHeader.context.autoDefault'),
+        rule: () => '',
+    } as const;
 
     const label = manual ? formatTokens(window) : t('ruleHeader.context.auto');
 
@@ -149,7 +162,7 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                     </Box>
 
                     <Typography sx={{ pt: 1, borderTop: 1, borderColor: 'divider', fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                        {t('ruleHeader.context.footer', { auto: context1M ? t('ruleHeader.context.auto1M') : t('ruleHeader.context.autoDefault'), apply: t('ruleHeader.compact.needsApply') })}
+                        {t('ruleHeader.context.footer', { auto: AUTO_NOTE[auto.source](autoWindow), apply: t('ruleHeader.compact.needsApply') })}
                     </Typography>
                 </Stack>
             </Popover>

@@ -631,9 +631,11 @@ func codexAutoCompactTokenLimit(contextWindow int) int {
 	return contextWindow * codexDefaultAutoCompactTokenLimitPct / 100
 }
 
-// BuildContextWindowsFromRules maps each active Codex rule to its context
-// window when it is not the default: the rule's own codex_context_window when
-// set (and in range), else 1M for the context_1m flag. Keys are the rules'
+// BuildContextWindowsFromRules maps each active Codex rule to the context
+// window its catalog entry gets, when it is known: the rule's own
+// codex_context_window (in range), else 1M for the context_1m flag, else the
+// window the provider catalog records for the model the rule routes to. Rules
+// with none of these are absent and get the 200K default. Keys are the rules'
 // request models verbatim — exactly the names collectCodexRuleModels feeds into
 // the catalog — so the override always lands on its catalog entry.
 func BuildContextWindowsFromRules(cfg *Config) map[string]int {
@@ -650,9 +652,43 @@ func BuildContextWindowsFromRules(cfg *Config) map[string]int {
 			contextWindows[model] = w
 		} else if rule.Flags.Context1M {
 			contextWindows[model] = codex1MContextWindow
+		} else if w := cfg.RuleCatalogContextWindow(rule); w > 0 {
+			contextWindows[model] = w
 		}
 	}
 	return contextWindows
+}
+
+// RuleCatalogContextWindow returns the context window the provider catalog
+// records for the upstream model(s) an active rule routes to, or 0 when none
+// is known. With several services it takes the smallest, so the window is
+// safe for whichever one serves the request. The template is matched from the
+// provider itself (never its user-chosen name), looked up by the service's
+// upstream model, then by the rule's request model for rules that keep the
+// upstream name.
+func (c *Config) RuleCatalogContextWindow(rule typ.Rule) int {
+	tm := c.GetTemplateManager()
+	if tm == nil {
+		return 0
+	}
+	smallest := 0
+	for _, svc := range rule.GetServices() {
+		if svc == nil || !svc.Active {
+			continue
+		}
+		provider, err := c.GetProviderByUUID(svc.Provider)
+		if err != nil || provider == nil {
+			continue
+		}
+		info, ok := tm.GetModelInfoForProvider(provider, svc.Model)
+		if !ok || info.Context <= 0 {
+			info, ok = tm.GetModelInfoForProvider(provider, rule.RequestModel)
+		}
+		if ok && info.Context > 0 && (smallest == 0 || info.Context < smallest) {
+			smallest = info.Context
+		}
+	}
+	return smallest
 }
 
 // BuildCompactPercentsFromRules maps each active Codex rule that sets its own

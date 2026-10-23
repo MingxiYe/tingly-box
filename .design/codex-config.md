@@ -325,8 +325,17 @@ Real windows vary (128K, 256K, 400K…), and until Tingly Box learns them from t
 model list (#2225, #1774) a person must be able to say it. A Codex rule can set
 `RuleFlags.CodexContextWindow` (tokens, 8,000–10,000,000, `0` = automatic). It
 is config-only like `codex_compact_percent`: `BuildContextWindowsFromRules`
-resolves each rule to *own value > 1M flag > default 200K*, so apply, the
-out-of-date check and the compact preview all see the same window.
+resolves each rule to *own value > 1M flag > provider catalog > default 200K*,
+so apply, the out-of-date check and the compact preview all see the same window.
+
+- **Auto uses the catalog first.** Many models already carry a window in the
+  built-in provider catalog (`providers.json` `context`, the same data `/v1/models`
+  returns), so Auto is never a blind 200K for them: `RuleCatalogContextWindow`
+  looks up the routed model of each active service (then the request model) on
+  the provider's matched template and takes the smallest. 200K is only for
+  models the catalog does not know. The editor reads these through
+  `GET /config/codex/catalog-windows` when a popover opens, and both popovers
+  say where Auto's number comes from.
 
 - **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
   Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
@@ -336,7 +345,8 @@ out-of-date check and the compact preview all see the same window.
 - **Why a manual setting before automatic detection.** Detection cannot be
   exhaustive (unknown upstreams, self-hosted gateways), and Codex is sensitive to
   a wrong window, so the manual value stays as the override even after detection
-  lands; detection would replace only what Auto resolves to.
+  lands; the upstream model list (#1774) would only add a source to what Auto
+  resolves to.
 - **Open.** `context_window` and `max_context_window` are still written equal
   (#2131), and the agent-apply bridge does not carry the rule value, like the
   other rule overrides.

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,6 +10,9 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tingly-dev/tingly-box/internal/catalog"
+	"github.com/tingly-dev/tingly-box/internal/loadbalance"
+	"github.com/tingly-dev/tingly-box/internal/protocol"
 	"github.com/tingly-dev/tingly-box/internal/typ"
 )
 
@@ -1033,4 +1037,43 @@ func TestApplyCodexConfig_SupportsSummariesMovesToCatalog(t *testing.T) {
 	prefs, _, _, err := ReadCodexConfig()
 	require.NoError(t, err)
 	assert.Equal(t, "true", prefs.SupportsReasoningSummaries)
+}
+
+// Auto resolves to the window the provider catalog records for the routed
+// model (the smallest across services), below the rule's own value and the 1M
+// flag; unknown models stay at the default.
+func TestBuildContextWindowsFromRules_CatalogWindow(t *testing.T) {
+	cfg, err := NewConfig(WithConfigDir(t.TempDir()))
+	require.NoError(t, err)
+	tm := catalog.NewProviderCatalogManager(catalog.EmbeddedOnly())
+	require.NoError(t, tm.Initialize(context.Background()))
+	cfg.SetTemplateManager(tm)
+
+	p := &typ.Provider{
+		Name:     "my deepseek",
+		APIBase:  "https://api.deepseek.com/v1",
+		APIStyle: protocol.APIStyleOpenAI,
+		AuthType: typ.AuthTypeAPIKey,
+		Token:    "sk-test",
+		Enabled:  true,
+	}
+	require.NoError(t, cfg.AddProvider(p))
+	svc := func(model string) []*loadbalance.Service {
+		return []*loadbalance.Service{{Provider: p.UUID, Model: model, Active: true}}
+	}
+	cfg.Rules = []typ.Rule{
+		{UUID: "a", Scenario: typ.ScenarioCodex, RequestModel: "fast", Active: true, Services: svc("deepseek-reasoner")},
+		{UUID: "b", Scenario: typ.ScenarioCodex, RequestModel: "own", Active: true, Services: svc("deepseek-reasoner"),
+			Flags: typ.RuleFlags{CodexContextWindow: 64_000}},
+		{UUID: "c", Scenario: typ.ScenarioCodex, RequestModel: "wide", Active: true, Services: svc("deepseek-reasoner"),
+			Flags: typ.RuleFlags{Context1M: true}},
+		{UUID: "d", Scenario: typ.ScenarioCodex, RequestModel: "unknown", Active: true, Services: svc("no-such-model")},
+	}
+
+	assert.Equal(t, 128_000, cfg.RuleCatalogContextWindow(cfg.Rules[0]))
+	assert.Equal(t, map[string]int{
+		"fast": 128_000,
+		"own":  64_000,
+		"wide": codex1MContextWindow,
+	}, BuildContextWindowsFromRules(cfg))
 }

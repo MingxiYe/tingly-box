@@ -92,10 +92,22 @@ export const CODEX_CONTEXT = {
     presets: [128_000, 200_000, 256_000, 400_000, 1_000_000],
 } as const;
 
-/** The window Codex is told about: the rule's own value, else 1M with the 1M flag, else 200K. */
-export function resolveCodexWindow(manual: number, context1M: boolean): number {
-    if (manual >= CODEX_CONTEXT.min && manual <= CODEX_CONTEXT.max) return manual;
-    return context1M ? CODEX_COMPACT.window1M : CODEX_COMPACT.window;
+export type CodexWindowSource = 'rule' | '1m' | 'catalog' | 'default';
+
+/**
+ * The window Codex is told about and where it comes from: the rule's own value,
+ * else 1M with the 1M flag, else what the provider catalog records for the
+ * routed model, else 200K. Mirrors BuildContextWindowsFromRules.
+ */
+export function resolveCodexWindowSource(manual: number, context1M: boolean, catalog = 0): { window: number; source: CodexWindowSource } {
+    if (manual >= CODEX_CONTEXT.min && manual <= CODEX_CONTEXT.max) return { window: manual, source: 'rule' };
+    if (context1M) return { window: CODEX_COMPACT.window1M, source: '1m' };
+    if (catalog > 0) return { window: catalog, source: 'catalog' };
+    return { window: CODEX_COMPACT.window, source: 'default' };
+}
+
+export function resolveCodexWindow(manual: number, context1M: boolean, catalog = 0): number {
+    return resolveCodexWindowSource(manual, context1M, catalog).window;
 }
 
 /** 200000 → "200K", 1000000 → "1M", 1500000 → "1.5M", 131072 → "131K". */

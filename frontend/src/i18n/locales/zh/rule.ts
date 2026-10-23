@@ -308,7 +308,8 @@ export default {
       "equals": "= {{tokens}} tokens，回车即设置。",
       "invalid": "请输入 {{min}} 到 {{max}} 之间的大小。",
       "set": "设置",
-      "autoDefault": "自动目前为 200K。",
+      "autoDefault": "自动为 200K：模型目录里没有这个模型。",
+      "autoCatalog": "自动取模型目录里的 {{value}}。",
       "auto1M": "开启 1M 时自动为 1M。",
       "footer": "{{auto}}{{apply}}"
     },

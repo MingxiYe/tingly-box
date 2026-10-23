@@ -18,6 +18,10 @@ export const profileApi = {
         return controlApi((client, headers) => client.GET('/api/v1/config/codex', {headers}));
     },
 
+    getCodexCatalogWindows: async (): Promise<any> => {
+        return controlApi((client, headers) => client.GET('/api/v1/config/codex/catalog-windows', {headers}));
+    },
+
     getAppliedDshConfig: async (): Promise<any> => {
         return controlApi((client, headers) => client.GET('/api/v1/config/dsh', {headers}));
     },

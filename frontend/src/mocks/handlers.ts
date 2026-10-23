@@ -3856,6 +3856,12 @@ export const handlers = [
         ],
     })),
 
+    // Catalog windows of the Codex rules' routed models (rule 2 is unknown).
+    http.get('/api/v1/config/codex/catalog-windows', () => HttpResponse.json({
+        success: true,
+        windows: { 'mock-rule-codex-1': 272_000 },
+    })),
+
     http.get('/api/v1/config/codex/status', () => HttpResponse.json({
         success: true,
         state: 'outdated',

@@ -308,7 +308,8 @@ export default {
       "equals": "= {{tokens}} токенов. Enter — задать.",
       "invalid": "Введите размер от {{min}} до {{max}}.",
       "set": "Задать",
-      "autoDefault": "Авто сейчас — 200K.",
+      "autoDefault": "Авто — 200K: этой модели нет в каталоге.",
+      "autoCatalog": "Авто берёт {{value}} из каталога моделей.",
       "auto1M": "Пока включён 1M, авто — 1M.",
       "footer": "{{auto}} {{apply}}"
     },
