@@ -321,21 +321,61 @@ pipeline, so it is deliberately not in `RuleFlagRegistry` (see `rule-flags.md`).
 ## Per-model context window (rule flag `codex_context_window`)
 
 The catalog window was 200K for every model, 1M with the rule's `1M` flag.
-Real windows vary (128K, 256K, 400K…), and until Tingly Box learns them from the
-model list (#2225, #1774) a person must be able to say it. A Codex rule can set
+Real windows vary (128K, 256K, 400K…). Auto now derives them from the provider
+catalog, and for models it doesn't know a person must be able to say it. A Codex rule can set
 `RuleFlags.CodexContextWindow` (tokens, 8,000–10,000,000, `0` = automatic). It
 is config-only like `codex_compact_percent`: `BuildContextWindowsFromRules`
-resolves each rule to *own value > 1M flag > provider catalog > default 200K*,
-so apply, the out-of-date check and the compact preview all see the same window.
+resolves each rule to *own value > the routed upstream's window* (below), so
+apply, the out-of-date check and the compact preview all see the same window.
 
-- **Auto uses the catalog first.** Many models already carry a window in the
-  built-in provider catalog (`providers.json` `context`, the same data `/v1/models`
-  returns), so Auto is never a blind 200K for them: `RuleCatalogContextWindow`
-  looks up the routed model of each active service (then the request model) on
-  the provider's matched template and takes the smallest. 200K is only for
-  models the catalog does not know. The editor reads these through
-  `GET /config/codex/catalog-windows` when a popover opens, and both popovers
-  say where Auto's number comes from.
+- **Auto is the routed upstream's window** (#2225, #2131). Each catalog entry
+  gets a window (`context_window`, what Codex plans around) and a ceiling
+  (`max_context_window`, the most a `model_context_window` override in Codex's
+  `config.toml` may reach). `CodexAutoContextWindow` derives both per reachable
+  upstream (active services, plus smart-routing services when smart routing
+  is on; disabled providers are skipped) and keeps the smallest window and the
+  smallest ceiling, because a request can land on any of them:
+
+  | Upstream | Window | Ceiling | Source |
+  |---|---|---|---|
+  | Claude on an Anthropic-style endpoint, 1M on | 1M | 1M | `1m` |
+  | Claude on an Anthropic-style endpoint, 1M off | catalog, at most 200K | same | `anthropic` (`catalog` when the catalog is lower) |
+  | model the provider catalog knows | `context` | `max_context`, else `context` | `catalog` |
+  | model the catalog doesn't know | 1M with the 1M flag, else 200K | same | `1m` / `default` |
+
+  The model looked up is the service's, then the request model (rules that
+  keep the upstream name), on the provider's matched template, like
+  `/v1/models`. "Anthropic-style" is the endpoint a Codex (OpenAI-style)
+  request is actually sent to (`Provider.ResolveEndpoint`), or the Anthropic
+  one when the rule forces it; DeepSeek's Anthropic endpoint serving
+  `deepseek-chat` is not Claude and keeps its catalog window.
+- **The 1M flag means one thing again.** It used to set every Codex model's
+  window to 1M; it now only does that where it changes what the upstream
+  accepts (the context-1m header on Claude) and, as before, for models the
+  catalog doesn't know. A DeepSeek rule with 1M on is 128K. The popover says so
+  where the flag no longer widens the window, so the old meaning doesn't
+  linger as a silent no-op.
+- **Window and ceiling are separate.** ChatGPT-backed GPT models are
+  `context: 272000, max_context: 872000` in the `codex` template, mirroring
+  Codex's own catalog: the window stays where Codex plans by default and the
+  ceiling lets a person opt into the larger one in Codex. `harness catalog
+  check` rejects a `max_context` that isn't above `context`.
+- **An own window is also its ceiling.** `CodexContextWindowFor` writes
+  `codex_context_window` as both: it is set for models whose real window
+  Tingly Box doesn't know, where a derived ceiling would only be a guess.
+- **One resolution, every path.** `BuildContextWindowsFromRules` (non-default
+  windows) and `BuildMaxContextWindowsFromRules` (ceilings above the window)
+  feed apply, preview and the out-of-date check, which compares
+  `max_context_window` too. The CLI / IM / TUI apply (`internal/agent`) uses
+  the same maps; without the server's template manager it falls back to the
+  embedded provider catalog. `tb agent apply codex --provider … --model …`
+  updates the `tingly-codex` rule before writing the files, so the first apply
+  already carries that model's window.
+- **What the editor reads.** `GET /config/codex/catalog-windows` returns each active Codex
+  rule's Auto as `{window, max, source, provider, model}`. The Context popover
+  names the model and provider Auto comes from, the ceiling when it is above
+  the window, and the 1M note above; the Compact popover reads the same window.
+  Until the call answers the editor shows the unknown-model fallback.
 
 - **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
   Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
@@ -347,9 +387,9 @@ so apply, the out-of-date check and the compact preview all see the same window.
   a wrong window, so the manual value stays as the override even after detection
   lands; the upstream model list (#1774) would only add a source to what Auto
   resolves to.
-- **Open.** `context_window` and `max_context_window` are still written equal
-  (#2131), and the agent-apply bridge does not carry the rule value, like the
-  other rule overrides.
+- **Open.** Template matching for an API-key provider on `api.anthropic.com`
+  can pick `anthropic-com` or `claude-code` (map order); both cap Claude at
+  200K here, but the `catalog` value can differ between them.
 
 ## Schema alignment: `supports_reasoning_summaries` (2026-10-19)
 
