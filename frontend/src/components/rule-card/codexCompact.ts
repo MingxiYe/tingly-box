@@ -82,3 +82,37 @@ export function compactZones(window: number, effectivePercent: number): CodexCom
         cappedFrom: cap < 100 ? cap : null,
     };
 }
+
+// Mirrors codexMinContextWindow / codexMaxContextWindow and the automatic
+// window in BuildContextWindowsFromRules (internal/config/apply_config_codex.go).
+export const CODEX_CONTEXT = {
+    min: 8_000,
+    max: 10_000_000,
+    // Common real windows, for picking without typing.
+    presets: [128_000, 200_000, 256_000, 400_000, 1_000_000],
+} as const;
+
+/** The window Codex is told about: the rule's own value, else 1M with the 1M flag, else 200K. */
+export function resolveCodexWindow(manual: number, context1M: boolean): number {
+    if (manual >= CODEX_CONTEXT.min && manual <= CODEX_CONTEXT.max) return manual;
+    return context1M ? CODEX_COMPACT.window1M : CODEX_COMPACT.window;
+}
+
+/** 200000 → "200K", 1000000 → "1M", 1500000 → "1.5M", 131072 → "131K". */
+export function formatTokens(n: number): string {
+    if (n >= 1_000_000) return `${Number((n / 1_000_000).toFixed(2))}M`;
+    if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+    return String(n);
+}
+
+/**
+ * Reads what a person types for a window: "256k", "1m", "1.5M", "131072",
+ * "200,000". Returns null when it is not a number in range.
+ */
+export function parseTokens(raw: string): number | null {
+    const m = raw.trim().replace(/[,_\s]/g, '').match(/^(\d+(?:\.\d+)?)([km]?)$/i);
+    if (!m) return null;
+    const unit = m[2].toLowerCase();
+    const n = Math.round(Number(m[1]) * (unit === 'm' ? 1_000_000 : unit === 'k' ? 1_000 : 1));
+    return n >= CODEX_CONTEXT.min && n <= CODEX_CONTEXT.max ? n : null;
+}

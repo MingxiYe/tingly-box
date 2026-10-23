@@ -501,6 +501,10 @@ const (
 
 	// 1M context window for models that support it (Sonnet 4.6+, Opus 4.6+)
 	codex1MContextWindow = 1000000
+
+	// Bounds for a rule's own codex_context_window; values outside are ignored.
+	codexMinContextWindow = 8_000
+	codexMaxContextWindow = 10_000_000
 )
 
 // renderCodexModelCatalog produces the JSON payload for
@@ -627,17 +631,24 @@ func codexAutoCompactTokenLimit(contextWindow int) int {
 	return contextWindow * codexDefaultAutoCompactTokenLimitPct / 100
 }
 
-// BuildContextWindowsFromRules maps each active Codex rule carrying the
-// context_1m flag to the 1M context window. Keys are the rules' request
-// models verbatim — exactly the names collectCodexRuleModels feeds into the
-// catalog — so the override always lands on its catalog entry.
+// BuildContextWindowsFromRules maps each active Codex rule to its context
+// window when it is not the default: the rule's own codex_context_window when
+// set (and in range), else 1M for the context_1m flag. Keys are the rules'
+// request models verbatim — exactly the names collectCodexRuleModels feeds into
+// the catalog — so the override always lands on its catalog entry.
 func BuildContextWindowsFromRules(cfg *Config) map[string]int {
 	contextWindows := make(map[string]int)
 	for _, rule := range cfg.GetRequestConfigs() {
-		if rule.GetScenario() != typ.ScenarioCodex || !rule.Active || !rule.Flags.Context1M {
+		if rule.GetScenario() != typ.ScenarioCodex || !rule.Active {
 			continue
 		}
-		if model := strings.TrimSpace(rule.RequestModel); model != "" {
+		model := strings.TrimSpace(rule.RequestModel)
+		if model == "" {
+			continue
+		}
+		if w := rule.Flags.CodexContextWindow; w >= codexMinContextWindow && w <= codexMaxContextWindow {
+			contextWindows[model] = w
+		} else if rule.Flags.Context1M {
 			contextWindows[model] = codex1MContextWindow
 		}
 	}

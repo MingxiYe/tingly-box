@@ -944,6 +944,26 @@ func TestBuildCompactPercentsFromRules(t *testing.T) {
 	assert.Equal(t, map[string]int{"m1": 70}, BuildCompactPercentsFromRules(cfg))
 }
 
+// A rule's own codex_context_window wins over the 1M flag; out-of-range values
+// fall back to the automatic window.
+func TestBuildContextWindowsFromRules_ManualWindow(t *testing.T) {
+	cfg := &Config{Rules: []typ.Rule{
+		{UUID: "a", Scenario: typ.ScenarioCodex, RequestModel: "m1", Active: true, Flags: typ.RuleFlags{CodexContextWindow: 256_000}},
+		{UUID: "b", Scenario: typ.ScenarioCodex, RequestModel: "m2", Active: true, Flags: typ.RuleFlags{Context1M: true, CodexContextWindow: 128_000}},
+		{UUID: "c", Scenario: typ.ScenarioCodex, RequestModel: "m3", Active: true, Flags: typ.RuleFlags{Context1M: true}},
+		{UUID: "d", Scenario: typ.ScenarioCodex, RequestModel: "m4", Active: true, Flags: typ.RuleFlags{Context1M: true, CodexContextWindow: 100}},
+		{UUID: "e", Scenario: typ.ScenarioCodex, RequestModel: "m5", Active: true},
+		{UUID: "f", Scenario: typ.ScenarioCodex, RequestModel: "m6", Active: false, Flags: typ.RuleFlags{CodexContextWindow: 256_000}},
+		{UUID: "g", Scenario: typ.ScenarioClaudeCode, RequestModel: "m7", Active: true, Flags: typ.RuleFlags{CodexContextWindow: 256_000}},
+	}}
+	assert.Equal(t, map[string]int{
+		"m1": 256_000,
+		"m2": 128_000,
+		"m3": codex1MContextWindow,
+		"m4": codex1MContextWindow,
+	}, BuildContextWindowsFromRules(cfg))
+}
+
 // With per-model overrides in the catalog, the shared default read back is the
 // most common value, not whichever model happens to come first.
 func TestReadCodexConfig_RestoresSharedCompactDefaultDespiteOverrides(t *testing.T) {

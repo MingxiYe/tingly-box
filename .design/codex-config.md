@@ -318,6 +318,29 @@ pipeline, so it is deliberately not in `RuleFlagRegistry` (see `rule-flags.md`).
   overrides; the UI "Auto Config" path does. Whether the 36,000 threshold is
   right still wants a real long-session check against Codex.
 
+## Per-model context window (rule flag `codex_context_window`)
+
+The catalog window was 200K for every model, 1M with the rule's `1M` flag.
+Real windows vary (128K, 256K, 400K…), and until Tingly Box learns them from the
+model list (#2225, #1774) a person must be able to say it. A Codex rule can set
+`RuleFlags.CodexContextWindow` (tokens, 8,000–10,000,000, `0` = automatic). It
+is config-only like `codex_compact_percent`: `BuildContextWindowsFromRules`
+resolves each rule to *own value > 1M flag > default 200K*, so apply, the
+out-of-date check and the compact preview all see the same window.
+
+- **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
+  Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
+  1M, and a box for anything else (`131072`, `300K`, `1.5M`). The Compact popover
+  reads its window from the same resolution (`resolveCodexWindow`), so moving
+  the context window updates the compact numbers at once.
+- **Why a manual setting before automatic detection.** Detection cannot be
+  exhaustive (unknown upstreams, self-hosted gateways), and Codex is sensitive to
+  a wrong window, so the manual value stays as the override even after detection
+  lands; detection would replace only what Auto resolves to.
+- **Open.** `context_window` and `max_context_window` are still written equal
+  (#2131), and the agent-apply bridge does not carry the rule value, like the
+  other rule overrides.
+
 ## Schema alignment: `supports_reasoning_summaries` (2026-10-19)
 
 The current upstream `config.schema.json` (root and `ConfigProfile` are

@@ -8,6 +8,7 @@ import { fontSizes } from '@/theme/fonts';
 import {
     CODEX_COMPACT,
     compactZones,
+    formatTokens,
     planCodexCompact,
     trackPosition,
     type CodexCompactStatus,
@@ -16,8 +17,8 @@ import {
 interface CodexCompactChipProps {
     /** The rule's own percent; 0 = follow the Auto Config default. */
     percent: number;
-    /** Whether the rule's 1M flag is on (the catalog window is then 1M). */
-    context1M: boolean;
+    /** The context window the catalog gives this model (see resolveCodexWindow). */
+    window: number;
     disabled?: boolean;
     onChange: (percent: number) => void;
     buttonSx: SxProps<Theme>;
@@ -60,7 +61,7 @@ const NOTE_COLOR: Record<Exclude<CodexCompactStatus, 'ok'>, 'warning' | 'info'> 
  */
 export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     percent,
-    context1M,
+    window,
     disabled,
     onChange,
     buttonSx,
@@ -77,7 +78,6 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     const open = Boolean(anchor);
     const overridden = percent > 0;
     const shown = draft ?? (overridden ? percent : shared.percent);
-    const window = context1M ? CODEX_COMPACT.window1M : CODEX_COMPACT.window;
     const plan = planCodexCompact({ window, percent: shown, effectivePercent: shared.effective });
     const zones = compactZones(window, shared.effective);
     const noteKind = plan.status === 'ok' ? null : NOTE_COLOR[plan.status];
@@ -253,7 +253,7 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
 
                     <Stack spacing={0.25} sx={{ fontSize: fontSizes.sm, fontVariantNumeric: 'tabular-nums' }}>
                         {[
-                            [t('ruleHeader.compact.window'), context1M ? '1M' : '200K', undefined],
+                            [t('ruleHeader.compact.window'), formatTokens(window), undefined],
                             [t('ruleHeader.compact.line'), `${plan.applied}% · ${fmt(plan.line)} tokens`, undefined],
                             [t('ruleHeader.compact.remain'), `${fmt(plan.remain)} tokens`, plan.status === 'low' ? 'warning.dark' : 'text.primary'],
                         ].map(([label, value, color]) => (
