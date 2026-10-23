@@ -10,7 +10,7 @@ import {
     compactZones,
     formatTokens,
     planCodexCompact,
-    resolveCodexWindow,
+    resolveCodexWindowSource,
     trackPosition,
     type CodexCompactStatus,
 } from './codexCompact';
@@ -20,7 +20,7 @@ interface CodexCompactChipProps {
     /** The rule's own percent; 0 = follow the Auto Config default. */
     percent: number;
     /** The rule's own context window (0 = automatic) and 1M flag; with the
-     * rule's Auto window they give the window this model has (resolveCodexWindow). */
+     * rule's Auto window they give the window this model has (resolveCodexWindowSource). */
     contextWindow: number;
     context1M: boolean;
     ruleUuid?: string;
@@ -85,11 +85,16 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     const open = Boolean(anchor);
     const overridden = percent > 0;
     const shown = draft ?? (overridden ? percent : shared.percent);
-    const auto = useCodexAutoWindow(ruleUuid, open, context1M);
-    const window = resolveCodexWindow(contextWindow, auto);
+    const { auto, status: autoStatus } = useCodexAutoWindow(ruleUuid, open, context1M);
+    const resolvedWindow = resolveCodexWindowSource(contextWindow, auto);
+    const window = resolvedWindow.window;
+    // Until the server has said what Auto is, token counts would be a guess:
+    // show the percent alone and no "too few tokens" warning.
+    const windowPending = autoStatus === 'pending' && resolvedWindow.source !== 'rule';
     const plan = planCodexCompact({ window, percent: shown, effectivePercent: shared.effective });
-    const zones = compactZones(window, shared.effective);
-    const noteKind = plan.status === 'ok' ? null : NOTE_COLOR[plan.status];
+    const allZones = compactZones(window, shared.effective);
+    const zones = windowPending ? { ...allZones, low: null } : allZones;
+    const noteKind = plan.status === 'ok' || (windowPending && plan.status === 'low') ? null : NOTE_COLOR[plan.status];
 
     React.useEffect(() => {
         if (!open) return;
@@ -262,9 +267,9 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
 
                     <Stack spacing={0.25} sx={{ fontSize: fontSizes.sm, fontVariantNumeric: 'tabular-nums' }}>
                         {[
-                            [t('ruleHeader.compact.window'), formatTokens(window), undefined],
-                            [t('ruleHeader.compact.line'), `${plan.applied}% · ${fmt(plan.line)} tokens`, undefined],
-                            [t('ruleHeader.compact.remain'), `${fmt(plan.remain)} tokens`, plan.status === 'low' ? 'warning.dark' : 'text.primary'],
+                            [t('ruleHeader.compact.window'), windowPending ? '…' : formatTokens(window), undefined],
+                            [t('ruleHeader.compact.line'), windowPending ? `${plan.applied}%` : `${plan.applied}% · ${fmt(plan.line)} tokens`, undefined],
+                            [t('ruleHeader.compact.remain'), windowPending ? '…' : `${fmt(plan.remain)} tokens`, plan.status === 'low' && !windowPending ? 'warning.dark' : 'text.primary'],
                         ].map(([label, value, color]) => (
                             <Stack key={label} direction="row" sx={{ justifyContent: 'space-between' }}>
                                 <Box component="span" sx={{ color: 'text.secondary' }}>{label}</Box>

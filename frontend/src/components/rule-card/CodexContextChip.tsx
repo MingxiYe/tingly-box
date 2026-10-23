@@ -1,17 +1,17 @@
-import { Box, Button, ButtonBase, Popover, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, ButtonBase, Link, Popover, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { alpha, type SxProps, type Theme } from '@mui/material/styles';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExpandMore as ExpandMoreIcon } from '@/components/icons';
 import { fontSizes } from '@/theme/fonts';
-import { CODEX_CONTEXT, formatTokens, parseTokens, resolveCodexWindowSource } from './codexCompact';
+import { CODEX_CONTEXT, formatTokens, parseTokens } from './codexCompact';
 import { useCodexAutoWindow } from './useCodexAutoWindow';
 
 interface CodexContextChipProps {
     /** The rule's own window in tokens; 0 = automatic. */
     window: number;
     /** Whether the rule's 1M flag is on (it widens Claude on an Anthropic
-     * endpoint, and a model the catalog doesn't know, to 1M). */
+     * endpoint, and a model the provider catalog doesn't know, to 1M). */
     context1M: boolean;
     /** The rule, to read what its Auto window resolves to. */
     ruleUuid?: string;
@@ -44,11 +44,12 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     const [text, setText] = React.useState('');
     const open = Boolean(anchor);
 
-    const auto = useCodexAutoWindow(ruleUuid, open, context1M);
+    const { auto, status } = useCodexAutoWindow(ruleUuid, open, context1M);
     const autoWindow = auto.window;
     const manual = window >= CODEX_CONTEXT.min && window <= CODEX_CONTEXT.max;
-    const resolved = resolveCodexWindowSource(window, auto);
     const typed = text.trim() === '' ? undefined : parseTokens(text);
+    // Until the server has answered, Auto has no number to show.
+    const autoLabel = status === 'pending' ? '…' : formatTokens(autoWindow);
 
     const choose = (next: number) => {
         onChange(next);
@@ -58,24 +59,62 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
         if (typed) choose(typed);
     };
 
-    // Where Auto comes from, naming the routed model and provider so a wrong
-    // number can be traced to the upstream it was read from.
+    // Where the window comes from, naming the routed model and provider so a
+    // wrong number can be traced to the upstream it was read from.
     const upstream = { model: auto.model ?? '', provider: auto.provider ?? '', value: formatTokens(autoWindow) };
-    const autoNote = (() => {
-        switch (auto.source) {
-            case 'catalog': return t('ruleHeader.context.autoCatalog', upstream);
-            case 'anthropic': return t('ruleHeader.context.autoAnthropic', upstream);
-            case '1m': return t('ruleHeader.context.auto1M');
-            default: return auto.provider ? t('ruleHeader.context.autoUnknown', upstream) : t('ruleHeader.context.autoDefault');
+    // A known upstream limit (not the guess for an unknown model).
+    const knownMax = status === 'known' && auto.source !== 'default' ? auto.max : 0;
+    const notes: { id: string; text: React.ReactNode }[] = [];
+    if (manual) {
+        if (knownMax && window > knownMax) {
+            notes.push({ id: 'over', text: t('ruleHeader.context.overCeiling', { ...upstream, value: formatTokens(window), max: formatTokens(knownMax) }) });
         }
-    })();
-    const notes = [
-        autoNote,
-        // The 1M flag used to set this window; say so where it no longer does.
-        context1M && auto.source === 'catalog' ? t('ruleHeader.context.ignores1M') : '',
-        resolved.max > resolved.window ? t('ruleHeader.context.ceiling', { max: formatTokens(resolved.max) }) : '',
-        t('ruleHeader.compact.needsApply'),
-    ].filter(Boolean);
+    } else if (status === 'pending') {
+        notes.push({ id: 'auto', text: t('ruleHeader.context.autoPending') });
+    } else if (status === 'unavailable') {
+        notes.push({ id: 'auto', text: t('ruleHeader.context.autoUnavailable', upstream) });
+    } else {
+        switch (auto.source) {
+            case 'catalog':
+                notes.push({ id: 'auto', text: t('ruleHeader.context.autoCatalog', upstream) });
+                // The 1M flag used to set this window; say so where it no longer does.
+                if (context1M) notes.push({ id: '1m', text: t('ruleHeader.context.ignores1M', upstream) });
+                break;
+            case 'anthropic':
+                // With 1M on this upstream is reached through its OpenAI URL,
+                // which never carries the 1M header.
+                notes.push({ id: 'auto', text: context1M ? t('ruleHeader.context.autoAnthropicOpenAI', upstream) : t('ruleHeader.context.autoAnthropic', upstream) });
+                break;
+            case '1m':
+                notes.push({ id: 'auto', text: t('ruleHeader.context.auto1M', upstream) });
+                break;
+            default:
+                notes.push({
+                    id: 'auto',
+                    text: !auto.provider
+                        ? t('ruleHeader.context.autoDefault', upstream)
+                        : context1M
+                            ? t('ruleHeader.context.autoGuess1M', upstream)
+                            : t('ruleHeader.context.autoUnknown', upstream),
+                });
+        }
+        // The larger window the upstream accepts is one click away: as the
+        // rule's own window it is also what Codex compacts against.
+        if (knownMax > autoWindow) {
+            notes.push({
+                id: 'max',
+                text: (
+                    <>
+                        {t('ruleHeader.context.ceiling', { ...upstream, max: formatTokens(knownMax) })}{' '}
+                        <Link component="button" type="button" disabled={disabled} onClick={() => choose(knownMax)} sx={{ fontSize: 'inherit', verticalAlign: 'baseline' }}>
+                            {t('ruleHeader.context.useCeiling', { max: formatTokens(knownMax) })}
+                        </Link>
+                    </>
+                ),
+            });
+        }
+    }
+    notes.push({ id: 'apply', text: t('ruleHeader.compact.needsApply') });
 
     const label = manual ? formatTokens(window) : t('ruleHeader.context.auto');
 
@@ -103,7 +142,11 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                         color={manual ? 'primary' : 'inherit'}
                         endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
                         disabled={disabled}
-                        aria-label={t('ruleHeader.context.aria', { value: manual ? formatTokens(window) : t('ruleHeader.context.autoValue', { value: formatTokens(autoWindow) }) })}
+                        aria-label={t('ruleHeader.context.aria', {
+                            value: manual
+                                ? formatTokens(window)
+                                : status === 'known' ? t('ruleHeader.context.autoValue', { value: autoLabel }) : t('ruleHeader.context.auto'),
+                        })}
                         aria-haspopup="dialog"
                         aria-expanded={open}
                         onClick={(e) => setAnchor(e.currentTarget)}
@@ -126,7 +169,7 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                     <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
                         <Typography sx={{ fontSize: fontSizes.md, fontWeight: 600 }}>{t('ruleHeader.context.title')}</Typography>
                         <Typography sx={{ fontSize: fontSizes.lg, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                            {formatTokens(resolved.window)}
+                            {manual ? formatTokens(window) : autoLabel}
                         </Typography>
                     </Stack>
                     <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: fontSizes.sm }}>
@@ -136,7 +179,7 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                     <Box role="radiogroup" aria-label={t('ruleHeader.context.title')} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.75 }}>
                         <ButtonBase role="radio" aria-checked={!manual} disabled={disabled} onClick={() => choose(0)} sx={cellSx(!manual)}>
                             <Box component="span" sx={{ fontSize: fontSizes.sm, fontWeight: 600 }}>{t('ruleHeader.context.auto')}</Box>
-                            <Box component="span" sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>{formatTokens(autoWindow)}</Box>
+                            <Box component="span" sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>{autoLabel}</Box>
                         </ButtonBase>
                         {PRESETS.map((n) => (
                             <ButtonBase key={n} role="radio" aria-checked={manual && window === n} disabled={disabled} onClick={() => choose(n)} sx={cellSx(manual && window === n)}>
@@ -175,8 +218,8 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
 
                     <Stack spacing={0.5} sx={{ pt: 1, borderTop: 1, borderColor: 'divider' }}>
                         {notes.map((note) => (
-                            <Typography key={note} sx={{ fontSize: fontSizes.xs, color: 'text.secondary', overflowWrap: 'anywhere' }}>
-                                {note}
+                            <Typography key={note.id} data-note={note.id} sx={{ fontSize: fontSizes.xs, color: note.id === 'over' ? 'warning.main' : 'text.secondary', overflowWrap: 'anywhere' }}>
+                                {note.text}
                             </Typography>
                         ))}
                     </Stack>
