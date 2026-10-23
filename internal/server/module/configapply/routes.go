@@ -46,7 +46,7 @@ func (h *Handler) RegisterRoutes(rt *module.Routes) {
 	)
 
 	router.GET("/config/codex/catalog-windows", h.GetCodexCatalogWindows,
-		swagger.WithDescription("Context window the provider catalog records for each active Codex rule's routed model (the rule's automatic window)"),
+		swagger.WithDescription("What each active Codex rule's automatic context window resolves to (window, ceiling, and the routed model and provider it comes from)"),
 		swagger.WithTags("config"),
 		swagger.WithResponseModel(CodexCatalogWindowsResponse{}),
 	)

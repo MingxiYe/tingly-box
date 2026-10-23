@@ -69,13 +69,13 @@ type CodexConfigResponse struct {
 	WriteCatalog bool              `json:"writeCatalog"`
 }
 
-// CodexCatalogWindowsResponse lists, per Codex rule UUID, the context window
-// the provider catalog records for the model the rule routes to. Rules with no
-// known window are absent. It is what a rule's "Auto" context window resolves
-// to when neither its own value nor the 1M flag is set.
+// CodexCatalogWindowsResponse lists, per active Codex rule UUID, what the
+// rule's "Auto" context window resolves to (ignoring its own
+// codex_context_window): the window and ceiling, and the routed model and
+// provider they come from (config.CodexAutoContextWindow).
 type CodexCatalogWindowsResponse struct {
-	Success bool           `json:"success"`
-	Windows map[string]int `json:"windows"`
+	Success bool                                 `json:"success"`
+	Windows map[string]config.CodexContextWindow `json:"windows"`
 }
 
 // ApplyOpenCodeConfigResponse is the response for ApplyOpenCodeConfigFromState

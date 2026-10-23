@@ -1898,8 +1898,8 @@
         "tags": [
           "config"
         ],
-        "summary": "Context window the provider catalog records for each active Codex rule's routed model (the rule's automatic window)",
-        "description": "Context window the provider catalog records for each active Codex rule's routed model (the rule's automatic window)",
+        "summary": "What each active Codex rule's automatic context window resolves to (window, ceiling, and the routed model and provider it comes from)",
+        "description": "What each active Codex rule's automatic context window resolves to (window, ceiling, and the routed model and provider it comes from)",
         "operationId": "apiV1ConfigCodexCatalog-windowsGet",
         "responses": {
           "200": {
@@ -11807,8 +11807,7 @@
             "type": "object",
             "description": "Field windows",
             "additionalProperties": {
-              "type": "integer",
-              "format": "int64"
+              "$ref": "#/components/schemas/CodexContextWindow"
             }
           }
         },
@@ -11879,6 +11878,38 @@
           "exists",
           "preferences",
           "writeCatalog"
+        ]
+      },
+      "CodexContextWindow": {
+        "type": "object",
+        "properties": {
+          "max": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Field max"
+          },
+          "model": {
+            "type": "string",
+            "description": "Field model"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Field provider"
+          },
+          "source": {
+            "type": "string",
+            "description": "Field source"
+          },
+          "window": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Field window"
+          }
+        },
+        "required": [
+          "window",
+          "max",
+          "source"
         ]
       },
       "CodexPrefs": {
@@ -15021,6 +15052,11 @@
           "id": {
             "type": "string",
             "description": "Field id"
+          },
+          "max_context": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Field max_context"
           },
           "max_output": {
             "type": "integer",

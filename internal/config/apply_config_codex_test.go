@@ -1040,8 +1040,9 @@ func TestApplyCodexConfig_SupportsSummariesMovesToCatalog(t *testing.T) {
 }
 
 // Auto resolves to the window the provider catalog records for the routed
-// model (the smallest across services), below the rule's own value and the 1M
-// flag; unknown models stay at the default.
+// model (the smallest across services), below the rule's own value; the 1M
+// flag doesn't change a known non-Claude model (it only adds Anthropic's 1M
+// header), and unknown models stay at the default.
 func TestBuildContextWindowsFromRules_CatalogWindow(t *testing.T) {
 	cfg, err := NewConfig(WithConfigDir(t.TempDir()))
 	require.NoError(t, err)
@@ -1070,10 +1071,14 @@ func TestBuildContextWindowsFromRules_CatalogWindow(t *testing.T) {
 		{UUID: "d", Scenario: typ.ScenarioCodex, RequestModel: "unknown", Active: true, Services: svc("no-such-model")},
 	}
 
-	assert.Equal(t, 128_000, cfg.RuleCatalogContextWindow(cfg.Rules[0]))
+	assert.Equal(t, CodexContextWindow{Window: 128_000, Max: 128_000, Source: CodexWindowSourceCatalog, Provider: "my deepseek", Model: "deepseek-reasoner"},
+		cfg.CodexAutoContextWindow(cfg.Rules[0]))
 	assert.Equal(t, map[string]int{
 		"fast": 128_000,
 		"own":  64_000,
-		"wide": codex1MContextWindow,
+		"wide": 128_000,
 	}, BuildContextWindowsFromRules(cfg))
+	// A pinned window is its own ceiling; deepseek-reasoner has no ceiling
+	// above its window.
+	assert.Empty(t, BuildMaxContextWindowsFromRules(cfg))
 }

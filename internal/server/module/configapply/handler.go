@@ -103,17 +103,16 @@ func (h *Handler) GetCodexConfig(c *gin.Context) {
 	})
 }
 
-// GetCodexCatalogWindows returns the catalog context window of each active
-// Codex rule's routed model, for the rule header's Context and Compact chips.
+// GetCodexCatalogWindows returns what each active Codex rule's automatic
+// context window resolves to and where it comes from, for the rule header's
+// Context and Compact chips.
 func (h *Handler) GetCodexCatalogWindows(c *gin.Context) {
-	windows := map[string]int{}
+	windows := map[string]config.CodexContextWindow{}
 	for _, rule := range h.config.GetRequestConfigs() {
 		if rule.GetScenario() != typ.ScenarioCodex || !rule.Active {
 			continue
 		}
-		if w := h.config.RuleCatalogContextWindow(rule); w > 0 {
-			windows[rule.UUID] = w
-		}
+		windows[rule.UUID] = h.config.CodexAutoContextWindow(rule)
 	}
 	c.JSON(http.StatusOK, CodexCatalogWindowsResponse{Success: true, Windows: windows})
 }
@@ -628,8 +627,9 @@ func (h *Handler) ApplyCodexConfigFromState(c *gin.Context) {
 
 	models := collectCodexRuleModels(cfg)
 
-	// Build context windows map from rules for models with context_1m flag
+	// Per-model windows, ceilings and compact overrides derived from the rules
 	contextWindows := config.BuildContextWindowsFromRules(cfg)
+	prefs.ModelMaxContextWindow = config.BuildMaxContextWindowsFromRules(cfg)
 	prefs.ModelAutoCompactPercent = config.BuildCompactPercentsFromRules(cfg)
 
 	port := h.resolvedPort()
@@ -746,8 +746,9 @@ func (h *Handler) GetCodexConfigPreview(c *gin.Context) {
 
 	models := collectCodexRuleModels(cfg)
 
-	// Build context windows map from rules for models with context_1m flag
+	// Per-model windows, ceilings and compact overrides derived from the rules
 	contextWindows := config.BuildContextWindowsFromRules(cfg)
+	prefs.ModelMaxContextWindow = config.BuildMaxContextWindowsFromRules(cfg)
 	prefs.ModelAutoCompactPercent = config.BuildCompactPercentsFromRules(cfg)
 
 	port := h.resolvedPort()
