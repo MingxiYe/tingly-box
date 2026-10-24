@@ -147,8 +147,6 @@ export interface ModelRequestHeaderProps {
     // model (0 = automatic). Config-only, see CodexContextChip.
     onContextWindowChange?: (window: number) => void;
     contextWindow?: number;
-    // The rule, for the chips to read its routed model's catalog window.
-    ruleUuid?: string;
     // False when none of the rule's services is OpenAI-compatible: the chip stays
     // (and works) but its tooltip says it has no effect there.
     endpointApplicable?: boolean;
@@ -179,7 +177,6 @@ export const ModelRequestHeader: React.FC<ModelRequestHeaderProps> = ({
     compactPercent = 0,
     onContextWindowChange,
     contextWindow = 0,
-    ruleUuid,
     endpointApplicable = true,
     pluginsCount = 0,
     onPluginsClick,
@@ -450,7 +447,7 @@ export const ModelRequestHeader: React.FC<ModelRequestHeaderProps> = ({
                     <CodexContextChip
                         window={contextWindow}
                         context1M={context1M}
-                        ruleUuid={ruleUuid}
+                        requestModel={modelName}
                         disabled={!active}
                         onChange={onContextWindowChange}
                         buttonSx={strategyButtonSx}
@@ -463,7 +460,7 @@ export const ModelRequestHeader: React.FC<ModelRequestHeaderProps> = ({
                         percent={compactPercent}
                         contextWindow={contextWindow}
                         context1M={context1M}
-                        ruleUuid={ruleUuid}
+                        requestModel={modelName}
                         disabled={!active}
                         onChange={onCompactChange}
                         buttonSx={strategyButtonSx}

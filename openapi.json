@@ -1893,28 +1893,6 @@
         }
       }
     },
-    "/api/v1/config/codex/catalog-windows": {
-      "get": {
-        "tags": [
-          "config"
-        ],
-        "summary": "Context window the provider catalog records for each active Codex rule's routed model (the rule's automatic window)",
-        "description": "Context window the provider catalog records for each active Codex rule's routed model (the rule's automatic window)",
-        "operationId": "apiV1ConfigCodexCatalog-windowsGet",
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CodexCatalogWindowsResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/config/codex/status": {
       "get": {
         "tags": [
@@ -11794,27 +11772,6 @@
         },
         "required": [
           "success"
-        ]
-      },
-      "CodexCatalogWindowsResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "description": "Field success"
-          },
-          "windows": {
-            "type": "object",
-            "description": "Field windows",
-            "additionalProperties": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        },
-        "required": [
-          "success",
-          "windows"
         ]
       },
       "CodexConfigPreviewResponse": {

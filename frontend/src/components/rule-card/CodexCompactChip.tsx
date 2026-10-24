@@ -23,7 +23,7 @@ interface CodexCompactChipProps {
      * catalog window they give the window this model has (resolveCodexWindow). */
     contextWindow: number;
     context1M: boolean;
-    ruleUuid?: string;
+    requestModel?: string;
     disabled?: boolean;
     onChange: (percent: number) => void;
     buttonSx: SxProps<Theme>;
@@ -68,7 +68,7 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     percent,
     contextWindow,
     context1M,
-    ruleUuid,
+    requestModel,
     disabled,
     onChange,
     buttonSx,
@@ -85,7 +85,7 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     const open = Boolean(anchor);
     const overridden = percent > 0;
     const shown = draft ?? (overridden ? percent : shared.percent);
-    const catalog = useCodexCatalogWindow(ruleUuid, open);
+    const catalog = useCodexCatalogWindow(requestModel, open);
     const window = resolveCodexWindow(contextWindow, context1M, catalog);
     const plan = planCodexCompact({ window, percent: shown, effectivePercent: shared.effective });
     const zones = compactZones(window, shared.effective);

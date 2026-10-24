@@ -659,38 +659,6 @@ func BuildContextWindowsFromRules(cfg *Config) map[string]int {
 	return contextWindows
 }
 
-// RuleCatalogContextWindow returns the context window the provider catalog
-// records for the upstream model(s) an active rule routes to, or 0 when none
-// is known. With several services it takes the smallest, so the window is
-// safe for whichever one serves the request. The template is matched from the
-// provider itself (never its user-chosen name), looked up by the service's
-// upstream model, then by the rule's request model for rules that keep the
-// upstream name.
-func (c *Config) RuleCatalogContextWindow(rule typ.Rule) int {
-	tm := c.GetTemplateManager()
-	if tm == nil {
-		return 0
-	}
-	smallest := 0
-	for _, svc := range rule.GetServices() {
-		if svc == nil || !svc.Active {
-			continue
-		}
-		provider, err := c.GetProviderByUUID(svc.Provider)
-		if err != nil || provider == nil {
-			continue
-		}
-		info, ok := tm.GetModelInfoForProvider(provider, svc.Model)
-		if !ok || info.Context <= 0 {
-			info, ok = tm.GetModelInfoForProvider(provider, rule.RequestModel)
-		}
-		if ok && info.Context > 0 && (smallest == 0 || info.Context < smallest) {
-			smallest = info.Context
-		}
-	}
-	return smallest
-}
-
 // BuildCompactPercentsFromRules maps each active Codex rule that sets its own
 // codex_compact_percent to that value, keyed like BuildContextWindowsFromRules.
 // Rules without the flag are absent: they follow the shared default.

@@ -519,7 +519,6 @@ export const UnifiedRoutingGraph: React.FC<UnifiedRoutingGraphProps> = ({
                     onUpdateRecord?.('flags', { ...record.flags, codexContextWindow: window || undefined });
                 } : undefined}
                 contextWindow={record.flags?.codexContextWindow || 0}
-                ruleUuid={record.uuid}
                 endpointApplicable={endpointApplicable}
                 pluginsCount={pluginsCount}
                 onPluginsClick={onPluginsClick}

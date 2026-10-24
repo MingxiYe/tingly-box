@@ -103,21 +103,6 @@ func (h *Handler) GetCodexConfig(c *gin.Context) {
 	})
 }
 
-// GetCodexCatalogWindows returns the catalog context window of each active
-// Codex rule's routed model, for the rule header's Context and Compact chips.
-func (h *Handler) GetCodexCatalogWindows(c *gin.Context) {
-	windows := map[string]int{}
-	for _, rule := range h.config.GetRequestConfigs() {
-		if rule.GetScenario() != typ.ScenarioCodex || !rule.Active {
-			continue
-		}
-		if w := h.config.RuleCatalogContextWindow(rule); w > 0 {
-			windows[rule.UUID] = w
-		}
-	}
-	c.JSON(http.StatusOK, CodexCatalogWindowsResponse{Success: true, Windows: windows})
-}
-
 // HTTPTransportConfigUpdate represents the update request for HTTP transport settings
 type HTTPTransportConfigUpdate struct {
 	RespectEnvProxy *bool   `json:"respect_env_proxy"` // nil = no change

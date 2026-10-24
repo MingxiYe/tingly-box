@@ -329,14 +329,20 @@ resolves each rule to *own value > 1M flag > provider catalog > default 200K*,
 so apply, the out-of-date check and the compact preview all see the same window.
 
 - **Auto uses the catalog first.** Many models already carry a window in the
-  built-in provider catalog (`providers.json` `context`, the same data `/v1/models`
-  returns), so Auto is never a blind 200K for them: `RuleCatalogContextWindow`
-  looks up the routed model of each active service (then the request model) on
-  the provider's matched template and takes the smallest. 200K is only for
-  models the catalog does not know. The editor reads these through
-  `GET /config/codex/catalog-windows` when a popover opens, and both popovers
-  say where Auto's number comes from.
-
+  built-in provider catalog (`providers.json` `context`), so Auto is never a
+  blind 200K for them. `Config.RuleModelInfo` is the one place a rule's model
+  metadata is resolved: it looks up the routed model of each active service
+  (then the request model) on the provider's matched template, keeps the first
+  known description and the smallest known context / max output, so the value
+  is safe whichever service answers. `/v1/models`, the Codex catalog and the
+  editor all read it, and 200K is only for models the catalog does not know.
+- **The editor reads the model list, not a private endpoint.** The chips take
+  Auto's number from `/tingly/codex/v1/models` (the list Codex's own clients
+  see), matched by the rule's request model, so what the editor shows and what
+  a client reads cannot drift. Entries carry the window as `context` and, for
+  OpenAI-compatible clients, `context_length` (OpenRouter's name; Anthropic's
+  list says `max_input_tokens`, Gemini's `inputTokenLimit`), with `max_output`
+  / `max_output_tokens` likewise.
 - **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
   Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
   1M, and a box for anything else (`131072`, `300K`, `1.5M`). The Compact popover

@@ -3856,10 +3856,13 @@ export const handlers = [
         ],
     })),
 
-    // Catalog windows of the Codex rules' routed models (rule 2 is unknown).
-    http.get('/api/v1/config/codex/catalog-windows', () => HttpResponse.json({
-        success: true,
-        windows: { 'mock-rule-codex-1': 272_000 },
+    // Codex's model list; gpt-5.6-terra is not in the catalog.
+    http.get('/tingly/codex/v1/models', () => HttpResponse.json({
+        object: 'list',
+        data: [
+            { id: 'gpt-5.6-luna', object: 'model', created: 0, owned_by: 'tingly-box', context: 272_000, context_length: 272_000, max_output: 128_000, max_output_tokens: 128_000 },
+            { id: 'gpt-5.6-terra', object: 'model', created: 0, owned_by: 'tingly-box' },
+        ],
     })),
 
     http.get('/api/v1/config/codex/status', () => HttpResponse.json({

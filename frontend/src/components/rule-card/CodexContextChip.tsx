@@ -12,8 +12,8 @@ interface CodexContextChipProps {
     window: number;
     /** Whether the rule's 1M flag is on (the automatic window is then 1M). */
     context1M: boolean;
-    /** The rule, to read the catalog window its routed model has. */
-    ruleUuid?: string;
+    /** The rule's request model, to read its window from Codex's model list. */
+    requestModel?: string;
     disabled?: boolean;
     onChange: (window: number) => void;
     buttonSx: SxProps<Theme>;
@@ -32,7 +32,7 @@ const PRESETS: readonly number[] = CODEX_CONTEXT.presets;
 export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     window,
     context1M,
-    ruleUuid,
+    requestModel,
     disabled,
     onChange,
     buttonSx,
@@ -43,7 +43,7 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     const [text, setText] = React.useState('');
     const open = Boolean(anchor);
 
-    const catalog = useCodexCatalogWindow(ruleUuid, open);
+    const catalog = useCodexCatalogWindow(requestModel, open);
     const auto = resolveCodexWindowSource(0, context1M, catalog);
     const autoWindow = auto.window;
     const manual = window >= CODEX_CONTEXT.min && window <= CODEX_CONTEXT.max;
