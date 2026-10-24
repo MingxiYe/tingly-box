@@ -17,7 +17,7 @@ export function useCodexCatalogWindow(requestModel: string | undefined, open: bo
             try {
                 const list = await api.listScenarioModels('codex') as OpenAIModelsResponse;
                 const entry = list?.data?.find((m) => m.id === requestModel);
-                const value = Number(entry?.context_length ?? entry?.context ?? 0);
+                const value = Number(entry?.max_input_tokens ?? entry?.context ?? 0);
                 if (!cancelled) setWindow(Number.isFinite(value) ? value : 0);
             } catch {
                 // Unknown: Auto falls back to the 1M flag or 200K.

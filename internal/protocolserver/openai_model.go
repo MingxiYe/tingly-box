@@ -21,11 +21,11 @@ type OpenAIModel struct {
 	Description string `json:"description,omitempty"` // Model description
 	Context     int    `json:"context,omitempty"`     // Max context window
 	MaxOutput   int    `json:"max_output,omitempty"`  // Max output tokens
-	// ContextLength / MaxOutputTokens carry the same numbers under the names
-	// OpenAI-compatible model lists use (OpenRouter's context_length), so a
-	// client can read them without knowing our own context / max_output.
-	ContextLength   int `json:"context_length,omitempty"`
-	MaxOutputTokens int `json:"max_output_tokens,omitempty"`
+	// MaxInputTokens / MaxTokens carry the same numbers under the names
+	// Anthropic's Models API uses (OpenAI's Model object has no such fields),
+	// so both listings describe a model the same way.
+	MaxInputTokens int `json:"max_input_tokens,omitempty"`
+	MaxTokens      int `json:"max_tokens,omitempty"`
 	// AuthType reflects the primary backing provider's auth type. It is
 	// non-standard (OpenAI's models API has no such field) and consumed by
 	// the tingly-box frontend to order model picker entries:
@@ -105,16 +105,16 @@ func (ph *ProtocolHandler) openAIListModelsWithScenario(c *gin.Context, scenario
 		info, _ := ruleModelInfo(cfg, rule)
 
 		models = append(models, OpenAIModel{
-			ID:              rule.RequestModel,
-			Object:          "model",
-			Created:         created,
-			OwnedBy:         ownedBy,
-			Description:     info.Description,
-			Context:         info.Context,
-			MaxOutput:       info.MaxOutput,
-			ContextLength:   info.Context,
-			MaxOutputTokens: info.MaxOutput,
-			AuthType:        string(PrimaryAuthTypeForRule(cfg, rule)),
+			ID:             rule.RequestModel,
+			Object:         "model",
+			Created:        created,
+			OwnedBy:        ownedBy,
+			Description:    info.Description,
+			Context:        info.Context,
+			MaxOutput:      info.MaxOutput,
+			MaxInputTokens: info.Context,
+			MaxTokens:      info.MaxOutput,
+			AuthType:       string(PrimaryAuthTypeForRule(cfg, rule)),
 		})
 	}
 

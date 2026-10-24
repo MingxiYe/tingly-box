@@ -11,9 +11,9 @@ export interface OpenAIModel {
   description?: string;
   context?: number;
   max_output?: number;
-  // The same numbers under the OpenAI-compatible names (OpenRouter's).
-  context_length?: number;
-  max_output_tokens?: number;
+  // The same numbers under the names Anthropic's Models API uses.
+  max_input_tokens?: number;
+  max_tokens?: number;
   auth_type?: string;
 }
 

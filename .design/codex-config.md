@@ -339,10 +339,11 @@ so apply, the out-of-date check and the compact preview all see the same window.
 - **The editor reads the model list, not a private endpoint.** The chips take
   Auto's number from `/tingly/codex/v1/models` (the list Codex's own clients
   see), matched by the rule's request model, so what the editor shows and what
-  a client reads cannot drift. Entries carry the window as `context` and, for
-  OpenAI-compatible clients, `context_length` (OpenRouter's name; Anthropic's
-  list says `max_input_tokens`, Gemini's `inputTokenLimit`), with `max_output`
-  / `max_output_tokens` likewise.
+  a client reads cannot drift. Entries carry the window as `context` and
+  `max_input_tokens`, the max output as `max_output` and `max_tokens`: the
+  names of Anthropic's Models API, which our Anthropic listing already uses.
+  OpenAI's Model object has no such fields; OpenRouter's `context_length` and
+  Gemini's `inputTokenLimit` are the other spellings in the wild.
 - **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
   Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
   1M, and a box for anything else (`131072`, `300K`, `1.5M`). The Compact popover
