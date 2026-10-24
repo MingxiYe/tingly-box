@@ -14979,6 +14979,16 @@
             "type": "string",
             "description": "Field id"
           },
+          "max_context": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Field max_context"
+          },
+          "max_input": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Field max_input"
+          },
           "max_output": {
             "type": "integer",
             "format": "int64",
@@ -16692,6 +16702,10 @@
           "canonical_domain": {
             "type": "string",
             "description": "Field canonical_domain"
+          },
+          "context_includes_output": {
+            "type": "boolean",
+            "description": "Field context_includes_output"
           },
           "default_model_capacity": {
             "type": "integer",
