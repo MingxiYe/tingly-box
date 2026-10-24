@@ -358,6 +358,17 @@ so apply, the out-of-date check and the compact preview all see the same window.
   by request model), so the chip and the generated catalog cannot drift. The
   `codex` template's `context` values are already that input budget and do not
   set `context_includes_output`.
+- **Codex and Claude Code read the same number.** Both treat a model's window
+  as the most input a request may carry, i.e. `max_input_tokens`, not the
+  published `context_window`. Codex: its catalog's `context_window` is an input
+  budget (272K for gpt-5, whose published window is 400K). Claude Code: its
+  model table and its `models.retrieve` call read `max_input_tokens` (falling
+  back to `context_window`), and the auto-compact threshold is the smaller of
+  `CLAUDE_CODE_AUTO_COMPACT_WINDOW` and that window. For Claude models the two
+  numbers are equal, so the difference only shows for vendors whose window
+  counts output. Tingly Box has no `GET /v1/models/{id}`, so Claude Code cannot
+  learn a routed model's window from us yet and uses its own table or the
+  window Tingly Box writes into its settings.
 - **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
   Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
   1M, and a box for anything else (`131072`, `300K`, `1.5M`). The Compact popover
