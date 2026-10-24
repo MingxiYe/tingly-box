@@ -1039,9 +1039,10 @@ func TestApplyCodexConfig_SupportsSummariesMovesToCatalog(t *testing.T) {
 	assert.Equal(t, "true", prefs.SupportsReasoningSummaries)
 }
 
-// Auto resolves to the window the provider catalog records for the routed
-// model (the smallest across services), below the rule's own value and the 1M
-// flag; unknown models stay at the default.
+// Auto resolves to the input limit the provider catalog records for the
+// routed model (the smallest across services), below the rule's own value. The
+// 1M flag can't raise a model the catalog knows has no larger window; unknown
+// models stay at the default.
 func TestBuildContextWindowsFromRules_CatalogWindow(t *testing.T) {
 	cfg, err := NewConfig(WithConfigDir(t.TempDir()))
 	require.NoError(t, err)
@@ -1070,17 +1071,17 @@ func TestBuildContextWindowsFromRules_CatalogWindow(t *testing.T) {
 		{UUID: "d", Scenario: typ.ScenarioCodex, RequestModel: "unknown", Active: true, Services: svc("no-such-model")},
 	}
 
-	assert.Equal(t, 128_000, cfg.RuleCatalogInputLimit(cfg.Rules[0]))
+	assert.Equal(t, CodexContextWindow{Window: 128_000, Max: 128_000, Source: CodexWindowSourceCatalog}, cfg.CodexAutoContextWindow(cfg.Rules[0]))
 	assert.Equal(t, map[string]int{
 		"fast": 128_000,
 		"own":  64_000,
-		"wide": codex1MContextWindow,
+		"wide": 128_000,
 	}, BuildContextWindowsFromRules(cfg))
 }
 
 // OpenAI publishes a window that counts output too (gpt-5.4-mini: 400K with
 // 128K output), so the input limit Codex is told is 272K, not 400K.
-func TestRuleCatalogInputLimit_ExcludesOutputForOpenAI(t *testing.T) {
+func TestRuleModelInfo_InputLimitExcludesOutputForOpenAI(t *testing.T) {
 	cfg, err := NewConfig(WithConfigDir(t.TempDir()))
 	require.NoError(t, err)
 	tm := catalog.NewProviderCatalogManager(catalog.EmbeddedOnly())
@@ -1103,5 +1104,5 @@ func TestRuleCatalogInputLimit_ExcludesOutputForOpenAI(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, 400_000, info.Context)
 	assert.Equal(t, 272_000, info.InputLimit())
-	assert.Equal(t, 272_000, cfg.RuleCatalogInputLimit(rule))
+	assert.Equal(t, 272_000, cfg.CodexAutoContextWindow(rule).Window)
 }

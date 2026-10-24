@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
+	"github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/typ"
 )
 
@@ -30,6 +31,10 @@ type OpenAIModel struct {
 	ContextWindow  int `json:"context_window,omitempty"`
 	MaxInputTokens int `json:"max_input_tokens,omitempty"`
 	MaxTokens      int `json:"max_tokens,omitempty"`
+	// MaxContextWindow is on the Codex list only (Tingly Box's own field,
+	// named after Codex's catalog): how far Codex may raise max_input_tokens
+	// for this model, when that is above it.
+	MaxContextWindow int `json:"max_context_window,omitempty"`
 	// AuthType reflects the primary backing provider's auth type. It is
 	// non-standard (OpenAI's models API has no such field) and consumed by
 	// the tingly-box frontend to order model picker entries:
@@ -108,7 +113,7 @@ func (ph *ProtocolHandler) openAIListModelsWithScenario(c *gin.Context, scenario
 		// this rule routes to.
 		info, _ := ruleModelInfo(cfg, rule)
 
-		models = append(models, OpenAIModel{
+		model := OpenAIModel{
 			ID:             rule.RequestModel,
 			Object:         "model",
 			Created:        created,
@@ -120,7 +125,11 @@ func (ph *ProtocolHandler) openAIListModelsWithScenario(c *gin.Context, scenario
 			MaxInputTokens: info.InputLimit(),
 			MaxTokens:      info.MaxOutput,
 			AuthType:       string(PrimaryAuthTypeForRule(cfg, rule)),
-		})
+		}
+		if scenario != nil && *scenario == typ.ScenarioCodex {
+			setCodexWindow(&model, cfg.CodexAutoContextWindow(rule))
+		}
+		models = append(models, model)
 	}
 
 	sort.SliceStable(models, func(i, j int) bool {
@@ -132,6 +141,29 @@ func (ph *ProtocolHandler) openAIListModelsWithScenario(c *gin.Context, scenario
 		Object: "list",
 		Data:   models,
 	})
+}
+
+// setCodexWindow makes a Codex list entry say what the rule's "Auto" context
+// window tells Codex: max_input_tokens is that window, which is the route's
+// input limit rather than the catalog's (a Claude model on an Anthropic-style
+// endpoint takes 200K without the 1M header the rule's 1M flag adds, and 1M
+// with it), and max_context_window the ceiling Codex may raise it to. Where
+// that opens more than the catalog's published window, context_window (and
+// context) follow, so max_input_tokens never exceeds them. A model whose
+// window is only a guess carries neither, as an unknown one does elsewhere.
+// The Context chip in the rule editor reads these fields.
+func setCodexWindow(m *OpenAIModel, w config.CodexContextWindow) {
+	m.MaxInputTokens, m.MaxContextWindow = 0, 0
+	if !w.Known() {
+		return
+	}
+	m.MaxInputTokens = w.Window
+	if w.Max > w.Window {
+		m.MaxContextWindow = w.Max
+	}
+	if m.ContextWindow < w.Window {
+		m.ContextWindow, m.Context = w.Window, w.Window
+	}
 }
 
 // ListModelsByScenario handles the /v1/models endpoint for scenario-based routing

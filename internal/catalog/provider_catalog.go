@@ -196,6 +196,8 @@ const (
 	PreferenceEmbedded
 	// PreferenceEmbeddedFirst: Embedded -> Cache -> GitHub
 	PreferenceEmbeddedFirst
+	// PreferenceLastSynced: Cache (within TTL) -> Embedded (no network requests)
+	PreferenceLastSynced
 )
 
 // ProviderCatalogManager manages provider templates with -tier fallback
@@ -247,6 +249,19 @@ func EmbeddedOnly() ProviderCatalogManagerOption {
 	return func(m *ProviderCatalogManager) {
 		m.githubURL = ""
 		m.sourcePreference = PreferenceEmbedded
+	}
+}
+
+// LastSynced resolves against the last catalog synced from GitHub — the disk
+// cache the server writes — while it is within the cache TTL, else the
+// embedded one, and never fetches: the catalog a server reads at startup when
+// GitHub can't be reached. For offline callers (the CLI) that must see the
+// same catalog the server does. A server that synced since has written a fresh
+// cache; an older one is what the server ignores too.
+func LastSynced() ProviderCatalogManagerOption {
+	return func(m *ProviderCatalogManager) {
+		m.githubURL = ""
+		m.sourcePreference = PreferenceLastSynced
 	}
 }
 
@@ -511,6 +526,17 @@ func (tm *ProviderCatalogManager) Initialize(ctx context.Context) error {
 		// Use embedded templates only, skip all network requests
 		tm.sourceMu.Lock()
 		tm.source = CatalogSourceLocal
+		tm.sourceMu.Unlock()
+		return nil
+
+	case PreferenceLastSynced:
+		source := CatalogSourceLocal
+		if cached, err := tm.loadCache(); err == nil && cached != nil {
+			tm.setExternalTemplates(cached)
+			source = CatalogSourceGitHub
+		}
+		tm.sourceMu.Lock()
+		tm.source = source
 		tm.sourceMu.Unlock()
 		return nil
 
