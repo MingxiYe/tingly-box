@@ -3,9 +3,11 @@ import { api } from '@/services/api';
 import type { OpenAIModelsResponse } from '@/types/model';
 
 /**
- * The context window Codex's model list (/tingly/codex/v1/models) gives a
- * rule's model, from the provider catalog (0 = unknown): what the rule's
- * "Auto" window resolves to. Read when a popover opens, so it follows service
+ * The input limit (max_input_tokens) Codex's model list
+ * (/tingly/codex/v1/models) gives a rule's model, from the provider catalog
+ * (0 = unknown): what the rule's "Auto" window resolves to. Codex's
+ * context_window is this input budget, not the published context_window,
+ * which for OpenAI models counts output too. Read when a popover opens, so it follows service
  * changes made since.
  */
 export function useCodexCatalogWindow(requestModel: string | undefined, open: boolean): number {

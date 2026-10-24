@@ -652,7 +652,7 @@ func BuildContextWindowsFromRules(cfg *Config) map[string]int {
 			contextWindows[model] = w
 		} else if rule.Flags.Context1M {
 			contextWindows[model] = codex1MContextWindow
-		} else if w := cfg.RuleCatalogContextWindow(rule); w > 0 {
+		} else if w := cfg.RuleCatalogInputLimit(rule); w > 0 {
 			contextWindows[model] = w
 		}
 	}

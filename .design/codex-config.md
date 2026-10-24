@@ -328,22 +328,36 @@ is config-only like `codex_compact_percent`: `BuildContextWindowsFromRules`
 resolves each rule to *own value > 1M flag > provider catalog > default 200K*,
 so apply, the out-of-date check and the compact preview all see the same window.
 
-- **Auto uses the catalog first.** Many models already carry a window in the
-  built-in provider catalog (`providers.json` `context`), so Auto is never a
-  blind 200K for them. `Config.RuleModelInfo` is the one place a rule's model
-  metadata is resolved: it looks up the routed model of each active service
-  (then the request model) on the provider's matched template, keeps the first
-  known description and the smallest known context / max output, so the value
-  is safe whichever service answers. `/v1/models`, the Codex catalog and the
-  editor all read it, and 200K is only for models the catalog does not know.
-- **The editor reads the model list, not a private endpoint.** The chips take
-  Auto's number from `/tingly/codex/v1/models` (the list Codex's own clients
-  see), matched by the rule's request model, so what the editor shows and what
-  a client reads cannot drift. Entries carry the window as `context` and
-  `max_input_tokens`, the max output as `max_output` and `max_tokens`: the
-  names of Anthropic's Models API, which our Anthropic listing already uses.
-  OpenAI's Model object has no such fields; OpenRouter's `context_length` and
-  Gemini's `inputTokenLimit` are the other spellings in the wild.
+- **Auto uses the catalog first.** Many models already carry limits in the
+  built-in provider catalog (`providers.json`), so Auto is never a blind 200K
+  for them. `Config.RuleModelInfo` is the one place a rule's model metadata is
+  resolved: it looks up the routed model of each active service (then the
+  request model) on the provider's matched template, keeps the first known
+  description and the smallest known limits, so the value is safe whichever
+  service answers. `/v1/models`, the Codex catalog and the editor all read it,
+  and 200K is only for models the catalog does not know.
+- **Three numbers, one meaning each.** Vendors publish "context window" in two
+  senses: Anthropic's window is shared by input and output, so its Models API
+  reports it as `max_input_tokens`; OpenAI's counts output too (gpt-5: 400K =
+  272K input + 128K output). Both model listings therefore carry
+  `context_window` (the window the vendor publishes, catalog `context`; Tingly
+  Box's own field, named so a reader never has to ask which sense),
+  `max_input_tokens` (the most input one request may carry) and `max_tokens`
+  (the most output), the last two with Anthropic's names and meaning. A
+  template whose `context` counts output sets `context_includes_output`
+  (`openai-com`, `azure-openai`) and lookups derive `max_input` as
+  `context − max_output`; a model may also state `max_input` itself. The
+  OpenAI-format list keeps its older `context` / `max_output` for existing
+  clients. OpenAI's Model object has no limit fields; OpenRouter's
+  `context_length` and Gemini's `inputTokenLimit` are other spellings, only
+  for reading upstream lists (#1774).
+- **Codex is given the input limit.** Codex's `context_window` is an input
+  budget (its own catalog gives gpt-5 272K, not 400K), so Auto resolves to
+  `max_input_tokens` (`RuleCatalogInputLimit`), and the editor reads the same
+  field from `/tingly/codex/v1/models` (the list Codex's clients see, matched
+  by request model), so the chip and the generated catalog cannot drift. The
+  `codex` template's `context` values are already that input budget and do not
+  set `context_includes_output`.
 - **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
   Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
   1M, and a box for anything else (`131072`, `300K`, `1.5M`). The Compact popover

@@ -40,15 +40,19 @@ func (c *Config) RuleModelInfo(rule typ.Rule) (info catalog.ModelInfo, ok bool) 
 			continue
 		}
 		info.Context = smallestKnown(info.Context, m.Context)
+		info.MaxInput = smallestKnown(info.InputLimit(), m.InputLimit())
 		info.MaxOutput = smallestKnown(info.MaxOutput, m.MaxOutput)
 	}
 	return info, ok
 }
 
-// RuleCatalogContextWindow is RuleModelInfo's context window, 0 when unknown.
-func (c *Config) RuleCatalogContextWindow(rule typ.Rule) int {
+// RuleCatalogInputLimit is RuleModelInfo's input limit (Anthropic's
+// max_input_tokens), 0 when unknown. Codex's `context_window` means this
+// input budget, not the vendor's published window: Codex's own catalog gives
+// gpt-5 272K, not OpenAI's 400K.
+func (c *Config) RuleCatalogInputLimit(rule typ.Rule) int {
 	info, _ := c.RuleModelInfo(rule)
-	return info.Context
+	return info.InputLimit()
 }
 
 // smallestKnown is the smaller of two values, treating 0 as unknown.

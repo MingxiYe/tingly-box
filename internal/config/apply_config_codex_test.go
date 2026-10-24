@@ -1070,10 +1070,38 @@ func TestBuildContextWindowsFromRules_CatalogWindow(t *testing.T) {
 		{UUID: "d", Scenario: typ.ScenarioCodex, RequestModel: "unknown", Active: true, Services: svc("no-such-model")},
 	}
 
-	assert.Equal(t, 128_000, cfg.RuleCatalogContextWindow(cfg.Rules[0]))
+	assert.Equal(t, 128_000, cfg.RuleCatalogInputLimit(cfg.Rules[0]))
 	assert.Equal(t, map[string]int{
 		"fast": 128_000,
 		"own":  64_000,
 		"wide": codex1MContextWindow,
 	}, BuildContextWindowsFromRules(cfg))
+}
+
+// OpenAI publishes a window that counts output too (gpt-5.4-mini: 400K with
+// 128K output), so the input limit Codex is told is 272K, not 400K.
+func TestRuleCatalogInputLimit_ExcludesOutputForOpenAI(t *testing.T) {
+	cfg, err := NewConfig(WithConfigDir(t.TempDir()))
+	require.NoError(t, err)
+	tm := catalog.NewProviderCatalogManager(catalog.EmbeddedOnly())
+	require.NoError(t, tm.Initialize(context.Background()))
+	cfg.SetTemplateManager(tm)
+
+	p := &typ.Provider{
+		Name:     "my openai",
+		APIBase:  "https://api.openai.com/v1",
+		APIStyle: protocol.APIStyleOpenAI,
+		AuthType: typ.AuthTypeAPIKey,
+		Token:    "sk-test",
+		Enabled:  true,
+	}
+	require.NoError(t, cfg.AddProvider(p))
+	rule := typ.Rule{UUID: "a", Scenario: typ.ScenarioCodex, RequestModel: "mini", Active: true,
+		Services: []*loadbalance.Service{{Provider: p.UUID, Model: "gpt-5.4-mini", Active: true}}}
+
+	info, ok := cfg.RuleModelInfo(rule)
+	require.True(t, ok)
+	assert.Equal(t, 400_000, info.Context)
+	assert.Equal(t, 272_000, info.InputLimit())
+	assert.Equal(t, 272_000, cfg.RuleCatalogInputLimit(rule))
 }
