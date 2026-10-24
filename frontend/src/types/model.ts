@@ -17,6 +17,9 @@ export interface OpenAIModel {
   // context_window when the window counts output too) and the most output.
   max_input_tokens?: number;
   max_tokens?: number;
+  // Codex's list only (Tingly Box's own field, named after Codex's catalog):
+  // how far Codex may raise max_input_tokens, when above it.
+  max_context_window?: number;
   auth_type?: string;
 }
 

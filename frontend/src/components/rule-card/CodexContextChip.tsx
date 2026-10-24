@@ -4,13 +4,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExpandMore as ExpandMoreIcon } from '@/components/icons';
 import { fontSizes } from '@/theme/fonts';
-import { CODEX_CONTEXT, formatTokens, parseTokens, resolveCodexWindow, resolveCodexWindowSource } from './codexCompact';
+import { CODEX_CONTEXT, formatTokens, parseTokens, resolveCodexWindowSource } from './codexCompact';
 import { useCodexCatalogWindow } from './useCodexCatalogWindow';
 
 interface CodexContextChipProps {
     /** The rule's own window in tokens; 0 = automatic. */
     window: number;
-    /** Whether the rule's 1M flag is on (the automatic window is then 1M). */
+    /** Whether the rule's 1M flag is on: the server opens the routed model's
+     * larger window with it (1M for Claude on an Anthropic endpoint), and
+     * assumes 1M for a model it doesn't know. */
     context1M: boolean;
     /** The rule's request model, to read its window from Codex's model list. */
     requestModel?: string;
@@ -43,12 +45,13 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     const [text, setText] = React.useState('');
     const open = Boolean(anchor);
 
-    const catalog = useCodexCatalogWindow(requestModel, open);
-    const auto = resolveCodexWindowSource(0, context1M, catalog);
+    const catalog = useCodexCatalogWindow(requestModel, open, context1M);
+    const auto = resolveCodexWindowSource(0, context1M, catalog.window, catalog.max);
     const autoWindow = auto.window;
     const manual = window >= CODEX_CONTEXT.min && window <= CODEX_CONTEXT.max;
-    const shown = resolveCodexWindow(window, context1M, catalog);
     const typed = text.trim() === '' ? undefined : parseTokens(text);
+    // Until the model list has been read, Auto has no number to show.
+    const autoLabel = catalog.status === 'pending' ? '…' : formatTokens(autoWindow);
 
     const choose = (next: number) => {
         onChange(next);
@@ -58,12 +61,31 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
         if (typed) choose(typed);
     };
 
-    const AUTO_NOTE = {
-        '1m': () => t('ruleHeader.context.auto1M'),
-        catalog: (n: number) => t('ruleHeader.context.autoCatalog', { value: formatTokens(n) }),
-        default: () => t('ruleHeader.context.autoDefault'),
-        rule: () => '',
-    } as const;
+    // Why Auto is what it is, and what can be done about it. The model list
+    // never names the upstream, so neither do these.
+    const value = formatTokens(autoWindow);
+    // A known limit of the routed model (not the guess for an unknown one).
+    const knownMax = auto.source === 'catalog' ? auto.max : 0;
+    const notes: { id: string; text: string }[] = [];
+    if (manual) {
+        if (knownMax && window > knownMax) {
+            notes.push({ id: 'over', text: t('ruleHeader.context.overCeiling', { value: formatTokens(window), max: formatTokens(knownMax) }) });
+        }
+    } else if (catalog.status === 'pending') {
+        notes.push({ id: 'auto', text: t('ruleHeader.context.autoPending') });
+    } else if (catalog.status === 'unavailable') {
+        notes.push({ id: 'auto', text: t('ruleHeader.context.autoUnavailable', { value }) });
+    } else if (auto.source === 'catalog') {
+        notes.push({ id: 'auto', text: context1M ? t('ruleHeader.context.auto1M', { value }) : t('ruleHeader.context.autoCatalog', { value }) });
+        // A larger window exists, and the 1M flag is what opens it (Auto then
+        // keeps following the upstream, unlike a pinned number).
+        if (!context1M && knownMax > autoWindow) {
+            notes.push({ id: 'max', text: t('ruleHeader.context.ceiling', { max: formatTokens(knownMax) }) });
+        }
+    } else {
+        notes.push({ id: 'auto', text: context1M ? t('ruleHeader.context.autoGuess1M') : t('ruleHeader.context.autoDefault', { value }) });
+    }
+    notes.push({ id: 'apply', text: t('ruleHeader.compact.needsApply') });
 
     const label = manual ? formatTokens(window) : t('ruleHeader.context.auto');
 
@@ -91,7 +113,11 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                         color={manual ? 'primary' : 'inherit'}
                         endIcon={<ExpandMoreIcon sx={{ fontSize: 14 }} />}
                         disabled={disabled}
-                        aria-label={t('ruleHeader.context.aria', { value: manual ? formatTokens(window) : t('ruleHeader.context.autoValue', { value: formatTokens(autoWindow) }) })}
+                        aria-label={t('ruleHeader.context.aria', {
+                            value: manual
+                                ? formatTokens(window)
+                                : catalog.status === 'known' ? t('ruleHeader.context.autoValue', { value: autoLabel }) : t('ruleHeader.context.auto'),
+                        })}
                         aria-haspopup="dialog"
                         aria-expanded={open}
                         onClick={(e) => setAnchor(e.currentTarget)}
@@ -114,7 +140,7 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                     <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
                         <Typography sx={{ fontSize: fontSizes.md, fontWeight: 600 }}>{t('ruleHeader.context.title')}</Typography>
                         <Typography sx={{ fontSize: fontSizes.lg, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                            {formatTokens(shown)}
+                            {manual ? formatTokens(window) : autoLabel}
                         </Typography>
                     </Stack>
                     <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: fontSizes.sm }}>
@@ -124,7 +150,7 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                     <Box role="radiogroup" aria-label={t('ruleHeader.context.title')} sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.75 }}>
                         <ButtonBase role="radio" aria-checked={!manual} disabled={disabled} onClick={() => choose(0)} sx={cellSx(!manual)}>
                             <Box component="span" sx={{ fontSize: fontSizes.sm, fontWeight: 600 }}>{t('ruleHeader.context.auto')}</Box>
-                            <Box component="span" sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>{formatTokens(autoWindow)}</Box>
+                            <Box component="span" sx={{ fontSize: fontSizes.xs, color: 'text.secondary' }}>{autoLabel}</Box>
                         </ButtonBase>
                         {PRESETS.map((n) => (
                             <ButtonBase key={n} role="radio" aria-checked={manual && window === n} disabled={disabled} onClick={() => choose(n)} sx={cellSx(manual && window === n)}>
@@ -161,9 +187,21 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
                         </Typography>
                     </Box>
 
-                    <Typography sx={{ pt: 1, borderTop: 1, borderColor: 'divider', fontSize: fontSizes.xs, color: 'text.secondary' }}>
-                        {t('ruleHeader.context.footer', { auto: AUTO_NOTE[auto.source](autoWindow), apply: t('ruleHeader.compact.needsApply') })}
-                    </Typography>
+                    <Stack spacing={0.5} sx={{ pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                        {notes.map((note) => (
+                            <Typography
+                                key={note.id}
+                                data-note={note.id}
+                                sx={{
+                                    fontSize: fontSizes.xs,
+                                    color: (theme) => note.id !== 'over' ? theme.palette.text.secondary : theme.palette.mode === 'dark' ? theme.palette.warning.light : theme.palette.warning.dark,
+                                    overflowWrap: 'anywhere',
+                                }}
+                            >
+                                {note.text}
+                            </Typography>
+                        ))}
+                    </Stack>
                 </Stack>
             </Popover>
         </Box>

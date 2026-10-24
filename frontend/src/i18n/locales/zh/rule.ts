@@ -308,10 +308,14 @@ export default {
       "equals": "= {{tokens}} tokens，回车即设置。",
       "invalid": "请输入 {{min}} 到 {{max}} 之间的大小。",
       "set": "设置",
-      "autoDefault": "自动为 200K：模型目录里没有这个模型。",
-      "autoCatalog": "自动取模型目录里的 {{value}}。",
-      "auto1M": "开启 1M 时自动为 1M。",
-      "footer": "{{auto}}{{apply}}"
+      "autoPending": "正在读取路由到的模型的窗口…",
+      "autoUnavailable": "没能读到路由到的模型的窗口，这里先显示 {{value}}，即自动为未知模型写入的值。",
+      "autoCatalog": "自动为 {{value}}，即路由到的模型的标准窗口。",
+      "auto1M": "自动为 {{value}}：开启 1M 后，经这条路由能用到的最大窗口。",
+      "autoDefault": "自动为 {{value}}：不知道路由到的模型的窗口。如有不同，请在上方选择实际大小。",
+      "autoGuess1M": "因为开启了 1M，自动为 1M，但不知道路由到的模型的窗口。如果更小，请在上方选择实际大小。",
+      "ceiling": "开启 1M 后，自动会变为 {{max}}。",
+      "overCeiling": "{{value}} 超过了路由到的模型能接收的 {{max}}。"
     },
     "compact": {
       "chip": "压缩：{{value}}",

@@ -308,10 +308,14 @@ export default {
       "equals": "= {{tokens}} tokens. Press Enter to set.",
       "invalid": "Enter a size between {{min}} and {{max}}.",
       "set": "Set",
-      "autoDefault": "Auto is 200K: this model is not in the catalog.",
-      "autoCatalog": "Auto uses {{value}} from the model catalog.",
-      "auto1M": "Auto is 1M while 1M is on.",
-      "footer": "{{auto}} {{apply}}"
+      "autoPending": "Reading the routed model's window…",
+      "autoUnavailable": "Couldn't read the routed model's window, so this shows {{value}}, what Auto writes for a model it doesn't know.",
+      "autoCatalog": "Auto is {{value}}, the routed model's standard window.",
+      "auto1M": "Auto is {{value}}: with 1M on, the most this route to the model allows.",
+      "autoDefault": "Auto is {{value}}: the routed model's window isn't known. If it differs, pick it above.",
+      "autoGuess1M": "Auto is 1M because 1M is on, but the routed model's window isn't known. If it is smaller, pick it above.",
+      "ceiling": "Turn on 1M and Auto becomes {{max}}.",
+      "overCeiling": "{{value}} is more than the {{max}} the routed model accepts."
     },
     "compact": {
       "chip": "Compact: {{value}}",
