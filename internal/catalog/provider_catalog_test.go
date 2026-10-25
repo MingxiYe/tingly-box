@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -877,6 +878,90 @@ func TestOpenCodeTemplateDisambiguation(t *testing.T) {
 	}
 }
 
+// LastSynced reads the cache the server wrote whatever its age, since a
+// running server keeps what it synced in memory past the cache TTL; without a
+// cache it is the embedded catalog. The server's own startup read still
+// treats an old cache as expired.
+func TestLastSyncedIgnoresCacheAge(t *testing.T) {
+	dir := t.TempDir()
+	inDir := func(m *ProviderCatalogManager) { m.cachePath = dir }
+	name := func(t *testing.T) string {
+		t.Helper()
+		tm := NewProviderCatalogManager(LastSynced(), inDir)
+		if err := tm.Initialize(context.Background()); err != nil {
+			t.Fatalf("Initialize: %v", err)
+		}
+		tmpl, err := tm.GetTemplate("deepseek-com")
+		if err != nil {
+			t.Fatalf("GetTemplate: %v", err)
+		}
+		return tmpl.Name
+	}
+	if got := name(t); got != "Deepseek" {
+		t.Fatalf("without a cache: %q, want the embedded name", got)
+	}
+
+	var registry ProviderCatalogRegistry
+	if err := json.Unmarshal(EmbeddedCatalogJSON()[KindProviders], &registry); err != nil {
+		t.Fatal(err)
+	}
+	registry.Providers["deepseek-com"].Name = "Synced DeepSeek"
+	raw, err := json.Marshal(CatalogCacheData{Registry: registry, CachedAt: time.Now().AddDate(0, -1, 0)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, CatalogCacheFileName), raw, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := name(t); got != "Synced DeepSeek" {
+		t.Errorf("with a month-old cache: %q, want the synced name", got)
+	}
+	if cached, err := NewProviderCatalogManager(inDir).loadCache(); err != nil || cached != nil {
+		t.Errorf("loadCache = %v, %v; want the expired cache skipped", cached, err)
+	}
+
+	// A server that can't sync starts from that cache too, so it and the CLI
+	// see the same catalog.
+	down := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer down.Close()
+	server := NewProviderCatalogManager(WithGitHubURL(down.URL), inDir)
+	if err := server.Initialize(context.Background()); err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+	if tmpl, err := server.GetTemplate("deepseek-com"); err != nil || tmpl.Name != "Synced DeepSeek" {
+		t.Errorf("server without GitHub: %v, %v; want the synced name", tmpl, err)
+	}
+}
+
+// An API-key provider on a domain a subscription template shares (same base
+// URL) always gets the key template; the subscription template stays the OAuth
+// provider's.
+func TestKeyProviderSkipsSubscriptionTemplate(t *testing.T) {
+	tm := NewProviderCatalogManager(EmbeddedOnly())
+	if err := tm.Initialize(context.Background()); err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+	tests := []struct {
+		provider *typ.Provider
+		want     string
+	}{
+		{&typ.Provider{APIBase: "https://api.anthropic.com", APIStyle: protocol.APIStyleAnthropic}, "anthropic-com"},
+		{&typ.Provider{APIBase: "https://generativelanguage.googleapis.com/v1beta/openai", APIStyle: protocol.APIStyleOpenAI}, "googleapis-com"},
+		{&typ.Provider{APIBase: "https://api.kimi.com/coding/v1", APIStyle: protocol.APIStyleOpenAI}, "kimi-com-coding"},
+		{&typ.Provider{APIBase: "https://api.anthropic.com", APIStyle: protocol.APIStyleAnthropic, AuthType: typ.AuthTypeOAuth,
+			OAuthDetail: &typ.OAuthDetail{Issuer: "claude_code"}}, "claude-code"},
+	}
+	for i := 0; i < 25; i++ {
+		for _, tt := range tests {
+			if tmpl := tm.findTemplateByProvider(tt.provider); tmpl == nil || tmpl.ID != tt.want {
+				t.Fatalf("iteration %d: %s matched %v, want %s", i, tt.provider.APIBase, tmpl, tt.want)
+			}
+		}
+	}
+}
+
 // TestGetOpenAIEndpointOverrideForModel exercises the per-model routing table
 // (data.ModelInfo.OpenAIEndpoints) end to end against the real embedded
 // providers.json, so a future edit to that file that breaks the shape (or a
@@ -981,6 +1066,27 @@ func TestModelInfoInputCeiling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.m.InputCeiling(); got != tt.want {
 				t.Errorf("InputCeiling() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+// WithMaxContext puts the larger window in use: its input limit is what
+// InputCeiling was.
+func TestModelInfoWithMaxContext(t *testing.T) {
+	tests := []struct {
+		name string
+		m    ModelInfo
+		want ModelInfo
+	}{
+		{"no larger window", ModelInfo{Context: 128000}, ModelInfo{Context: 128000}},
+		{"header-gated window", ModelInfo{Context: 200000, MaxContext: 1000000, MaxOutput: 128000}, ModelInfo{Context: 1000000, MaxOutput: 128000}},
+		{"window counts output", ModelInfo{Context: 400000, MaxInput: 272000, MaxContext: 1050000}, ModelInfo{Context: 1050000, MaxInput: 922000}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.m.WithMaxContext(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("WithMaxContext() = %+v, want %+v", got, tt.want)
 			}
 		})
 	}

@@ -1,6 +1,7 @@
 package protocolserver
 
 import (
+	"github.com/tingly-dev/tingly-box/ai"
 	"github.com/tingly-dev/tingly-box/internal/catalog"
 	"github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/typ"
@@ -57,7 +58,8 @@ func AuthTypeSortWeight(a typ.AuthType) int {
 }
 
 // ruleModelInfo returns the catalog details (description, context, max
-// output) of the model a rule routes to; see config.RuleModelInfo.
-func ruleModelInfo(cfg *config.Config, rule typ.Rule) (catalog.ModelInfo, bool) {
-	return cfg.RuleModelInfo(rule)
+// output) of the model a rule routes to, for a client of style client; see
+// config.RuleModelInfo.
+func ruleModelInfo(cfg *config.Config, rule typ.Rule, client ai.APIStyle) (catalog.ModelInfo, bool) {
+	return cfg.RuleModelInfo(rule, client)
 }

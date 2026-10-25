@@ -1,9 +1,9 @@
 package config
 
 import (
-	"context"
 	"strings"
 
+	"github.com/tingly-dev/tingly-box/ai"
 	"github.com/tingly-dev/tingly-box/internal/catalog"
 	"github.com/tingly-dev/tingly-box/internal/typ"
 )
@@ -19,19 +19,25 @@ import (
 // known: templates count it differently (with or without output), so the
 // Codex window merges it per upstream instead (CodexAutoContextWindow).
 //
+// The rule's 1M flag counts where it opens more: an upstream that a request
+// from a client of style client reaches with the context-1m header
+// (sendsContext1M) has its larger window in use (ModelInfo.WithMaxContext).
+//
 // It is the one place a rule's model metadata is resolved: /v1/models and the
 // management model listing read it, and the Codex window reads the same
 // upstreams (ruleUpstreams, upstreamModelInfo).
-func (c *Config) RuleModelInfo(rule typ.Rule) (info catalog.ModelInfo, ok bool) {
-	upstreams := c.ruleUpstreams(rule)
-	if len(upstreams) == 0 {
+func (c *Config) RuleModelInfo(rule typ.Rule, client ai.APIStyle) (info catalog.ModelInfo, ok bool) {
+	tm := c.GetTemplateManager()
+	if tm == nil {
 		return info, false
 	}
-	tm := c.modelCatalog()
-	for _, up := range upstreams {
-		_, m, found := upstreamModelInfo(tm, up, rule.RequestModel)
+	for _, up := range c.ruleUpstreams(rule) {
+		m, found := upstreamModelInfo(tm, up, rule.RequestModel)
 		if !found {
 			continue
+		}
+		if sendsContext1M(up.provider, rule, client) {
+			m = m.WithMaxContext()
 		}
 		if !ok {
 			info, ok = m, true
@@ -78,41 +84,29 @@ func (c *Config) ruleUpstreams(rule typ.Rule) []ruleUpstream {
 
 // upstreamModelInfo looks an upstream's model up on its provider's matched
 // template: the service's model, then the request model for rules that keep
-// the upstream name. model is the name that was found, else the one the
-// request goes out with.
-func upstreamModelInfo(tm *catalog.ProviderCatalogManager, up ruleUpstream, requestModel string) (model string, info catalog.ModelInfo, ok bool) {
-	requestModel = strings.TrimSpace(requestModel)
-	model = up.model
-	if model == "" {
-		model = requestModel
-	}
+// the upstream name. A nil catalog knows nothing.
+func upstreamModelInfo(tm *catalog.ProviderCatalogManager, up ruleUpstream, requestModel string) (catalog.ModelInfo, bool) {
 	if tm == nil {
-		return model, catalog.ModelInfo{}, false
+		return catalog.ModelInfo{}, false
 	}
-	if info, ok = tm.GetModelInfoForProvider(up.provider, up.model); ok {
-		return up.model, info, true
+	if info, ok := tm.GetModelInfoForProvider(up.provider, up.model); ok {
+		return info, true
 	}
-	if info, ok = tm.GetModelInfoForProvider(up.provider, requestModel); ok {
-		return requestModel, info, true
-	}
-	return model, catalog.ModelInfo{}, false
+	return tm.GetModelInfoForProvider(up.provider, strings.TrimSpace(requestModel))
 }
 
-// modelCatalog is the provider catalog rule metadata is read from: the
-// server's template manager, or for a Config loaded without one (the CLI and
-// TUI agent apply) the last catalog the server synced, else the embedded one,
-// so every path resolves a rule the same way.
-func (c *Config) modelCatalog() *catalog.ProviderCatalogManager {
-	if tm := c.GetTemplateManager(); tm != nil {
-		return tm
+// sendsContext1M reports whether a request from a client of style client
+// reaches provider through rule with the context-1m beta header: the rule's
+// 1M flag adds it, and only a request sent to the provider's Anthropic
+// endpoint carries it. A provider with a URL in the client's own style serves
+// it there unless the rule forces the Anthropic endpoint, the choice the
+// gateway makes (Provider.RequestStyle).
+func sendsContext1M(provider *typ.Provider, rule typ.Rule, client ai.APIStyle) bool {
+	if !rule.Flags.Context1M {
+		return false
 	}
-	c.localCatalogOnce.Do(func() {
-		tm := catalog.NewProviderCatalogManager(catalog.LastSynced())
-		if tm.Initialize(context.Background()) == nil {
-			c.localCatalog = tm
-		}
-	})
-	return c.localCatalog
+	_, style := provider.ResolveEndpoint(provider.RequestStyle(client, rule.Flags.ForcesAnthropicEndpoint()))
+	return style == ai.APIStyleAnthropic
 }
 
 // smallestKnown is the smaller of two values, treating 0 as unknown.

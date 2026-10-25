@@ -151,7 +151,7 @@ func TestApplyCodexConfig_WritesDerivedWindows(t *testing.T) {
 }
 
 // The CLI / IM apply (internal/agent) writes the same catalog as the UI's Auto
-// Config, even from a config without the server's template manager.
+// Config, also from the catalog a CLI process loads (internal/app).
 func TestCodexAgentApply_MatchesAutoConfig(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -164,8 +164,10 @@ func TestCodexAgentApply_MatchesAutoConfig(t *testing.T) {
 	fromUI, err := os.ReadFile(catalogPath)
 	require.NoError(t, err)
 
-	// The CLI loads the config without a template manager.
-	cfg.SetTemplateManager(nil)
+	// A CLI process reads the catalog the server last synced, here none yet.
+	tm := catalog.NewProviderCatalogManager(catalog.LastSynced())
+	require.NoError(t, tm.Initialize(context.Background()))
+	cfg.SetTemplateManager(tm)
 	result, err := agent.NewAgentApply(cfg, "localhost").ApplyAgent(&agent.ApplyAgentRequest{AgentType: agent.AgentTypeCodex})
 	require.NoError(t, err)
 	require.True(t, result.Success, result.Message)

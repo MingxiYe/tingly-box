@@ -340,12 +340,14 @@ out-of-date check and the compact preview all see the same window.
   known description and the smallest known limits, so the value is safe
   whichever upstream answers. `/v1/models` reads it, and the Codex window
   (below) reads the same upstreams the same way, so 200K is only for models
-  the catalog does not know. A config loaded without the server's template
-  manager (CLI, TUI) reads the catalog the server last synced
-  (`~/.tingly-box/provider_catalog.json`) while it is within the cache TTL, as
-  a server reads it at startup, else the embedded one (`catalog.LastSynced`),
-  so both resolve a rule the same. A rule with several upstreams keeps
-  `max_context` only per upstream: templates count it differently.
+  the catalog does not know. A command that runs without the server (CLI,
+  TUI) is given the catalog at start (`app.AppManager`): the one the server
+  last synced (`~/.tingly-box/provider_catalog.json`, whatever its age: the
+  cache TTL only decides when a server syncs again, and a running server keeps
+  its synced copy in memory), else the embedded one (`catalog.LastSynced`), so
+  both resolve a rule the same. A config with no catalog knows no model. A
+  rule with several upstreams keeps `max_context` only per upstream:
+  templates count it differently.
 - **Window and ceiling, per upstream** (#2131). Each catalog entry gets a window
   (`context_window`, what Codex plans around: its meter and when it compacts)
   and a ceiling (`max_context_window`, the most a `model_context_window`
@@ -358,8 +360,7 @@ out-of-date check and the compact preview all see the same window.
   |---|---|---|---|
   | model the catalog knows | input limit (`max_input_tokens`) | input limit of `max_context`, else the window | `catalog` |
   | same, 1M flag on, `max_context` above `context` | input limit of `max_context` | same | `extended` |
-  | Claude sent to an Anthropic-style endpoint, 1M flag on | 1M | 1M | `1m` |
-  | Claude on a provider with an Anthropic-style endpoint, flag off or sent to its OpenAI URL | 200K, or the catalog's lower value | same | `anthropic` / `catalog` |
+  | same, on a provider with an Anthropic-style endpoint, without the context-1m header | input limit | the window | `catalog` |
   | model the catalog doesn't know | 1M with the flag, else 200K (a guess) | same | `default` |
 
   `max_context` is a catalog field for the larger window a client may opt
@@ -367,19 +368,31 @@ out-of-date check and the compact preview all see the same window.
   off for templates whose window counts output). The `codex` template's
   ChatGPT-backed GPT models carry `context: 272000, max_context: 872000`, as
   Codex's own catalog does; `harness catalog check` rejects a `max_context`
-  that isn't above `context`. "Anthropic-style" is the endpoint a Codex
-  (OpenAI-style) request is actually sent to (`Provider.ResolveEndpoint`), or
-  the Anthropic one when the rule forces it: only that endpoint carries the
-  context-1m header, so Claude through a dual provider's OpenAI URL stays at
-  200K even with the flag. DeepSeek's Anthropic endpoint serving
-  `deepseek-chat` is not Claude and keeps its catalog window.
+  that isn't above `context`. On a provider with an Anthropic-style endpoint
+  `max_context` is the window the context-1m header opens, which the rule's
+  1M flag adds: the `claude-code` template's Opus / Sonnet 4.6 carry `context:
+  200000, max_context: 1000000` (a subscription gets 1M only with the header,
+  which is what Claude Code's `[1m]` variant sends), while on the API Claude
+  4.6 and later is 1M without it (`anthropic-com`: `context: 1000000`, no
+  `max_context`). No model name or 200K constant is involved. Without the
+  header the upstream answers with the standard window, so that is the
+  ceiling too: Codex's own `model_context_window` can't open it.
+  "Anthropic-style" is the endpoint a Codex (OpenAI-style) request is actually
+  sent to: the gateway's choice, shared through `Provider.RequestStyle`
+  (`codexSendsContext1M` here, `resolveAttemptStyle` in the gateway), so Claude
+  through a dual provider's OpenAI URL stays at its standard window even with
+  the flag.
 - **What the 1M flag means for Codex.** It used to set every Codex model's
   window to 1M, which is wrong for models that don't have one (a 128K DeepSeek
   model) and for ChatGPT-backed models, whose larger window is 872K, not 1M
-  (#2131). It now asks for the routed model's larger window: the context-1m
-  header on Claude, `max_context` on a catalog model, nothing on a model
-  without one. Only for a model nothing is known about does it keep its old
-  meaning, 1M, which stays a guess.
+  (#2131). It now asks for the routed model's larger window, the catalog's
+  `max_context`: 872K on a ChatGPT-backed model, the window the context-1m
+  header (which the flag adds) opens on Claude 4.6 through a subscription,
+  nothing on a model without one. Only for a model nothing is known about does
+  it keep its old meaning, 1M, which stays a guess. The other model lists
+  follow the same header rule (`RuleModelInfo`, `sendsContext1M` for the
+  list's client style): a Claude subscription rule lists 200K, or 1M with the
+  flag.
 - **An own window is also its ceiling.** `CodexContextWindowFor` writes
   `codex_context_window` as both: it is set for models whose real window
   Tingly Box doesn't know, where a derived ceiling would only be a guess. Two
@@ -412,13 +425,14 @@ out-of-date check and the compact preview all see the same window.
   budget (its own catalog gives gpt-5 272K, not 400K), so Auto resolves to
   `max_input_tokens`, and the editor reads it from `/tingly/codex/v1/models`
   (the list Codex's clients see, matched by request model), so the chip and the
-  generated catalog cannot drift. On that list `max_input_tokens` is what the
-  rule's Auto tells Codex (`CodexAutoContextWindow`, flag included: a Claude
-  rule with 1M says 1M there), and `max_context_window`, Tingly Box's own field
-  named after Codex's, the ceiling when it is above that; `context_window`
-  rises to `max_input_tokens` where the flag opens more than the catalog
-  publishes. A model whose window would only be a guess carries neither. The `codex` template's `context`
-  values are already that input budget and do not set
+  generated catalog cannot drift. Each entry of that list carries
+  `codex_windows` (Tingly Box's own field): `{off, on}`, each a
+  `{context_window, max_context_window, source}`, what the rule's Auto writes
+  into Codex's catalog with the 1M flag off and on (`ResolveCodexAutoWindows`,
+  merged per request model as the catalog entry is). The editor shows it as
+  is and works nothing out itself; the standard fields keep their meaning
+  (`RuleModelInfo`), the same on every scenario's list. The `codex`
+  template's `context` values are already that input budget and do not set
   `context_includes_output`.
 - **Codex and Claude Code read the same number.** Both treat a model's window
   as the most input a request may carry, i.e. `max_input_tokens`, not the
@@ -434,8 +448,9 @@ out-of-date check and the compact preview all see the same window.
 - **Editor.** A `Context: Auto ▾` chip sits before `Compact`. Its popover offers
   Auto (showing what it resolves to), the common sizes 128K / 200K / 256K / 400K /
   1M, and a box for anything else (`131072`, `300K`, `1.5M`). The Compact popover
-  reads its window from the same resolution (`resolveCodexWindowSource`), so
-  moving the context window updates the compact numbers at once. The Context
+  reads its window the same way (`resolveCodexWindow`: the rule's own value,
+  else the list's Auto for the rule's 1M state), so moving the context window
+  updates the compact numbers at once. The Context
   popover says where Auto comes from without naming the upstream (the list
   never does): the routed model's input limit, the larger window the 1M flag
   opened, or a guess for a model the list doesn't know. When the model has a
@@ -444,21 +459,24 @@ out-of-date check and the compact preview all see the same window.
   with an own window it only warns when that is above a known ceiling. Until
   the list has been read both popovers show "…" rather than a guessed number;
   when it can't be read the Context popover says so and the Compact one shows
-  only the percent. Answers are kept per request model and 1M flag. Rules
-  sharing a request model show the smallest window and ceiling among their
-  entries, as their shared catalog entry gets.
+  only the percent. Answers are kept per request model; they hold both 1M
+  states, so turning 1M on or off shows the other at once. The 1M menu of a
+  Codex rule says what each choice writes ("Codex window: 272K" / "872K"),
+  marks a guess, and says when the Context chip pins the window.
 - **Why a manual setting before automatic detection.** Detection cannot be
   exhaustive (unknown upstreams, self-hosted gateways), and Codex is sensitive to
   a wrong window, so the manual value stays as the override even after detection
   lands; the upstream model list (#1774) would only add a source to what Auto
   resolves to.
-- **Open.** The 1M flag is taken at its word for Claude: the catalog doesn't
-  record which Claude models accept the 1M header (`claude-sonnet-4-5` lists
-  200K and takes 1M with it; `claude-haiku-4-5` doesn't). When rules share a
-  request model, the editor doesn't see another rule's own window, which the
-  shared catalog entry also takes into account. Template matching for an
-  API-key provider on `api.anthropic.com` can pick `anthropic-com` or
-  `claude-code` (map order); both cap Claude at 200K here.
+- **Open.** Which subscriptions get the header-gated 1M the catalog can't
+  tell (Opus 4.6 is included on Max / Team / Enterprise; Sonnet 4.6 needs
+  usage credits on every plan), so the 1M flag is taken at its word there.
+  When rules share a request model, the editor doesn't see another rule's own
+  window, which the shared catalog entry also takes into account, and the
+  list's `on` is with 1M on for all of them, not only the rule being edited
+  (the second rule is usually shadowed anyway). An API-key
+  provider on `api.anthropic.com` matches `anthropic-com`, never the
+  subscription-only `claude-code` template (`keyTemplates`).
 
 ## Schema alignment: `supports_reasoning_summaries` (2026-10-19)
 

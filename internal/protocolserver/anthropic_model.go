@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
+	"github.com/tingly-dev/tingly-box/ai"
 	"github.com/tingly-dev/tingly-box/internal/typ"
 )
 
@@ -145,7 +146,7 @@ func (ph *ProtocolHandler) anthropicListModelsWithScenario(c *gin.Context, scena
 
 		// Model details come from the catalog entry of the upstream model
 		// this rule routes to.
-		info, _ := ruleModelInfo(cfg, rule)
+		info, _ := ruleModelInfo(cfg, rule, ai.APIStyleAnthropic)
 
 		// Build capabilities from Anthropic API provider data
 		var caps *ModelCapabilities

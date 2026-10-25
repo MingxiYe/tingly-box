@@ -3,13 +3,11 @@ package config
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tingly-dev/tingly-box/ai"
 	"github.com/tingly-dev/tingly-box/internal/catalog"
 	"github.com/tingly-dev/tingly-box/internal/loadbalance"
 	"github.com/tingly-dev/tingly-box/internal/protocol"
@@ -25,10 +23,6 @@ type codexWindowProviders struct {
 
 func newCodexWindowConfig(t *testing.T, withTemplateManager bool) (*Config, codexWindowProviders) {
 	t.Helper()
-	// Without a template manager the catalog last synced under ~/.tingly-box
-	// is read: keep the real one out.
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("USERPROFILE", os.Getenv("HOME"))
 	cfg, err := NewConfig(WithConfigDir(t.TempDir()))
 	require.NoError(t, err)
 	if withTemplateManager {
@@ -75,9 +69,8 @@ func codexRule(model string, flags typ.RuleFlags, services ...*loadbalance.Servi
 }
 
 // Each kind of upstream contributes the input window it really answers with,
-// and the 1M flag only matters where it opens a larger one (Claude on an
-// Anthropic-style endpoint, a catalog model's max_context, or a model nothing
-// is known about).
+// and the 1M flag only matters where it opens a larger one (a catalog model's
+// max_context, or a model nothing is known about).
 func TestCodexAutoContextWindow_PerUpstream(t *testing.T) {
 	cfg, p := newCodexWindowConfig(t, true)
 	on := typ.RuleFlags{Context1M: true}
@@ -96,22 +89,20 @@ func TestCodexAutoContextWindow_PerUpstream(t *testing.T) {
 			CodexContextWindow{Window: 128000, Max: 128000, Source: CodexWindowSourceCatalog}},
 		{"1M model on DeepSeek", codexRule("flash", off, codexSvc(p.deepseek, "deepseek-v4-flash")),
 			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceCatalog}},
-		{"Claude on Anthropic without 1M answers with 200K", codexRule("sonnet", off, codexSvc(p.anthropic, "claude-sonnet-4-6")),
-			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceAnthropic}},
-		{"Claude on Anthropic with 1M", codexRule("sonnet", on, codexSvc(p.anthropic, "claude-sonnet-4-6")),
-			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSource1M}},
-		{"Claude whose catalog window is 200K stays catalog", codexRule("sonnet", off, codexSvc(p.claudeCode, "claude-sonnet-4-5")),
+		{"Claude 4.6+ on an API key is 1M without any header", codexRule("sonnet", off, codexSvc(p.anthropic, "claude-sonnet-4-6")),
+			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceCatalog}},
+		{"… so the 1M flag changes nothing", codexRule("sonnet", on, codexSvc(p.anthropic, "claude-sonnet-4-6")),
+			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceCatalog}},
+		{"… over a dual provider's OpenAI URL too", codexRule("sonnet", off, codexSvc(p.dual, "claude-sonnet-4-6")),
+			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceCatalog}},
+		{"Claude whose catalog window is 200K", codexRule("sonnet", on, codexSvc(p.claudeCode, "claude-sonnet-4-5")),
 			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceCatalog}},
-		{"Claude subscription with 1M", codexRule("opus", on, codexSvc(p.claudeCode, "claude-opus-4-6")),
-			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSource1M}},
-		{"Claude over a dual provider's OpenAI URL gets no 1M header: 200K", codexRule("sonnet", off, codexSvc(p.dual, "claude-sonnet-4-6")),
-			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceAnthropic}},
-		{"… even with the 1M flag", codexRule("sonnet", on, codexSvc(p.dual, "claude-sonnet-4-6")),
-			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceAnthropic}},
-		{"forcing the Anthropic endpoint lets the 1M flag open it", codexRule("sonnet", typ.RuleFlags{AnthropicEndpointOverride: "anthropic", Context1M: true}, codexSvc(p.dual, "claude-sonnet-4-6")),
-			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSource1M}},
-		{"forcing the Anthropic endpoint without 1M", codexRule("sonnet", typ.RuleFlags{AnthropicEndpointOverride: "anthropic"}, codexSvc(p.dual, "claude-sonnet-4-6")),
-			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceAnthropic}},
+		{"Claude 4.6 on a subscription answers with 200K without the context-1m header", codexRule("opus", off, codexSvc(p.claudeCode, "claude-opus-4-6")),
+			CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceCatalog}},
+		{"… and the 1M flag adds it", codexRule("opus", on, codexSvc(p.claudeCode, "claude-opus-4-6")),
+			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceExtended}},
+		{"Claude 4.7+ on a subscription is 1M without it", codexRule("opus", off, codexSvc(p.claudeCode, "claude-opus-4-7")),
+			CodexContextWindow{Window: 1000000, Max: 1000000, Source: CodexWindowSourceCatalog}},
 		{"ChatGPT-backed model: 272K, up to 872K", codexRule("sol", off, codexSvc(p.chatgpt, "gpt-6-sol")),
 			CodexContextWindow{Window: 272000, Max: 872000, Source: CodexWindowSourceCatalog}},
 		{"the 1M flag opens a ChatGPT-backed model's 872K, not 1M (#2131)", codexRule("sol", on, codexSvc(p.chatgpt, "gpt-6-sol")),
@@ -189,48 +180,14 @@ func TestCodexAutoContextWindow_SmartRoutes(t *testing.T) {
 		cfg.CodexAutoContextWindow(rule))
 }
 
-// A config loaded without the server's template manager (CLI, TUI) falls back
-// to the embedded catalog and derives the same windows.
-func TestCodexAutoContextWindow_EmbeddedCatalogFallback(t *testing.T) {
+// Without a provider catalog nothing is known: every upstream is judged like an
+// unknown model, and RuleModelInfo has nothing to say.
+func TestCodexAutoContextWindow_NoCatalog(t *testing.T) {
 	cfg, p := newCodexWindowConfig(t, false)
-	require.Nil(t, cfg.GetTemplateManager())
-	assert.Equal(t, CodexContextWindow{Window: 272000, Max: 872000, Source: CodexWindowSourceCatalog},
-		cfg.CodexAutoContextWindow(codexRule("sol", typ.RuleFlags{}, codexSvc(p.chatgpt, "gpt-6-sol"))))
-}
-
-// …but when the server has synced a catalog it would still read at startup
-// (within the cache TTL), that one, so the CLI resolves what the server does.
-// An older cache is ignored, as the server ignores it.
-func TestCodexAutoContextWindow_LastSyncedCatalog(t *testing.T) {
-	writeCache := func(t *testing.T, cachedAt time.Time) {
-		var registry catalog.ProviderCatalogRegistry
-		require.NoError(t, json.Unmarshal(catalog.EmbeddedCatalogJSON()[catalog.KindProviders], &registry))
-		models := registry.Providers["deepseek-com"].Models
-		for i := range models {
-			if models[i].ID == "deepseek-chat" {
-				models[i].Context = 64000
-			}
-		}
-		raw, err := json.Marshal(catalog.CatalogCacheData{Registry: registry, CachedAt: cachedAt})
-		require.NoError(t, err)
-		dir := filepath.Join(os.Getenv("HOME"), ".tingly-box")
-		require.NoError(t, os.MkdirAll(dir, 0o755))
-		require.NoError(t, os.WriteFile(filepath.Join(dir, catalog.CatalogCacheFileName), raw, 0o644))
-	}
-	rule := func(p codexWindowProviders) typ.Rule {
-		return codexRule("ds", typ.RuleFlags{}, codexSvc(p.deepseek, "deepseek-chat"))
-	}
-
-	t.Run("fresh cache", func(t *testing.T) {
-		cfg, p := newCodexWindowConfig(t, false)
-		writeCache(t, time.Now().Add(-time.Hour))
-		assert.Equal(t, CodexContextWindow{Window: 64000, Max: 64000, Source: CodexWindowSourceCatalog}, cfg.CodexAutoContextWindow(rule(p)))
-	})
-	t.Run("stale cache", func(t *testing.T) {
-		cfg, p := newCodexWindowConfig(t, false)
-		writeCache(t, time.Now().AddDate(0, -1, 0))
-		assert.Equal(t, CodexContextWindow{Window: 128000, Max: 128000, Source: CodexWindowSourceCatalog}, cfg.CodexAutoContextWindow(rule(p)))
-	})
+	rule := codexRule("sol", typ.RuleFlags{}, codexSvc(p.chatgpt, "gpt-6-sol"))
+	assert.Equal(t, CodexContextWindow{Window: 200000, Max: 200000, Source: CodexWindowSourceDefault}, cfg.CodexAutoContextWindow(rule))
+	_, ok := cfg.RuleModelInfo(rule, ai.APIStyleOpenAI)
+	assert.False(t, ok)
 }
 
 // The rule's own window wins and is also its ceiling.

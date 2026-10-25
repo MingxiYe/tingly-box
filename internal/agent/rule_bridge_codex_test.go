@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/tingly-dev/tingly-box/internal/catalog"
 	serverconfig "github.com/tingly-dev/tingly-box/internal/config"
 	"github.com/tingly-dev/tingly-box/internal/protocol"
 	"github.com/tingly-dev/tingly-box/internal/typ"
@@ -35,17 +37,25 @@ func codexCatalogWindows(t *testing.T, home string) map[string][2]int {
 	return out
 }
 
+// useLastSyncedCatalog gives cfg the provider catalog a CLI command starts
+// with (app.AppManager): the one the server last synced, here none yet.
+func useLastSyncedCatalog(t *testing.T, cfg *serverconfig.Config) {
+	t.Helper()
+	tm := catalog.NewProviderCatalogManager(catalog.LastSynced())
+	require.NoError(t, tm.Initialize(context.Background()))
+	cfg.SetTemplateManager(tm)
+}
+
 // `tb agent apply codex --provider … --model …` points the tingly-codex rule
 // at the chosen model before writing the files, so the first apply already
-// lists that rule in the catalog with the model's real window (the CLI config
-// has no template manager: the embedded catalog is used).
+// lists that rule in the catalog with the model's real window.
 func TestApplyAgent_CodexWritesWindowOfTheModelBeingSet(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	cfg, err := serverconfig.NewConfigWithDir(t.TempDir())
 	require.NoError(t, err)
-	require.Nil(t, cfg.GetTemplateManager())
+	useLastSyncedCatalog(t, cfg)
 	require.NoError(t, cfg.AddProvider(&typ.Provider{
 		UUID: "ds", Name: "DeepSeek", APIBase: "https://api.deepseek.com/v1",
 		APIStyle: protocol.APIStyleOpenAI, AuthType: typ.AuthTypeAPIKey, Token: "t", Enabled: true,

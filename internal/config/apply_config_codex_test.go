@@ -10,6 +10,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tingly-dev/tingly-box/ai"
 	"github.com/tingly-dev/tingly-box/internal/catalog"
 	"github.com/tingly-dev/tingly-box/internal/loadbalance"
 	"github.com/tingly-dev/tingly-box/internal/protocol"
@@ -1100,7 +1101,7 @@ func TestRuleModelInfo_InputLimitExcludesOutputForOpenAI(t *testing.T) {
 	rule := typ.Rule{UUID: "a", Scenario: typ.ScenarioCodex, RequestModel: "mini", Active: true,
 		Services: []*loadbalance.Service{{Provider: p.UUID, Model: "gpt-5.4-mini", Active: true}}}
 
-	info, ok := cfg.RuleModelInfo(rule)
+	info, ok := cfg.RuleModelInfo(rule, ai.APIStyleOpenAI)
 	require.True(t, ok)
 	assert.Equal(t, 400_000, info.Context)
 	assert.Equal(t, 272_000, info.InputLimit())

@@ -79,8 +79,11 @@ Anthropic 的窗口由输入输出共用,它的 Models API 把窗口直接报成
 读取统一走 `ModelInfo.InputLimit()`,详见 `.design/codex-config.md` 的 "Three numbers, one meaning each"。
 
 `max_context` 是可选的**上限**:客户端能主动开到、但默认不用的更大窗口,口径与同一条的 `context`
-相同,只在它高于 `context` 时写(`harness catalog check` 会拦住相等或更低的值)。目前只有 `codex`
-模板用到:ChatGPT 后端的 GPT 模型 `context` 272000、`max_context` 872000,与 Codex 自带目录一致。
+相同,只在它高于 `context` 时写(`harness catalog check` 会拦住相等或更低的值)。`codex` 模板里
+ChatGPT 后端的 GPT 模型 `context` 272000、`max_context` 872000,与 Codex 自带目录一致。在有
+Anthropic 风格端点的 provider 上,它指 context-1m 请求头才开的窗口:`claude-code` 模板(订阅登录)
+的 Opus / Sonnet 4.6 是 `context` 200000、`max_context` 1000000;API 上 Claude 4.6 起默认就是 1M,
+`anthropic-com` 直接写 `context` 1000000,不写 `max_context`。
 它的输入上限读 `ModelInfo.InputCeiling()`(窗口包含输出时同样扣掉输出部分)。Codex 的模型目录据此写
 `context_window` / `max_context_window`,见 `.design/codex-config.md` 的 "Per-model context window"。
 
