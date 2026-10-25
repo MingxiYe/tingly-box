@@ -360,6 +360,14 @@ func (f RuleFlags) IsZero() bool {
 	return reflect.DeepEqual(f, RuleFlags{})
 }
 
+// ForcesAnthropicEndpoint reports whether AnthropicEndpointOverride forces the
+// Anthropic-style upstream. Only "anthropic" does, case-sensitively (the
+// registry emits lowercase); empty, "auto" and anything unrecognized leave
+// routing adaptive, so a misconfigured rule degrades safely.
+func (f RuleFlags) ForcesAnthropicEndpoint() bool {
+	return f.AnthropicEndpointOverride == "anthropic"
+}
+
 // VisionProxyService identifies the upstream used to describe images for the
 // vision proxy: a provider UUID plus a model name (the system's standard
 // two-element service identity).
