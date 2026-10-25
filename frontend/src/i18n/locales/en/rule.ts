@@ -293,6 +293,15 @@ export default {
     "managePlugins": "Manage plugins",
     "test": "Test",
     "ruleActions": "Rule actions",
+    "context1M": {
+      "off": "Off",
+      "offDescription": "Do not add 1M for this rule. Client-requested 1M still works where supported.",
+      "on": "On",
+      "onDescription": "Add 1M for this rule. The upstream model must support it.",
+      "codexWindow": "Context window: {{value}}",
+      "codexWindowGuess": "Context window: {{value}} (guess)",
+      "codexWindowPinned": "Context window: {{value}} (pinned)"
+    },
     "context": {
       "chip": "Context: {{value}}",
       "auto": "Auto",
@@ -314,7 +323,7 @@ export default {
       "auto1M": "Auto is {{value}}: with 1M on, the most this route to the model allows.",
       "autoDefault": "Auto is {{value}}: the routed model's window isn't known. If it differs, pick it above.",
       "autoGuess1M": "Auto is 1M because 1M is on, but the routed model's window isn't known. If it is smaller, pick it above.",
-      "ceiling": "Turn on 1M and Auto becomes {{max}}.",
+      "ceiling": "Turn on 1M and Auto becomes {{value}}.",
       "overCeiling": "{{value}} is more than the {{max}} the routed model accepts."
     },
     "compact": {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CODEX_COMPACT, compactZones, formatTokens, lowZoneStart, parseTokens, planCodexCompact, resolveCodexWindowSource } from './codexCompact';
+import { CODEX_COMPACT, codexGuessWindow, compactZones, formatTokens, lowZoneStart, parseTokens, planCodexCompact, resolveCodexWindow } from './codexCompact';
 
 const { window, window1M } = CODEX_COMPACT;
 
@@ -62,24 +62,16 @@ describe('compactZones', () => {
 });
 
 describe('context window helpers', () => {
-    it('resolves manual > 1M flag > 200K', () => {
-        expect(resolveCodexWindowSource(256_000, true).window).toBe(256_000);
-        expect(resolveCodexWindowSource(0, true).window).toBe(1_000_000);
-        expect(resolveCodexWindowSource(0, false).window).toBe(200_000);
-        expect(resolveCodexWindowSource(100, false).window).toBe(200_000);
+    it('a rule\'s own window in range wins, and is also its ceiling', () => {
+        const auto = { window: 272_000, max: 872_000, source: 'catalog' } as const;
+        expect(resolveCodexWindow(400_000, auto)).toEqual({ window: 400_000, max: 400_000, source: 'rule' });
+        expect(resolveCodexWindow(0, auto)).toBe(auto);
+        expect(resolveCodexWindow(100, auto)).toBe(auto);
     });
 
-    it('a known model list window wins over the 1M flag, which already shaped it on the server', () => {
-        expect(resolveCodexWindowSource(0, true, 128_000)).toEqual({ window: 128_000, max: 128_000, source: 'catalog' });
-        expect(resolveCodexWindowSource(0, false, 272_000, 872_000)).toEqual({ window: 272_000, max: 872_000, source: 'catalog' });
-        // A ceiling below the window says nothing.
-        expect(resolveCodexWindowSource(0, false, 272_000, 100_000)).toEqual({ window: 272_000, max: 272_000, source: 'catalog' });
-        expect(resolveCodexWindowSource(0, true)).toEqual({ window: 1_000_000, max: 1_000_000, source: '1m' });
-        expect(resolveCodexWindowSource(0, false)).toEqual({ window: 200_000, max: 200_000, source: 'default' });
-    });
-
-    it('a rule\'s own window is also its ceiling', () => {
-        expect(resolveCodexWindowSource(400_000, false, 272_000, 872_000)).toEqual({ window: 400_000, max: 400_000, source: 'rule' });
+    it('guesses 200K, or 1M with the 1M flag, for a model Auto does not know', () => {
+        expect(codexGuessWindow(false)).toEqual({ window: 200_000, max: 200_000, source: 'default' });
+        expect(codexGuessWindow(true)).toEqual({ window: 1_000_000, max: 1_000_000, source: 'default' });
     });
 
     it('formats windows the way people say them', () => {

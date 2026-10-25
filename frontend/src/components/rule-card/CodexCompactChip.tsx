@@ -10,7 +10,7 @@ import {
     compactZones,
     formatTokens,
     planCodexCompact,
-    resolveCodexWindowSource,
+    resolveCodexWindow,
     trackPosition,
     type CodexCompactStatus,
 } from './codexCompact';
@@ -19,9 +19,9 @@ import { useCodexCatalogWindow } from './useCodexCatalogWindow';
 interface CodexCompactChipProps {
     /** The rule's own percent; 0 = follow the Auto Config default. */
     percent: number;
-    /** The rule's own context window (0 = automatic) and 1M flag; with the
-     * model list's window they give the window this model has
-     * (resolveCodexWindowSource). */
+    /** The rule's own context window (0 = automatic) and 1M flag; with what
+     * the model list says Auto writes they give the window this model has
+     * (resolveCodexWindow). */
     contextWindow: number;
     context1M: boolean;
     requestModel?: string;
@@ -86,8 +86,8 @@ export const CodexCompactChip: React.FC<CodexCompactChipProps> = ({
     const open = Boolean(anchor);
     const overridden = percent > 0;
     const shown = draft ?? (overridden ? percent : shared.percent);
-    const catalog = useCodexCatalogWindow(requestModel, open, context1M);
-    const resolvedWindow = resolveCodexWindowSource(contextWindow, context1M, catalog.window, catalog.max);
+    const catalog = useCodexCatalogWindow(requestModel, open);
+    const resolvedWindow = resolveCodexWindow(contextWindow, context1M ? catalog.on : catalog.off);
     const window = resolvedWindow.window;
     // Until the model list has said what Auto is (or when it can't be read),
     // token counts would be a guess: show the percent alone and no "too few

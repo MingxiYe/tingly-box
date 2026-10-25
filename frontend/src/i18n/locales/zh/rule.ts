@@ -293,6 +293,15 @@ export default {
     "managePlugins": "管理插件",
     "test": "测试",
     "ruleActions": "规则操作",
+    "context1M": {
+      "off": "关",
+      "offDescription": "这条规则不主动加 1M。客户端自己请求的 1M 在支持的地方照常生效。",
+      "on": "开",
+      "onDescription": "这条规则主动加 1M。需要上游模型支持。",
+      "codexWindow": "上下文窗口：{{value}}",
+      "codexWindowGuess": "上下文窗口：{{value}}（估计）",
+      "codexWindowPinned": "上下文窗口：{{value}}（已固定）"
+    },
     "context": {
       "chip": "上下文：{{value}}",
       "auto": "自动",
@@ -314,7 +323,7 @@ export default {
       "auto1M": "自动为 {{value}}：开启 1M 后，经这条路由能用到的最大窗口。",
       "autoDefault": "自动为 {{value}}：不知道路由到的模型的窗口。如有不同，请在上方选择实际大小。",
       "autoGuess1M": "因为开启了 1M，自动为 1M，但不知道路由到的模型的窗口。如果更小，请在上方选择实际大小。",
-      "ceiling": "开启 1M 后，自动会变为 {{max}}。",
+      "ceiling": "开启 1M 后，自动会变为 {{value}}。",
       "overCeiling": "{{value}} 超过了路由到的模型能接收的 {{max}}。"
     },
     "compact": {

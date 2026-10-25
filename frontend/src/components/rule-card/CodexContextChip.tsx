@@ -4,15 +4,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ExpandMore as ExpandMoreIcon } from '@/components/icons';
 import { fontSizes } from '@/theme/fonts';
-import { CODEX_CONTEXT, formatTokens, parseTokens, resolveCodexWindowSource } from './codexCompact';
+import { CODEX_CONTEXT, formatTokens, parseTokens } from './codexCompact';
 import { useCodexCatalogWindow } from './useCodexCatalogWindow';
 
 interface CodexContextChipProps {
     /** The rule's own window in tokens; 0 = automatic. */
     window: number;
-    /** Whether the rule's 1M flag is on: the server opens the routed model's
-     * larger window with it (1M for Claude on an Anthropic endpoint), and
-     * assumes 1M for a model it doesn't know. */
+    /** Whether the rule's 1M flag is on: Auto then writes what the model list
+     * gives for it (the routed model's larger window, where it has one). */
     context1M: boolean;
     /** The rule's request model, to read its window from Codex's model list. */
     requestModel?: string;
@@ -45,8 +44,8 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     const [text, setText] = React.useState('');
     const open = Boolean(anchor);
 
-    const catalog = useCodexCatalogWindow(requestModel, open, context1M);
-    const auto = resolveCodexWindowSource(0, context1M, catalog.window, catalog.max);
+    const catalog = useCodexCatalogWindow(requestModel, open);
+    const auto = context1M ? catalog.on : catalog.off;
     const autoWindow = auto.window;
     const manual = window >= CODEX_CONTEXT.min && window <= CODEX_CONTEXT.max;
     const typed = text.trim() === '' ? undefined : parseTokens(text);
@@ -64,8 +63,8 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
     // Why Auto is what it is, and what can be done about it. The model list
     // never names the upstream, so neither do these.
     const value = formatTokens(autoWindow);
-    // A known limit of the routed model (not the guess for an unknown one).
-    const knownMax = auto.source === 'catalog' ? auto.max : 0;
+    // A known limit of the route (not the guess for an unknown model).
+    const knownMax = auto.source !== 'default' ? auto.max : 0;
     const notes: { id: string; text: string }[] = [];
     if (manual) {
         if (knownMax && window > knownMax) {
@@ -75,15 +74,15 @@ export const CodexContextChip: React.FC<CodexContextChipProps> = ({
         notes.push({ id: 'auto', text: t('ruleHeader.context.autoPending') });
     } else if (catalog.status === 'unavailable') {
         notes.push({ id: 'auto', text: t('ruleHeader.context.autoUnavailable', { value }) });
-    } else if (auto.source === 'catalog') {
-        notes.push({ id: 'auto', text: context1M ? t('ruleHeader.context.auto1M', { value }) : t('ruleHeader.context.autoCatalog', { value }) });
+    } else if (auto.source === 'default') {
+        notes.push({ id: 'auto', text: context1M ? t('ruleHeader.context.autoGuess1M') : t('ruleHeader.context.autoDefault', { value }) });
+    } else {
+        notes.push({ id: 'auto', text: auto.source === 'extended' ? t('ruleHeader.context.auto1M', { value }) : t('ruleHeader.context.autoCatalog', { value }) });
         // A larger window exists, and the 1M flag is what opens it (Auto then
         // keeps following the upstream, unlike a pinned number).
-        if (!context1M && knownMax > autoWindow) {
-            notes.push({ id: 'max', text: t('ruleHeader.context.ceiling', { max: formatTokens(knownMax) }) });
+        if (!context1M && catalog.on.source !== 'default' && catalog.on.window > autoWindow) {
+            notes.push({ id: 'max', text: t('ruleHeader.context.ceiling', { value: formatTokens(catalog.on.window) }) });
         }
-    } else {
-        notes.push({ id: 'auto', text: context1M ? t('ruleHeader.context.autoGuess1M') : t('ruleHeader.context.autoDefault', { value }) });
     }
     notes.push({ id: 'apply', text: t('ruleHeader.compact.needsApply') });
 

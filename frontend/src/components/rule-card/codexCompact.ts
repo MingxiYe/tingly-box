@@ -1,3 +1,5 @@
+import type { CodexWindow } from '@/types/model';
+
 // Mirrors the Codex catalog rules in internal/config/apply_config_codex.go
 // (codexEffectiveContextWindowPercent,
 // codexDefaultAutoCompactTokenLimitPct, the 200K / 1M windows). The server is
@@ -93,12 +95,13 @@ export const CODEX_CONTEXT = {
 } as const;
 
 /**
- * Where the window Codex is told about comes from: the rule's own value, what
- * Codex's model list gives the routed model (the server's Auto), or, when the
- * list doesn't know it, 1M with the 1M flag (`1m`) or 200K (`default`), as the
- * server writes for an unknown model.
+ * Where the window Codex is told about comes from: the rule's own value
+ * (`rule`), else what the rule's "Auto" gives on the server, as Codex's model
+ * list says (CodexWindow.source): the routed model's input limit (`catalog`),
+ * the larger window the 1M flag opens (`extended`), or a guess for a model
+ * the catalog doesn't know (`default`).
  */
-export type CodexWindowSource = 'rule' | 'catalog' | '1m' | 'default';
+export type CodexWindowSource = 'rule' | CodexWindow['source'];
 
 export interface CodexResolvedWindow {
     window: number;
@@ -108,16 +111,22 @@ export interface CodexResolvedWindow {
 }
 
 /**
- * The window Codex is told about, its ceiling and where it comes from: the
- * rule's own value (also its ceiling), else the model list's window and
- * ceiling, else 1M with the 1M flag, else 200K. Mirrors CodexContextWindowFor
- * in internal/config/apply_config_codex.go.
+ * What Auto writes for a model it doesn't know: 200K, or 1M with the 1M flag.
+ * Shown until Codex's model list says otherwise.
  */
-export function resolveCodexWindowSource(manual: number, context1M: boolean, catalog = 0, catalogMax = 0): CodexResolvedWindow {
+export function codexGuessWindow(context1M: boolean): CodexResolvedWindow {
+    const window = context1M ? CODEX_COMPACT.window1M : CODEX_COMPACT.window;
+    return { window, max: window, source: 'default' };
+}
+
+/**
+ * The window Codex is told about: the rule's own value when in range (also its
+ * ceiling), else Auto's. Mirrors CodexContextWindowFor in
+ * internal/config/apply_config_codex.go.
+ */
+export function resolveCodexWindow(manual: number, auto: CodexResolvedWindow): CodexResolvedWindow {
     if (manual >= CODEX_CONTEXT.min && manual <= CODEX_CONTEXT.max) return { window: manual, max: manual, source: 'rule' };
-    if (catalog > 0) return { window: catalog, max: Math.max(catalog, catalogMax), source: 'catalog' };
-    if (context1M) return { window: CODEX_COMPACT.window1M, max: CODEX_COMPACT.window1M, source: '1m' };
-    return { window: CODEX_COMPACT.window, max: CODEX_COMPACT.window, source: 'default' };
+    return auto;
 }
 
 /** 200000 → "200K", 1000000 → "1M", 1500000 → "1.5M", 131072 → "131K". */
